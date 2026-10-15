@@ -121,6 +121,7 @@ local function readRoster()
     local nr = api(GuildControlGetNumRanks) or 0
     for i = 1, math.min(nr, 10) do ranks[i - 1] = api(GuildControlGetRankName, i) end
     roster = { byKey = byKey, byName = byName, list = list, ranks = ranks }
+    ns.SelectGuild()
     ns.Fire("roster")
     ns.Fire("data")
 end
@@ -325,14 +326,61 @@ end
 -- Demarrage
 ------------------------------------------------------------------------------
 
+-- La sauvegarde est commune a tout le compte : le journal est range par
+-- guilde (CorpSRDB.guilds[cle]), pour qu un perso d une autre guilde ne
+-- melange jamais ses donnees. Tant que la guilde n est pas connue (ou hors
+-- guilde), le journal courant est vide et rien n est garde.
+-- Reprise : l ancien journal unique (CorpSRDB.journal, avant la 0.4.1) va
+-- a la premiere guilde vue.
+local function guildKey()
+    if not (IsInGuild and IsInGuild()) or type(GetGuildInfo) ~= "function" then return nil end
+    local ok, name, _, _, realm = pcall(GetGuildInfo, "player")
+    if not ok or type(name) ~= "string" or issecret(name) or name == "" then return nil end
+    if type(realm) ~= "string" or issecret(realm) or realm == "" then
+        realm = GetNormalizedRealmName and api(GetNormalizedRealmName) or ""
+    end
+    return name .. "@" .. tostring(realm or "")
+end
+
+--- Choisit le journal de la guilde du perso (au login, puis a chaque
+-- changement de guilde).
+function ns.SelectGuild()
+    local db = ns.db
+    if not db then return end
+    local key = guildKey()
+    if key == ns.guildKey and ns.store then return end
+    ns.guildKey = key
+    if not key then
+        ns.store = J.NewStore({})
+    else
+        local g = db.guilds[key]
+        if type(g) ~= "table" then
+            g = {}
+            db.guilds[key] = g
+        end
+        if type(g.journal) ~= "table" then
+            if type(db.journal) == "table" then
+                g.journal = db.journal
+                db.migrated = key
+            else
+                g.journal = {}
+            end
+            db.journal = nil
+        end
+        ns.store = J.NewStore(g.journal)
+    end
+    if ns.sync then ns.sync.store = ns.store end
+    ns.Fire("data")
+end
+
 local function init()
     if type(CorpSRDB) ~= "table" then CorpSRDB = {} end
     local db = CorpSRDB
-    if type(db.journal) ~= "table" then db.journal = {} end
+    if type(db.guilds) ~= "table" then db.guilds = {} end
     if type(db.names) ~= "table" then db.names = {} end
     if type(db.classes) ~= "table" then db.classes = {} end
     ns.db = db
-    ns.store = J.NewStore(db.journal)
+    ns.store = J.NewStore({})
 end
 
 local events = CreateFrame("Frame")
@@ -346,13 +394,17 @@ end
 function HANDLERS.PLAYER_LOGIN()
     ns.me = ns.KeyOf(UnitGUID("player"))
     if ns.db and ns.me then ns.db.names[ns.me] = myName() end
+    ns.SelectGuild()
     ns.AskRoster()
     readRoster()
     ns.Fire("login")
 end
 
 function HANDLERS.GUILD_ROSTER_UPDATE() ns.Later("roster", 0.5, readRoster) end
-function HANDLERS.PLAYER_GUILD_UPDATE() ns.Later("roster", 0.5, readRoster) end
+function HANDLERS.PLAYER_GUILD_UPDATE()
+    ns.SelectGuild()
+    ns.Later("roster", 0.5, readRoster)
+end
 
 local function itemArrived(id)
     if type(id) == "number" then pending[id] = nil end

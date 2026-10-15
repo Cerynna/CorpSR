@@ -85,8 +85,30 @@ local function cell(parent, x, y, w, justify, onClick)
     return b
 end
 
+-- les reglages de travail different-ils de ceux en vigueur ?
+-- (fourchettes telles quelles : en double, elles doivent etre refusees, pas
+-- ramenees aux valeurs par defaut ; grades sans aucun droit ignores)
+local function canon(c)
+    local x = R.Settings(c)
+    x.rolls = R.Copy(c.rolls)
+    for rank, r in pairs(x.rights) do
+        if next(r) == nil then x.rights[rank] = nil end
+    end
+    return ns.Journal.Encode(x)
+end
+
+local function differs()
+    if not (S.dirty and S.draft) then return false end
+    return canon(S.draft) ~= canon(ns.State().cfg)
+end
+
 local function publish()
     local d = draft()
+    if not differs() then
+        S.dirty, S.draft = false, nil
+        ns.Panel.Notice(L.SET_SAME, true)
+        return
+    end
     local used = {}
     for _, k in ipairs({ "sr", "ms", "os", "mog" }) do
         if used[d.rolls[k]] then return ns.Panel.Notice(L.SET_SAME_RANGE, true) end
@@ -211,10 +233,10 @@ local function refresh(f)
     end
     f.publish:SetShown(gm)
     f.reset:SetShown(gm)
-    f.publish:SetActive(S.dirty)
+    f.publish:SetActive(differs())
     f.reset:SetActive(S.dirty)
     if gm then
-        f.note:SetText(S.dirty and (UI.Hex("gold") .. L.SET_DIRTY .. "|r") or L.SET_GM_HINT)
+        f.note:SetText(differs() and (UI.Hex("gold") .. L.SET_DIRTY .. "|r") or L.SET_GM_HINT)
     else
         f.note:SetText(L.SET_ONLY_GM)
     end

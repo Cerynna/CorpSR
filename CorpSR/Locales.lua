@@ -89,7 +89,7 @@ locales.enUS = {
 
     SYNC_BUSY = "sync: %d queued", SYNC_ASKED = "sync requested from the guild.",
     SYNC_OFF = "sync not started: guild roster not read yet.", SET_PUBLISH = "Publish", SET_RESET = "Cancel changes",
-    SET_DIRTY = "Changes not published", SET_PUBLISHED = "Settings published to the guild.",
+    SET_DIRTY = "Changes not published", SET_PUBLISHED = "Settings published to the guild.", SET_SAME = "Nothing to publish: same settings.",
     SET_SAME_RANGE = "Two categories have the same roll range.", SET_EDIT_TIP = "Left click: +1. Right click: -1. Shift: by 10.",
     SET_TOGGLE_TIP = "Click to switch.", SET_RIGHT_TIP = "Click to give or take this right.",
     SET_GM_HINT = "You are GM: click a value or a box, then Publish.", TAB_RAIDS = "Raids", RAIDS_CATALOG = "Catalog: %s",
@@ -217,7 +217,7 @@ locales.frFR = {
 
     SYNC_BUSY = "synchro : %d en file", SYNC_ASKED = "synchro demandée à la guilde.",
     SYNC_OFF = "synchro pas démarrée : liste de guilde pas encore lue.", SET_PUBLISH = "Publier",
-    SET_RESET = "Annuler les changements", SET_DIRTY = "Changements non publiés", SET_PUBLISHED = "Réglages publiés à la guilde.",
+    SET_RESET = "Annuler les changements", SET_DIRTY = "Changements non publiés", SET_PUBLISHED = "Réglages publiés à la guilde.", SET_SAME = "Rien à publier : réglages identiques.",
     SET_SAME_RANGE = "Deux catégories ont la même fourchette de jet.",
     SET_EDIT_TIP = "Clic gauche : +1. Clic droit : -1. Maj : par 10.", SET_TOGGLE_TIP = "Clique pour basculer.",
     SET_RIGHT_TIP = "Clique pour donner ou retirer ce droit.",
@@ -350,7 +350,7 @@ locales.deDE = {
     SYNC_BUSY = "Abgleich: %d in der Schlange", SYNC_ASKED = "Abgleich bei der Gilde angefragt.",
     SYNC_OFF = "Abgleich nicht gestartet: Gildenliste noch nicht gelesen.", SET_PUBLISH = "Veröffentlichen",
     SET_RESET = "Änderungen verwerfen", SET_DIRTY = "Änderungen nicht veröffentlicht",
-    SET_PUBLISHED = "Optionen an die Gilde veröffentlicht.", SET_SAME_RANGE = "Zwei Kategorien haben denselben Würfelbereich.",
+    SET_PUBLISHED = "Optionen an die Gilde veröffentlicht.", SET_SAME = "Nichts zu veröffentlichen: gleiche Optionen.", SET_SAME_RANGE = "Zwei Kategorien haben denselben Würfelbereich.",
     SET_EDIT_TIP = "Linksklick: +1. Rechtsklick: -1. Umschalt: um 10.", SET_TOGGLE_TIP = "Klicken zum Umschalten.",
     SET_RIGHT_TIP = "Klicken, um dieses Recht zu geben oder zu nehmen.",
     SET_GM_HINT = "Du bist Gildenmeister: klicke einen Wert oder ein Feld, dann Veröffentlichen.", TAB_RAIDS = "Schlachtzüge",
@@ -486,7 +486,7 @@ locales.esES = {
 
     SYNC_BUSY = "sincronización: %d en cola", SYNC_ASKED = "sincronización pedida a la hermandad.",
     SYNC_OFF = "sincronización no iniciada: lista de hermandad aún no leída.", SET_PUBLISH = "Publicar",
-    SET_RESET = "Anular cambios", SET_DIRTY = "Cambios sin publicar", SET_PUBLISHED = "Ajustes publicados a la hermandad.",
+    SET_RESET = "Anular cambios", SET_DIRTY = "Cambios sin publicar", SET_PUBLISHED = "Ajustes publicados a la hermandad.", SET_SAME = "Nada que publicar: ajustes idénticos.",
     SET_SAME_RANGE = "Dos categorías tienen el mismo rango de tirada.",
     SET_EDIT_TIP = "Clic izquierdo: +1. Clic derecho: -1. Mayús: de 10 en 10.", SET_TOGGLE_TIP = "Haz clic para cambiar.",
     SET_RIGHT_TIP = "Haz clic para dar o quitar este derecho.",
@@ -622,7 +622,7 @@ locales.ptBR = {
 
     SYNC_BUSY = "sincronização: %d na fila", SYNC_ASKED = "sincronização pedida à guilda.",
     SYNC_OFF = "sincronização não iniciada: lista da guilda ainda não lida.", SET_PUBLISH = "Publicar",
-    SET_RESET = "Desfazer mudanças", SET_DIRTY = "Mudanças não publicadas", SET_PUBLISHED = "Ajustes publicados para a guilda.",
+    SET_RESET = "Desfazer mudanças", SET_DIRTY = "Mudanças não publicadas", SET_PUBLISHED = "Ajustes publicados para a guilda.", SET_SAME = "Nada a publicar: ajustes idênticos.",
     SET_SAME_RANGE = "Duas categorias têm a mesma faixa de rolagem.",
     SET_EDIT_TIP = "Clique esquerdo: +1. Clique direito: -1. Shift: de 10 em 10.", SET_TOGGLE_TIP = "Clique para alternar.",
     SET_RIGHT_TIP = "Clique para dar ou tirar este direito.",
@@ -754,7 +754,7 @@ locales.itIT = {
 
     SYNC_BUSY = "sincronizzazione: %d in coda", SYNC_ASKED = "sincronizzazione chiesta alla gilda.",
     SYNC_OFF = "sincronizzazione non avviata: elenco della gilda non ancora letto.", SET_PUBLISH = "Pubblica",
-    SET_RESET = "Annulla modifiche", SET_DIRTY = "Modifiche non pubblicate", SET_PUBLISHED = "Opzioni pubblicate alla gilda.",
+    SET_RESET = "Annulla modifiche", SET_DIRTY = "Modifiche non pubblicate", SET_PUBLISHED = "Opzioni pubblicate alla gilda.", SET_SAME = "Niente da pubblicare: opzioni identiche.",
     SET_SAME_RANGE = "Due categorie hanno lo stesso intervallo di tiro.",
     SET_EDIT_TIP = "Clic sinistro: +1. Clic destro: -1. Maiusc: di 10.", SET_TOGGLE_TIP = "Clic per cambiare.",
     SET_RIGHT_TIP = "Clic per dare o togliere questo diritto.",
@@ -889,7 +889,7 @@ locales.ruRU = {
 
     SYNC_BUSY = "синхронизация: в очереди %d", SYNC_ASKED = "синхронизация запрошена у гильдии.",
     SYNC_OFF = "синхронизация не запущена: список гильдии ещё не прочитан.", SET_PUBLISH = "Опубликовать",
-    SET_RESET = "Отменить изменения", SET_DIRTY = "Изменения не опубликованы", SET_PUBLISHED = "Настройки отправлены гильдии.",
+    SET_RESET = "Отменить изменения", SET_DIRTY = "Изменения не опубликованы", SET_PUBLISHED = "Настройки отправлены гильдии.", SET_SAME = "Нечего публиковать: настройки те же.",
     SET_SAME_RANGE = "У двух категорий одинаковый диапазон броска.", SET_EDIT_TIP = "Левый клик: +1. Правый клик: -1. Shift: по 10.",
     SET_TOGGLE_TIP = "Нажмите, чтобы переключить.", SET_RIGHT_TIP = "Нажмите, чтобы дать или забрать право.",
     SET_GM_HINT = "Вы глава гильдии: нажмите значение или клетку, затем «Опубликовать».", TAB_RAIDS = "Рейды",
@@ -1017,7 +1017,7 @@ locales.zhCN = {
     SET_ONLY_GM = "只有会长能修改设置。",
 
     SYNC_BUSY = "同步：队列中 %d 条", SYNC_ASKED = "已向公会请求同步。", SYNC_OFF = "同步未开始：尚未读取公会名单。", SET_PUBLISH = "发布", SET_RESET = "撤销更改",
-    SET_DIRTY = "更改尚未发布", SET_PUBLISHED = "设置已发布给公会。", SET_SAME_RANGE = "两个类别的掷骰范围相同。", SET_EDIT_TIP = "左键：+1。右键：-1。Shift：每次 10。",
+    SET_DIRTY = "更改尚未发布", SET_PUBLISHED = "设置已发布给公会。", SET_SAME = "无需发布：设置相同。", SET_SAME_RANGE = "两个类别的掷骰范围相同。", SET_EDIT_TIP = "左键：+1。右键：-1。Shift：每次 10。",
     SET_TOGGLE_TIP = "点击切换。", SET_RIGHT_TIP = "点击授予或收回此权限。", SET_GM_HINT = "你是会长：点击数值或格子，然后点“发布”。", TAB_RAIDS = "副本",
     RAIDS_CATALOG = "目录：%s", RAIDS_ADD = "添加", RAIDS_ALL_ADDED = "目录中的副本都已跟踪", RAIDS_DROP = "移除此副本",
     RAIDS_DROP_TIP = "副本会从列表中移除；积分保留。可以重新添加。", RAIDS_EMPTY = "没有副本：从目录中添加一个。", RAIDS_ITEMS_EMPTY = "没有物品：把物品拖到上方。",
@@ -1126,7 +1126,7 @@ locales.zhTW = {
     SET_ONLY_GM = "只有會長能修改設定。",
 
     SYNC_BUSY = "同步：佇列中 %d 則", SYNC_ASKED = "已向公會請求同步。", SYNC_OFF = "同步未開始：尚未讀取公會名單。", SET_PUBLISH = "發布", SET_RESET = "取消變更",
-    SET_DIRTY = "變更尚未發布", SET_PUBLISHED = "設定已發布給公會。", SET_SAME_RANGE = "兩個類別的擲骰範圍相同。", SET_EDIT_TIP = "左鍵：+1。右鍵：-1。Shift：每次 10。",
+    SET_DIRTY = "變更尚未發布", SET_PUBLISHED = "設定已發布給公會。", SET_SAME = "無需發布：設定相同。", SET_SAME_RANGE = "兩個類別的擲骰範圍相同。", SET_EDIT_TIP = "左鍵：+1。右鍵：-1。Shift：每次 10。",
     SET_TOGGLE_TIP = "點擊切換。", SET_RIGHT_TIP = "點擊授予或收回此權限。", SET_GM_HINT = "你是會長：點擊數值或格子，然後點「發布」。", TAB_RAIDS = "副本",
     RAIDS_CATALOG = "目錄：%s", RAIDS_ADD = "新增", RAIDS_ALL_ADDED = "目錄中的副本都已追蹤", RAIDS_DROP = "移除此副本",
     RAIDS_DROP_TIP = "副本會從清單中移除；積分保留。可以重新新增。", RAIDS_EMPTY = "沒有副本：從目錄中新增一個。", RAIDS_ITEMS_EMPTY = "沒有物品：把物品拖到上方。",
@@ -1235,7 +1235,7 @@ locales.koKR = {
     SET_ONLY_GM = "길드장만 설정을 바꿀 수 있습니다.",
 
     SYNC_BUSY = "동기화: 대기 %d개", SYNC_ASKED = "길드에 동기화를 요청했습니다.", SYNC_OFF = "동기화 미시작: 길드 명단을 아직 읽지 않았습니다.", SET_PUBLISH = "게시",
-    SET_RESET = "변경 취소", SET_DIRTY = "게시하지 않은 변경", SET_PUBLISHED = "설정을 길드에 게시했습니다.", SET_SAME_RANGE = "두 분류의 주사위 범위가 같습니다.",
+    SET_RESET = "변경 취소", SET_DIRTY = "게시하지 않은 변경", SET_PUBLISHED = "설정을 길드에 게시했습니다.", SET_SAME = "게시할 것 없음: 설정이 같습니다.", SET_SAME_RANGE = "두 분류의 주사위 범위가 같습니다.",
     SET_EDIT_TIP = "왼쪽 클릭: +1. 오른쪽 클릭: -1. Shift: 10씩.", SET_TOGGLE_TIP = "클릭하여 전환.", SET_RIGHT_TIP = "클릭하여 이 권한을 주거나 뺍니다.",
     SET_GM_HINT = "길드장입니다: 값이나 칸을 클릭한 뒤 게시하세요.", TAB_RAIDS = "공격대", RAIDS_CATALOG = "목록: %s", RAIDS_ADD = "추가",
     RAIDS_ALL_ADDED = "목록의 모든 공격대를 추적 중", RAIDS_DROP = "이 공격대 제거", RAIDS_DROP_TIP = "공격대가 목록에서 빠지고 포인트는 남습니다. 다시 추가할 수 있습니다.",

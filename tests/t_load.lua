@@ -5,7 +5,9 @@ Test("le .toc charge sans erreur ; premier lancement : accueil", function()
     local FS, ns = Game()
     Ok(#TocFiles() >= 10, "fichiers listes")
     Ok(ns.Rules and ns.Journal and ns.Demo and ns.Panel, "modules charges")
-    Ok(type(CorpSRDB) == "table" and type(CorpSRDB.journal) == "table", "sauvegarde creee")
+    Ok(type(CorpSRDB) == "table" and type(CorpSRDB.guilds) == "table", "sauvegarde creee")
+    Eq(ns.guildKey, "[EVER]@ClassicBetaPvE2", "guilde reconnue")
+    Ok(CorpSRDB.guilds[ns.guildKey] and type(CorpSRDB.guilds[ns.guildKey].journal) == "table", "journal de la guilde")
     Eq(ns.me, "4620-00D54EFC", "cle du joueur")
     Eq(ns.MyRank(), 4, "grade lu dans la liste de guilde")
     Ok(CorpSRWindow and CorpSRWindow:IsShown(), "fenetre ouverte au premier lancement")
@@ -27,12 +29,35 @@ Test("accueil vu : plus d ouverture automatique ; /csr ouvre et ferme", function
     Ok(not CorpSRWindow:IsShown(), "/csr ferme")
 end)
 
-Test("sauvegarde existante reprise, langue inconnue = anglais", function()
+Test("ancienne sauvegarde (journal unique) reprise par la guilde, langue inconnue = anglais", function()
     local FS, ns = Game({ noLogin = true, locale = "xxXX" })
     CorpSRDB = { journal = { { a = "GM", t = 10, n = 1, rk = 0, w = 1, k = "open", r = "MC" }, "abime" }, intro = true }
     FS.Fire("ADDON_LOADED", "CorpSR")
+    Eq(ns.store:Count(), 0, "rien avant de connaitre la guilde")
+    FS.Fire("PLAYER_LOGIN")
     Eq(ns.store:Count(), 1, "une ecriture valable")
+    Eq(CorpSRDB.journal, nil, "ancien journal deplace")
+    Eq(CorpSRDB.migrated, "[EVER]@ClassicBetaPvE2", "repris par la guilde")
     Eq(ns.L.TAB_MINE, "My SR", "texte en anglais")
+end)
+
+Test("deux persos de deux guildes sur le meme compte : journaux separes", function()
+    local FS, ns = Game({ noLogin = true })
+    CorpSRDB = { intro = true }
+    FS.Fire("ADDON_LOADED", "CorpSR")
+    FS.Fire("PLAYER_LOGIN")
+    ns.Write("sr", { r = "MC", i = { 17076 } })
+    Eq(ns.store:Count(), 1, "une ecriture chez [EVER]")
+    FS.guild = "Autre Guilde"
+    FS.Fire("PLAYER_GUILD_UPDATE")
+    Eq(ns.store:Count(), 0, "journal vide pour l autre guilde")
+    FS.guild = nil
+    FS.Fire("PLAYER_GUILD_UPDATE")
+    Eq(ns.guildKey, nil, "hors guilde")
+    Eq(ns.store:Count(), 0, "rien hors guilde")
+    FS.guild = "[EVER]"
+    FS.Fire("PLAYER_GUILD_UPDATE")
+    Eq(ns.store:Count(), 1, "on retrouve [EVER]")
 end)
 
 Test("toutes les langues ont les cles de l anglais, avec les memes %", function()

@@ -95,6 +95,13 @@ Test("reglages : le GM modifie, publie ; un novice ne peut rien changer", functi
     Ok(ns.Rules.Can(cfg, 3, "undo"), "droit donne")
     Ok(ns.Rules.Can(cfg, 1, "session"), "droits d avant gardes")
     Ok(not ns.SettingsView.dirty, "plus rien en cours")
+    -- rien de change : pas de publication
+    local count = ns.Store():Count()
+    f.values[1]:Click("LeftButton")
+    f.values[1]:Click("RightButton")
+    Ok(not f.publish:IsEnabled(), "publier grise (identique)")
+    f.publish:Click()
+    Eq(ns.Store():Count(), count, "aucune ecriture inutile")
 
     -- fourchettes identiques : refuse
     for _ = 1, 10 do f.values[6]:Click("LeftButton") end   -- +1 de 100 a 110 = SR
