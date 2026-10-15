@@ -1,0 +1,27 @@
+## Interface: 16001
+## Title: |cffd65cffCorp|r|cffffd100SR|r
+## Notes: Guild soft reserve with points: 2 SR per raid, points that build up week after week, roll + points. Guild-only sync. Type /csr
+## Notes-frFR: Soft Reserve de guilde avec points : 2 SR par raid, des points qui montent chaque semaine, jet + points. Synchro par la guilde seulement. Tape /csr
+## Notes-deDE: Gilden-Soft-Reserve mit Punkten: 2 SR pro Schlachtzug, Punkte, die Woche für Woche wachsen, Wurf + Punkte. Abgleich nur über die Gilde. Gib /csr ein
+## Notes-esES: Soft Reserve de hermandad con puntos: 2 SR por banda, puntos que crecen cada semana, tirada + puntos. Sincronización solo por la hermandad. Escribe /csr
+## Notes-esMX: Soft Reserve de hermandad con puntos: 2 SR por banda, puntos que crecen cada semana, tirada + puntos. Sincronización solo por la hermandad. Escribe /csr
+## Notes-ptBR: Soft Reserve de guilda com pontos: 2 SR por raide, pontos que crescem a cada semana, rolagem + pontos. Sincronização só pela guilda. Digite /csr
+## Notes-itIT: Soft Reserve di gilda a punti: 2 SR per incursione, punti che crescono ogni settimana, tiro + punti. Sincronizzazione solo tramite la gilda. Digita /csr
+## Notes-ruRU: Мягкий резерв гильдии с очками: 2 SR за рейд, очки растут каждую неделю, бросок + очки. Синхронизация только через гильдию. Введите /csr
+## Notes-zhCN: 公会软预定（积分制）：每个团队副本 2 个 SR，积分每周累积，掷骰 + 积分。仅通过公会同步。输入 /csr
+## Notes-zhTW: 公會軟預定（積分制）：每個團隊副本 2 個 SR，積分每週累積，擲骰 + 積分。僅透過公會同步。輸入 /csr
+## Notes-koKR: 포인트 기반 길드 소프트 예약: 공격대당 SR 2개, 매주 쌓이는 포인트, 주사위 + 포인트. 길드를 통해서만 동기화. /csr 입력
+## IconTexture: Interface\Icons\INV_Misc_Coin_01
+## Author: ceryn
+## Version: 0.1.0
+## OptionalDeps: CorpUI
+## SavedVariables: CorpSRDB
+
+Locales.lua
+
+# Moteur : Lua pur, teste hors du jeu (CorpSR-dev/tests)
+Engine\Rules.lua
+Engine\Journal.lua
+
+Core.lua
+Sonde.lua

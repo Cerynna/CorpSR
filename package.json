@@ -1,0 +1,12 @@
+{
+  "name": "corpsr-dev",
+  "private": true,
+  "description": "Bancs d'essai hors jeu de l'addon CorpSR (fengari = Lua 5.3, luaparse = syntaxe Lua 5.1)",
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.4",
+    "luaparse": "^0.3.1"
+  }
+}
