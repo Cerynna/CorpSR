@@ -316,3 +316,53 @@ Test("caches du magasin : resume et ids remis a jour apres un ajout", function()
     Ok(after.h ~= before.h, "empreinte changee")
     Eq(#s:Ids(3), ids + 1, "ids recalcules")
 end)
+
+Test("reinitialisation du GM : tout ce qui precede est efface, puis refuse", function()
+    local b = NewBook(ns, RANKS)
+    b:E("GM", 1, "cfg", { c = { pts = 25, rights = { [1] = { fix = true } } } })
+    b:E("GM", 1, "raid", { r = "MC", nm = "MC", add = { X, Y } })
+    b:SR("A", 1, { X, X })
+    local old = b:E("Off", 1, "fix", { p = "A", i = X, d = 30, y = "test" })
+    local saved = {}
+    for i, e in ipairs(b.list) do saved[i] = e end
+    local store = J.NewStore(saved)
+    Eq(store:Count(), 4, "avant")
+    -- un non-GM ne peut pas : ecriture mal formee
+    local fake = { a = "Off", t = b.t + 30, n = 1, rk = 1, w = 1, k = "reset" }
+    Eq(store:Add(fake), "bad", "reinitialisation hors GM")
+    local reset = { a = "GM", t = b.t + 60, n = 1, rk = 0, w = 1, k = "reset" }
+    Eq(store:Add(reset), "reset", "reinitialisation")
+    Eq(store:Count(), 1, "tout efface")
+    Eq(#saved, 1, "la sauvegarde aussi (sur place)")
+    local st = store:State()
+    Eq(st.cfg.pts, R.DEFAULTS.pts, "reglages par defaut")
+    Ok(next(st.raids) == nil and next(st.sr) == nil and next(st.pts) == nil, "plus d objets, de SR ni de points")
+    Ok(not R.Can(st.cfg, 1, "fix"), "droits par defaut")
+    -- une ecriture d avant (un absent qui la renvoie) : refusee
+    Eq(store:Add(old), "old", "ancienne ecriture refusee")
+    Eq(store:Add({ a = "A", t = reset.t - 1, n = 1, rk = 5, w = 1, k = "sr", i = { X } }), "old", "juste avant : refusee")
+    -- apres : acceptee
+    Eq(store:Add({ a = "A", t = reset.t + 60, n = 1, rk = 5, w = 1, k = "sr", i = { Y } }), "new", "SR apres")
+    Eq(J.SR(store:State(), 1, "A")[1], Y, "SR apres compte")
+    -- une reinitialisation plus ancienne : refusee ; une plus recente : efface encore
+    Eq(store:Add({ a = "GM", t = reset.t - 600, n = 1, rk = 0, w = 1, k = "reset" }), "old", "reinitialisation plus ancienne")
+    local again = { a = "GM", t = reset.t + 120, n = 1, rk = 0, w = 1, k = "reset" }
+    Eq(store:Add(again), "reset", "nouvelle reinitialisation")
+    Eq(store:Count(), 1, "il ne reste qu elle")
+    Eq(store.reset, again, "la derniere")
+end)
+
+Test("reinitialisation : sauvegarde relue, annulation impossible", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X })
+    local reset = b:E("GM", 1, "reset", {})
+    b:SR("B", 1, { Y })
+    local list = { b.list[3], b.list[1], b.list[2] }
+    local store = J.NewStore(list)
+    Eq(store:Count(), 2, "relue : l ancien SR est retire")
+    Eq(store.reset, reset, "reinitialisation retrouvee")
+    Ok(J.SR(store:State(), 1, "A") == nil and J.SR(store:State(), 1, "B")[1] == Y, "seul le SR d apres")
+    local u = b:E("GM", 1, "undo", { ref = J.Id(reset), y = "oups" })
+    store:Add(u)
+    Eq(store:State().byId[J.Id(u)].why, "target", "on n annule pas une reinitialisation")
+end)

@@ -19,7 +19,7 @@ local KINDS = {
     { "*", "KIND_ALL" }, { "sr", "KIND_SR" }, { "session", "KIND_SESSION" }, { "award", "KIND_AWARD" },
     { "fix", "KIND_FIX" }, { "undo", "KIND_UNDO" }, { "cfg", "KIND_CFG" },
 }
-local GROUP = { open = "session", lock = "session", pres = "session", close = "session", raid = "cfg" }
+local GROUP = { open = "session", lock = "session", pres = "session", close = "session", raid = "cfg", reset = "cfg" }
 
 function ns.CatLabel(c) return L["CAT_" .. tostring(c)] end
 
@@ -70,6 +70,8 @@ function ns.Describe(rec, st)
         return L.D_RAID:format(e.nm or ns.RaidName(e.r), #(e.add or {}), #(e.del or {}))
     elseif k == "cfg" then
         return L.D_CFG
+    elseif k == "reset" then
+        return L.D_RESET
     end
     return k
 end
@@ -111,7 +113,7 @@ local function buildRow(list)
         if why then lines[#lines + 1] = { why, 1, 0.4, 0.4 } end
         for _, l in ipairs(ns.Effects(rec)) do lines[#lines + 1] = { l, 1, 0.82, 0.25 } end
         lines[#lines + 1] = { L.TIP_BY:format(ns.Name(rec.e.a), ns.RankName(rec.e.rk), ns.Date(rec.e.t)), 0.6, 0.6, 0.6 }
-        if ns.Can("undo") and rec.e.k ~= "cfg" and rec.st ~= "refused" then lines[#lines + 1] = { L.UNDO_HINT, 0.6, 0.6, 0.6 } end
+        if ns.Can("undo") and rec.e.k ~= "cfg" and rec.e.k ~= "reset" and rec.st ~= "refused" then lines[#lines + 1] = { L.UNDO_HINT, 0.6, 0.6, 0.6 } end
         UI.Tip(self, L["KIND_" .. (GROUP[rec.e.k] or rec.e.k):upper()] or rec.e.k, lines)
     end)
     r:SetScript("OnLeave", UI.HideTip)
@@ -119,7 +121,7 @@ local function buildRow(list)
     -- annuler une annulation retablit l ecriture d origine
     r:SetScript("OnClick", function(self, button)
         local rec = self.d
-        if button ~= "RightButton" or not ns.Can("undo") or rec.e.k == "cfg" or rec.st == "refused" then return end
+        if button ~= "RightButton" or not ns.Can("undo") or rec.e.k == "cfg" or rec.e.k == "reset" or rec.st == "refused" then return end
         ns.Prompt({
             title = L.UNDO_TITLE, text = ns.Describe(rec), fields = { { L.FIX_WHY, "" } }, ok = L.UNDO_OK,
             onOK = function(v)

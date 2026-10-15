@@ -10,7 +10,8 @@
                   Acceptee si l expediteur (pose par le serveur, impossible
                   a usurper) est bien l auteur, avec son grade actuel.
       S  GUILD    resume : { n = total, h = empreinte, w = { [semaine] = { n, h } },
-                  a = true pour demander les resumes des autres (connexion).
+                  a = true pour demander les resumes des autres (connexion),
+                  x = id de la derniere reinitialisation du GM (s il y en a).
                   Un resume identique deja diffuse par un autre n est pas
                   repete (une diffusion suffit pour toute la guilde).
          WHISPER  le meme, en prive, pour pousser l autre a se rattraper.
@@ -24,6 +25,11 @@
     Rattrapage entre deux membres A et B qui different : un seul lance
     (celui qui a le moins d ecritures dans les semaines en cause, ou a
     egalite la plus petite cle) ; l echange pousse dans les deux sens.
+    Reinitialisation (ecriture « reset » du GM) : si les x different, on
+    regle d abord ca, sans comparer le reste. Le plus a jour donne sa
+    reinitialisation (R), l autre la demande (G) ; en la recevant, il
+    efface tout ce qui la precede et renvoie son resume en prive. Les
+    ecritures d avant la reinitialisation sont refusees par le magasin.
 
     Fourni par l appelant (opts) :
       store, me (cle), send(kind, payload, channel, target), now() en
@@ -66,6 +72,8 @@ function Sync.New(opts)
         stats = { E = 0, S = 0, Q = 0, I = 0, G = 0, R = 0, W = 0, rejected = 0, added = 0 },
         week = opts.week, version = opts.version, onPeer = opts.onPeer,
         wantFull = {},      -- [pair] = heure : detail des vieilles semaines deja demande
+        wantReset = {},     -- [pair] = heure : sa reinitialisation deja demandee
+        gaveReset = {},     -- [pair] = heure : notre reinitialisation deja donnee
     }, O)
     o.nextPeriodic = o.now() + Sync.PERIOD * (0.5 + o.random(100) / 200)
     return o
@@ -112,20 +120,25 @@ function O:Summary(full, cutoff)
     end
     local s = { n = n, h = h, w = out }
     if cutoff then s.o, s.c = { on, oh }, cutoff end
+    if self.store.reset then s.x = J.Id(self.store.reset) end
     return s
 end
 
--- ajoute des ecritures recues ; rend le nombre de nouvelles
+-- ajoute des ecritures recues ; rend le nombre de nouvelles, et true si
+-- une reinitialisation plus recente est arrivee (tout ce qui la precede
+-- vient d etre efface)
 function O:absorb(list)
-    local added = 0
+    local added, reset = 0, false
     for _, e in ipairs(list) do
-        if self.store:Add(e) == "new" then added = added + 1 end
+        local r = self.store:Add(e)
+        if r == "new" or r == "reset" then added = added + 1 end
+        if r == "reset" then reset = true end
     end
     if added > 0 then
         self.stats.added = self.stats.added + added
         self.changed()
     end
-    return added
+    return added, reset
 end
 
 ------------------------------------------------------------------------------
@@ -245,6 +258,7 @@ end
 -- (Sync.IDLE secondes sans rien : liberee). Le resume du pair est garde
 -- pour reessayer plus tard les semaines encore reservees.
 function O:consider(key, sender, s)
+    if s.x ~= (self.store.reset and J.Id(self.store.reset)) then return self:resetFirst(key, sender, s) end
     local compact = s.o ~= nil
     local mine = self:Summary(not compact, compact and s.c or nil)
     if s.n == mine.n and s.h == mine.h then
@@ -296,6 +310,28 @@ function O:consider(key, sender, s)
     self:out("Q", { ws = ws, all = all }, "WHISPER", sender)
 end
 
+-- Les deux n ont pas la meme reinitialisation : le plus a jour donne la
+-- sienne, l autre la demande. Le resume du pair est garde : une fois la
+-- reinitialisation recue, la comparaison normale reprend (Tick).
+function O:resetFirst(key, sender, s)
+    local now = self.now()
+    local theirs, mine = J.FromId(s.x), self.store.reset
+    if theirs and (not mine or J.Before(mine, theirs)) then
+        local p = self.peers[key]
+        if not p or p.s ~= s then self.peers[key] = { sender = sender, s = s, tries = 0 } end
+        if (self.wantReset[key] or 0) <= now then
+            self.wantReset[key] = now + Sync.BUSY
+            self:out("G", { ids = { s.x } }, "WHISPER", sender)
+        end
+        return
+    end
+    self.peers[key] = nil
+    if mine and (self.gaveReset[key] or 0) <= now then
+        self.gaveReset[key] = now + Sync.BUSY
+        self:push({ mine }, sender)
+    end
+end
+
 -- demande du detail de toutes les semaines : resume complet, en prive
 function H.W(self, _, channel, sender)
     if channel ~= "WHISPER" then return end
@@ -305,6 +341,7 @@ end
 function H.S(self, s, channel, sender, who)
     if type(s) ~= "table" or type(s.w) ~= "table" or type(s.n) ~= "number" then return end
     if s.o ~= nil and (type(s.o) ~= "table" or type(s.c) ~= "number") then return end
+    if s.x ~= nil and type(s.x) ~= "string" then return end
     local now = self.now()
     local mine = self:Summary()
     if channel == "GUILD" and s.n == mine.n and s.h == mine.h then self.lastSame = now end
@@ -404,6 +441,8 @@ function H.R(self, batch, channel, sender, who)
             weeks[e.w] = true
         end
     end
-    self:absorb(ok)
+    local _, reset = self:absorb(ok)
     self:alive(who.key, weeks)
+    -- reinitialisation recue : on repart de notre nouveau resume avec lui
+    if reset then self:out("S", self:Summary(), "WHISPER", sender) end
 end

@@ -8,6 +8,8 @@
     sur une case de droit ; puis « Publier » ecrit des reglages complets au
     journal, diffuses a toute la guilde. Seuls ceux du GM comptent (le
     rejeu refuse les autres).
+    « Tout reinitialiser » (GM seul, mot RESET a taper) : tout repart de
+    zero pour toute la guilde (ecriture « reset », voir Engine/Journal.lua).
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...
@@ -181,6 +183,26 @@ local function build(parent)
     reset:SetPoint("RIGHT", publishBtn, "LEFT", -6, 0)
     f.publish, f.reset = publishBtn, reset
 
+    -- reinitialisation complete (GM) : il faut taper le mot pour confirmer
+    local wipe = UI.Button(f, L.WIPE, 150, function()
+        ns.Prompt({
+            title = L.WIPE_TITLE, text = L.WIPE_TEXT, ok = L.WIPE,
+            fields = { { L.WIPE_FIELD, "" } },
+            onOK = function(v)
+                local word = (v[1] or ""):gsub("%s", ""):upper()
+                if word ~= L.WIPE_WORD:upper() then return L.WIPE_BAD end
+                local ok, why = ns.ResetAll()
+                if not ok then return L.WRITE_FAILED:format(tostring(why)) end
+                S.dirty, S.draft = false, nil
+                ns.Panel.Notice(L.WIPE_DONE)
+                return true
+            end,
+        })
+    end)
+    wipe:SetPoint("TOPLEFT", RIGHT_X, -262)
+    wipe.tip = { L.WIPE, { L.WIPE_TIP } }
+    f.wipe = wipe
+
     local note = UI.Text(f, "GameFontDisableSmall")
     note:SetPoint("BOTTOMLEFT", 4, 4)
     note:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -280, 4)
@@ -233,6 +255,7 @@ local function refresh(f)
     end
     f.publish:SetShown(gm)
     f.reset:SetShown(gm)
+    f.wipe:SetShown(gm)
     f.publish:SetActive(differs())
     f.reset:SetActive(S.dirty)
     if gm then

@@ -36,7 +36,7 @@ local function build()
     f.text = UI.Text(card, "GameFontHighlightSmall")
     f.text:SetPoint("TOPLEFT", 14, -36)
     f.text:SetPoint("TOPRIGHT", -14, -36)
-    f.text:SetHeight(34)
+    f.text:SetHeight(38)
     f.text:SetWordWrap(true)
     f.fields = {}
     for i = 1, 2 do

@@ -280,12 +280,42 @@ function ns.Write(kind, fields)
     local e = { a = me, t = t, n = store:NextN(me, t), rk = rank, w = ns.Week(t), k = kind }
     for k, v in pairs(fields) do e[k] = v end
     local res = store:Add(e)
-    if res ~= "new" then return nil, res end
+    if res ~= "new" and res ~= "reset" then return nil, res end
     ns.Fire("data")
     -- la vraie guilde seulement : la demo n envoie jamais rien
     if not ns.demo then ns.Fire("written", e) end
     return e
 end
+
+--- Reinitialisation complete par le GM (droit du GM seul, controle par le
+-- journal) : chez chaque membre, tout ce qui la precede est efface.
+function ns.ResetAll()
+    if not ns.IsGM() then return nil, "right" end
+    return ns.Write("reset", {})
+end
+
+-- Une reinitialisation vient d arriver (la notre, ou recue de la guilde) :
+-- on le dit, et ce qui tournait sur les anciennes donnees s arrete.
+local function newStore(list)
+    local s = J.NewStore(list)
+    s.seenReset = s.reset
+    return s
+end
+
+ns.On("data", function()
+    local s = ns.Store()
+    if not s or s.reset == s.seenReset then return end
+    s.seenReset = s.reset
+    if not s.reset then return end
+    if ns.Distrib then
+        if ns.Distrib.cur then ns.Distrib.Finish() end
+        ns.Distrib.leftover, ns.Distrib.last = nil, nil
+    end
+    if ns.Raider then ns.Raider.Hide() end
+    if ns.ui then ns.ui.session, ns.ui.editRaid = nil, nil end
+    say(L.RESET_DONE_BY:format(ns.ColorName(s.reset.a), ns.Date(s.reset.t)))
+    ns.Fire("reset", s.reset)
+end)
 
 ------------------------------------------------------------------------------
 -- Mode demo
@@ -305,7 +335,7 @@ function ns.StartDemo(role)
         now = ns.Now(), nextReset = ns.NextReset(), ranks = t.ranks,
         raids = { MC = L.RAID_MC, ONY = L.RAID_ONY }, texts = t.texts,
     })
-    ns.demo = { store = J.NewStore(built.list), roster = built.roster, role = role or 0 }
+    ns.demo = { store = newStore(built.list), roster = built.roster, role = role or 0 }
     ns.Fire("demo")
     ns.Fire("data")
 end
@@ -359,7 +389,7 @@ function ns.SelectGuild()
     if key == ns.guildKey and ns.store then return end
     ns.guildKey = key
     if not key then
-        ns.store = J.NewStore({})
+        ns.store = newStore({})
     else
         local g = db.guilds[key]
         if type(g) ~= "table" then
@@ -375,7 +405,7 @@ function ns.SelectGuild()
             end
             db.journal = nil
         end
-        ns.store = J.NewStore(g.journal)
+        ns.store = newStore(g.journal)
     end
     if ns.sync then ns.sync.store = ns.store end
     ns.Fire("data")
@@ -388,7 +418,7 @@ local function init()
     if type(db.names) ~= "table" then db.names = {} end
     if type(db.classes) ~= "table" then db.classes = {} end
     ns.db = db
-    ns.store = J.NewStore({})
+    ns.store = newStore({})
 end
 
 local events = CreateFrame("Frame")

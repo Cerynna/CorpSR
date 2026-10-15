@@ -23,6 +23,7 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 - En cas d'égalité, on relance entre les ex æquo. S'il tombe N exemplaires, les N meilleurs gagnent. Seul le premier jet valable compte.
 - Si personne ne veut l'objet, le distributeur choisit : jet libre, banque de guilde ou désenchantement.
 - Le GM règle les valeurs (points, nombre de SR, double SR, portée de « déjà loot », fourchettes). Il choisit aussi les droits grade par grade.
+- Le GM peut **tout réinitialiser** (Réglages, mot RESET à taper) : points, SR, soirées, historique, objets, réglages et droits repartent de zéro pour toute la guilde. Les membres connectés effacent tout de suite, les absents à leur connexion (0.4.6 ou plus) ; une écriture d’avant la réinitialisation est ensuite refusée partout.
 - **Soirée automatique** chez le chef de raid : elle s'ouvre en entrant dans un raid, une seule par soir même sur plusieurs raids. Les SR se verrouillent au premier objet, l'attribution part à l'ouverture du butin et se valide après le délai.
 
 ## Organisation

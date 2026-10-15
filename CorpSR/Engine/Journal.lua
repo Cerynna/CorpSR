@@ -33,6 +33,9 @@
                                       SR : credites au drop (une fois par drop)
         fix    p, i, d, y             correction de d points, raison y obligatoire
         undo   ref, y                 annule l ecriture ref, raison y obligatoire
+        reset                         reinitialisation complete (GM seulement) :
+                                      tout ce qui la precede est efface chez
+                                      chaque membre, puis refuse (voir le magasin)
 
     Rejeu, en trois passes :
       1. droits : reglages en vigueur au moment de chaque ecriture, grade
@@ -68,6 +71,14 @@ J.RIGHT = RIGHT
 local function num(v) return format("%.0f", v) end
 
 function J.Id(e) return e.a .. "." .. num(e.t) .. "." .. num(e.n) end
+
+--- L inverse : { a, t, n } d un identifiant (pour l ordre), ou nil.
+function J.FromId(id)
+    if type(id) ~= "string" then return nil end
+    local a, t, n = id:match("^(.+)%.(%d+)%.(%d+)$")
+    if not a then return nil end
+    return { a = a, t = tonumber(t), n = tonumber(n) }
+end
 
 --- Semaine d une heure du serveur. anchor = heure d une reinitialisation
 -- hebdomadaire (n importe laquelle : seul son reste modulo 7 jours sert).
@@ -125,6 +136,8 @@ local FORM = {
             and isStr(e.y, 200)
     end,
     undo = function(e) return isKey(e.ref) and isStr(e.y, 200) end,
+    -- seul le GM reinitialise : une autre est mal formee, refusee partout
+    reset = function(e) return e.rk == 0 end,
 }
 
 --- Une ecriture bien formee ?
@@ -291,6 +304,7 @@ end
 local APPLY = {}
 
 function APPLY.cfg() return true end
+function APPLY.reset() return true end   -- rien avant elle : l etat part de zero
 function APPLY.undo() return true end
 
 function APPLY.raid(st, e)
@@ -492,7 +506,7 @@ function J.Replay(list)
         local e = sorted[i]
         if e.k == "undo" and valid[i] and not undone[i] then
             local j = index[e.ref]
-            if j and j < i and sorted[j].k ~= "cfg" then
+            if j and j < i and sorted[j].k ~= "cfg" and sorted[j].k ~= "reset" then
                 undone[j] = i
             else
                 valid[i] = nil
@@ -573,32 +587,63 @@ function J.Dropped(st, dr) return st.drops[dr] == true end
 local S = {}
 S.__index = S
 
+-- garde dans la liste (sur place) les ecritures qui passent keep(e)
+local function filter(list, keep)
+    local out = {}
+    for _, e in ipairs(list) do
+        if keep(e) then out[#out + 1] = e end
+    end
+    for i = #list, 1, -1 do list[i] = nil end
+    for i, e in ipairs(out) do list[i] = e end
+end
+
 --- list : la table sauvegardee (CorpSRDB) ; elle est nettoyee sur place
--- (ecritures abimees et doublons retires) puis gardee telle quelle.
+-- (ecritures abimees, doublons et ecritures d avant la derniere
+-- reinitialisation retires) puis gardee telle quelle.
+-- self.reset : la derniere reinitialisation du GM (ecriture « reset »).
 function J.NewStore(list)
     local st = setmetatable({ list = list or {}, byId = {}, dirty = true }, S)
-    local keep = {}
-    for _, e in ipairs(st.list) do
-        if J.Check(e) and not st.byId[J.Id(e)] then
-            st.byId[J.Id(e)] = e
-            keep[#keep + 1] = e
-        end
-    end
-    for i = #st.list, 1, -1 do st.list[i] = nil end
-    for i, e in ipairs(keep) do st.list[i] = e end
+    filter(st.list, function(e)
+        if not J.Check(e) or st.byId[J.Id(e)] then return false end
+        st.byId[J.Id(e)] = e
+        if e.k == "reset" and (not st.reset or before(st.reset, e)) then st.reset = e end
+        return true
+    end)
+    if st.reset then st:purge(st.reset) end
     return st
 end
 
---- Ajoute une ecriture. Rend "new", "dup" (deja la) ou "bad" (mal formee).
+--- Reinitialisation : tout ce qui precede r est efface (sur place : la
+-- sauvegarde maigrit d autant) ; les caches repartent de zero.
+function S:purge(r)
+    self.reset = r
+    filter(self.list, function(e)
+        if before(e, r) then
+            self.byId[J.Id(e)] = nil
+            return false
+        end
+        return true
+    end)
+    self.dirty, self.sumCache, self.idsCache = true, nil, nil
+end
+
+--- Ajoute une ecriture. Rend "new", "reset" (une reinitialisation plus
+-- recente : tout ce qui la precede vient d etre efface), "dup" (deja la),
+-- "old" (d avant la derniere reinitialisation : refusee) ou "bad" (mal formee).
 function S:Add(e)
     if not J.Check(e) then return "bad" end
     local id = J.Id(e)
     if self.byId[id] then return "dup" end
+    if self.reset and before(e, self.reset) then return "old" end
     self.byId[id] = e
     self.list[#self.list + 1] = e
     self.dirty = true
     self.sumCache = nil
     if self.idsCache then self.idsCache[e.w] = nil end
+    if e.k == "reset" then
+        self:purge(e)
+        return "reset"
+    end
     return "new"
 end
 
