@@ -87,3 +87,29 @@ function Rng(seed)
         return 1 + (x % n)
     end
 end
+
+------------------------------------------------------------------------------
+-- Faux jeu complet (interface) : installe l environnement et charge le .toc
+------------------------------------------------------------------------------
+
+function TocFiles()
+    local files = {}
+    for line in ADDON_TOC:gmatch("[^\n]+") do
+        line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if line ~= "" and not line:find("^#") then files[#files + 1] = line end
+    end
+    return files
+end
+
+--- Charge l addon dans un faux jeu neuf. Rend FS (framestub) et ns.
+function Game(opts)
+    local FS = assert(loadfile(TESTS_DIR .. "/framestub.lua"))()
+    FS.Install(opts)
+    local ns = LoadAddon(TocFiles())
+    if not (opts and opts.noLogin) then
+        FS.Fire("ADDON_LOADED", "CorpSR")
+        FS.Fire("PLAYER_LOGIN")
+        FS.RunTimers()
+    end
+    return FS, ns
+end

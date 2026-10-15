@@ -13,7 +13,7 @@
 ## Notes-koKR: 포인트 기반 길드 소프트 예약: 공격대당 SR 2개, 매주 쌓이는 포인트, 주사위 + 포인트. 길드를 통해서만 동기화. /csr 입력
 ## IconTexture: Interface\Icons\INV_Misc_Coin_01
 ## Author: ceryn
-## Version: 0.1.0
+## Version: 0.2.0
 ## OptionalDeps: CorpUI
 ## SavedVariables: CorpSRDB
 
@@ -22,6 +22,19 @@ Locales.lua
 # Moteur : Lua pur, teste hors du jeu (CorpSR-dev/tests)
 Engine\Rules.lua
 Engine\Journal.lua
+Engine\Catalog.lua
+Engine\Demo.lua
 
 Core.lua
 Sonde.lua
+
+# Interface : panneau, vues, fenetre /csr, onglet de la fenetre de guilde
+UI\Style.lua
+UI\Panel.lua
+UI\ViewMine.lua
+UI\ViewPoints.lua
+UI\ViewSession.lua
+UI\ViewHistory.lua
+UI\ViewSettings.lua
+UI\Window.lua
+UI\GuildTab.lua

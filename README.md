@@ -27,9 +27,14 @@ L'addon est autonome : CorpUI est facultatif. Tout se passe dans le jeu, et la s
 CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   Engine/Rules.lua   moteur pur : réglages, droits, catégories, classement d'une attribution
   Engine/Journal.lua journal d'écritures, rejeu déterministe, encodage, résumés de synchro
-  Core.lua           sauvegarde CorpSRDB, commande /csr
+  Engine/Catalog.lua raids connus (MC, Onyxia) : itemIDs seulement
+  Engine/Demo.lua    mode démo : guilde simulée, cinq semaines d'historique passées par le moteur
+  Core.lua           sauvegarde, liste de guilde, vraie guilde ou démo, semaine du serveur, /csr
   Sonde.lua          /csr sonde : mesure ce que le client permet (résultats dans CorpSRDB.sonde)
-tests/               bancs hors jeu (fengari, Lua 5.3) + syntaxe Lua 5.1 (luaparse)
+  UI/                style, panneau, vues (Mes SR, Points, Session, Attribution, Historique,
+                     Réglages), fenêtre /csr, onglet de la fenêtre Guilde & Communautés
+tests/               bancs hors jeu (fengari, Lua 5.3) + syntaxe Lua 5.1 (luaparse) ;
+                     framestub.lua = faux jeu pour charger toute l'interface
 ```
 
 Toutes les données sont un journal : on n'en efface jamais une ligne, et une erreur se corrige par une écriture d'annulation. Points, SR et historique se recalculent en rejouant le journal dans un ordre fixe. Chaque membre garde la copie complète et obtient le même résultat, quel que soit l'ordre d'arrivée des écritures.
@@ -44,7 +49,7 @@ npm test
 ## Avancement
 
 1. Moteur de règles, journal et bancs : **fait** (0.1.0).
-2. Onglet dans la fenêtre Guilde & Communautés, fenêtre `/csr`, vues en lecture, mode démo.
+2. Onglet dans la fenêtre Guilde & Communautés, fenêtre `/csr`, vues, mode démo : **fait** (0.2.0), à vérifier en jeu.
 3. Synchro de guilde, droits et réglages du GM.
 4. Sessions, attribution, lecture des jets, fenêtre côté raideur ; le mode démo rejoue une soirée de raid complète.
 5. Essais en jeu.
