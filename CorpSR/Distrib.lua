@@ -29,6 +29,17 @@ function D.LiveSession()
     return nil
 end
 
+--- Presents a noter au verrouillage : membres de la guilde du groupe et
+-- ceux deja notes a la main.
+function D.PresentKeys(s)
+    local set, out = {}, {}
+    for _, k in ipairs(ns.Raid.GuildKeys()) do set[k] = true end
+    for k in pairs(s.present) do set[k] = true end
+    for k in pairs(set) do out[#out + 1] = k end
+    table.sort(out)
+    return out
+end
+
 local seq = 0
 local function newId()
     seq = seq + 1
@@ -46,6 +57,12 @@ function D.Start(item, count, free)
     local s = D.LiveSession()
     if not s then return nil, "session" end
     if type(item) ~= "number" then return nil, "item" end
+    -- les SR comptent une fois verrouilles : on verrouille au premier objet
+    if not s.locked then
+        if not ns.Can("session") then return nil, "unlocked" end
+        if not ns.Write("lock", { s = s.id, pr = D.PresentKeys(s) }) then return nil, "unlocked" end
+        s = D.LiveSession()
+    end
     if D.cur then D.Finish() end
     D.leftover = nil
     local roster = ns.Roster()
@@ -85,6 +102,8 @@ function D.OnRoll(name, roll, min, max)
     cur.names[m.key] = name
     local c, why = cur.attr:Roll(m.key, roll, min, max)
     if not c and why == "notie" then return end
+    -- validation automatique : un jet qui arrive repousse un peu l echeance
+    if c and cur.deadline then cur.deadline = math.max(cur.deadline, (GetTime and GetTime() or 0) + 5) end
     ns.Fire("distrib", "roll", m.key, c, why)
 end
 

@@ -35,8 +35,10 @@ CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   Comm.lua, Net.lua  transport par le canal d'addon (GUILD, WHISPER) et branchement sur le jeu
   Raid.lua           groupe, butin ouvert, /roll lus dans le chat (modèle localisé)
   Distrib.lua        le distributeur : attribution en direct, relance, validation, reste
+  Auto.lua           soirée automatique chez le chef de raid : ouverture, verrou, butin, validation
   DemoLive.lua       démo d'une soirée : groupe simulé, boss, jets simulés, soirée automatique
   UI/CorpUIPage.lua  page CorpSR dans /corp quand CorpUI est installé (API publique de CorpUI)
+  UI/Minimap.lua     bouton de la minicarte (clic gauche : CorpSR, clic droit : Attribution)
   UI/                style, panneau, vues (Mes SR, Points, Session, Attribution, Historique,
                      Réglages, Raids), fenêtre /csr, onglet de la fenêtre Guilde & Communautés,
                      fenêtre côté raideur, bouton d'annonce sécurisé (/rw), boîte de saisie

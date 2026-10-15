@@ -52,15 +52,7 @@ local function write(kind, fields)
     return ok
 end
 
--- presents a noter au verrouillage : groupe (membres de la guilde) + deja notes
-local function presentKeys(s)
-    local set, out = {}, {}
-    for _, k in ipairs(ns.Raid.GuildKeys()) do set[k] = true end
-    for k in pairs(s.present) do set[k] = true end
-    for k in pairs(set) do out[#out + 1] = k end
-    table.sort(out)
-    return out
-end
+local function presentKeys(s) return ns.Distrib.PresentKeys(s) end
 
 local A = {}
 ns.SessionActions = A

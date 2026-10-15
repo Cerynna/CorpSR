@@ -24,7 +24,7 @@ local D = ns.Distrib
 
 ns.ui = ns.ui or {}
 local S = { item = nil, count = 1, manualCat = "ms", manualKey = nil }
-local LOOT_ICONS = 8
+local LOOT_ICONS = 6
 
 local function link(id)
     local name, l = ns.Item(id)
@@ -180,9 +180,23 @@ local function build(parent)
     -- ligne 1 : soiree, butin
     local head = UI.Text(f, "GameFontNormalSmall")
     head:SetPoint("TOPLEFT", 2, -4)
-    head:SetPoint("TOPRIGHT", f, "TOPLEFT", 300, -4)
+    head:SetPoint("TOPRIGHT", f, "TOPLEFT", 186, -4)
     head:SetHeight(16)
     f.head = head
+    -- soiree automatique (chef de raid) : delai avant validation, ou coupee
+    local auto = UI.Cycle(f, 104, function()
+        local out = {}
+        for _, d in ipairs(ns.Auto.DELAYS) do out[#out + 1] = { d, d == 0 and L.AUTO_OFF or L.AUTO_DELAY:format(d) } end
+        return out
+    end, function() return ns.Auto.Delay() end, function(v) ns.Auto.SetDelay(v) end)
+    auto:SetPoint("TOPLEFT", 190, 0)
+    auto.tip = { L.AUTO_TITLE, { L.AUTO_TIP, L.CYCLE_TIP } }
+    f.auto = auto
+    local timer = UI.Text(f, "GameFontNormalSmall")
+    timer:SetPoint("TOPLEFT", auto, "TOPRIGHT", 6, -4)
+    timer:SetPoint("TOPRIGHT", auto, "TOPRIGHT", 150, -4)
+    timer:SetHeight(16)
+    f.timer = timer
     f.loot = {}
     for i = 1, LOOT_ICONS do
         local b = CreateFrame("Button", nil, f)
@@ -200,7 +214,7 @@ local function build(parent)
     end
     local lootLabel = UI.Text(f, "GameFontDisableSmall", "RIGHT")
     lootLabel:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(LOOT_ICONS * 26) - 4, -4)
-    lootLabel:SetPoint("TOPLEFT", head, "TOPRIGHT", 4, 0)
+    lootLabel:SetPoint("TOPLEFT", timer, "TOPRIGHT", 4, 0)
     lootLabel:SetHeight(16)
     f.lootLabel = lootLabel
 
@@ -374,7 +388,22 @@ local function build(parent)
     return f
 end
 
+-- compte a rebours de la validation automatique (et pourquoi elle est coupee)
+local function refreshTimer(f)
+    local left = ns.Auto.Remaining()
+    if left then
+        f.timer:SetText(UI.Hex("gold") .. L.AUTO_COUNTDOWN:format(left) .. "|r")
+    elseif ns.Auto.Delay() > 0 and not ns.Auto.Leader() then
+        f.timer:SetText(UI.Hex("dim") .. L.AUTO_NOT_LEADER .. "|r")
+    else
+        f.timer:SetText("")
+    end
+end
+
 local function refresh(f)
+    S.frame = f
+    f.auto:Update()
+    refreshTimer(f)
     local s = D.LiveSession()
     local cur = D.cur
     f.head:SetText(s and L.AW_SESSION:format(ns.RaidName(s.r)) or (UI.Hex("dim") .. L.AW_NO_SESSION .. "|r"))
@@ -391,7 +420,7 @@ local function refresh(f)
             b:Hide()
         end
     end
-    f.lootLabel:SetText(#loot > 0 and L.AW_LOOT or "")
+    f.lootLabel:SetText("")   -- les icones parlent d elles-memes (infobulle)
 
     -- objet choisi
     local item = cur and cur.item or S.item
@@ -450,4 +479,5 @@ ns.On("loot", function()
     if not D.cur and loot[1] then S.item = loot[1] end
     if ns.Panel.frame then ns.Panel.Refresh() end
 end)
+function S.Tick() if S.frame then refreshTimer(S.frame) end end
 ns.AwardView = S

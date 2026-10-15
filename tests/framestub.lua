@@ -190,6 +190,11 @@ function FS.Install(opts)
         end,
     }
     _G.IsShiftKeyDown = function() return FS.shift end
+    FS.leader = false
+    _G.UnitIsGroupLeader = function() return FS.leader end
+    _G.Minimap = newObj("Frame", "Minimap", UIParent)
+    Minimap._w, Minimap._h = 140, 140
+    _G.GetCursorPosition = function() return 0, 0 end
     _G.GetCursorInfo = function() if FS.cursor then return FS.cursor[1], FS.cursor[2] end end
     _G.ClearCursor = function() FS.cursor = nil end
     _G.GetTime = function() return FS.time end

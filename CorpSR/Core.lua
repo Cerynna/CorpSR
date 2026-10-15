@@ -436,6 +436,8 @@ SlashCmdList.CORPSR = function(input)
         ns.SondeCommand()
     elseif cmd == "sync" then
         if ns.SyncNow then ns.SyncNow() end
+    elseif cmd == "minimap" then
+        if ns.MinimapButton then ns.MinimapButton.Toggle() end
     elseif cmd == "demo" then
         if ns.demo then ns.StopDemo() else ns.StartDemo(0) end
         if ns.ShowWindow then ns.ShowWindow(true) end
