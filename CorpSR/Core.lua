@@ -297,10 +297,17 @@ function ns.StartDemo(role)
         raids = { MC = L.RAID_MC, ONY = L.RAID_ONY }, texts = t.texts,
     })
     ns.demo = { store = J.NewStore(built.list), roster = built.roster, role = role or 0 }
+    ns.Fire("demo")
     ns.Fire("data")
 end
 
 function ns.StopDemo()
+    -- une attribution de demo en cours s arrete avec elle (rien n est envoye)
+    if ns.Distrib then
+        if ns.Distrib.cur then ns.Distrib.Finish() end
+        ns.Distrib.leftover, ns.Distrib.last = nil, nil
+    end
+    if ns.Raider then ns.Raider.Hide() end
     ns.demo = nil
     ns.Fire("data")
 end

@@ -14,6 +14,9 @@
 local _, ns = ...
 local L = ns.L
 
+-- messages de l attribution en cours (fenetre de raideur), hors journal
+local RAIDER = { A = true, T = true, Z = true }
+
 local function member(sender)
     if type(sender) ~= "string" then return nil end
     local r = ns.GuildRoster()
@@ -37,7 +40,11 @@ local function start()
         changed = function() ns.Later("synced", 0.5, function() ns.Fire("data") end) end,
     })
     ns.Comm.OnMessage(function(kind, payload, channel, sender)
-        if ns.sync then ns.sync:OnMessage(kind, payload, channel, sender) end
+        if RAIDER[kind] then
+            if ns.Raider then ns.Raider.OnMessage(kind, payload, channel, sender) end
+        elseif ns.sync then
+            ns.sync:OnMessage(kind, payload, channel, sender)
+        end
     end)
     ns.sync:Login()
     if C_Timer and C_Timer.NewTicker then

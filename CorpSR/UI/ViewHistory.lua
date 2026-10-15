@@ -116,9 +116,25 @@ local function buildRow(list)
         if why then lines[#lines + 1] = { why, 1, 0.4, 0.4 } end
         for _, l in ipairs(ns.Effects(rec)) do lines[#lines + 1] = { l, 1, 0.82, 0.25 } end
         lines[#lines + 1] = { L.TIP_BY:format(ns.Name(rec.e.a), ns.RankName(rec.e.rk), ns.Date(rec.e.t)), 0.6, 0.6, 0.6 }
+        if ns.Can("undo") and rec.e.k ~= "cfg" and rec.st ~= "refused" then lines[#lines + 1] = { L.UNDO_HINT, 0.6, 0.6, 0.6 } end
         UI.Tip(self, L["KIND_" .. (GROUP[rec.e.k] or rec.e.k):upper()] or rec.e.k, lines)
     end)
     r:SetScript("OnLeave", UI.HideTip)
+    -- clic droit (droit « undo ») : annuler l ecriture, raison obligatoire ;
+    -- annuler une annulation retablit l ecriture d origine
+    r:SetScript("OnClick", function(self, button)
+        local rec = self.d
+        if button ~= "RightButton" or not ns.Can("undo") or rec.e.k == "cfg" or rec.st == "refused" then return end
+        ns.Prompt({
+            title = L.UNDO_TITLE, text = ns.Describe(rec), fields = { { L.FIX_WHY, "" } }, ok = L.UNDO_OK,
+            onOK = function(v)
+                if not v[1]:find("%S") then return L.FIX_NEED_WHY end
+                local ok, why = ns.Write("undo", { ref = rec.id, y = v[1]:sub(1, 200) })
+                if not ok then return L.WRITE_FAILED:format(tostring(why)) end
+                return true
+            end,
+        })
+    end)
     return r
 end
 

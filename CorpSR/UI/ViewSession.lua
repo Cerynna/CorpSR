@@ -1,14 +1,19 @@
 --[[--------------------------------------------------------------------------
-    CorpSR - vues « Session » et « Attribution » (selon les droits)
+    CorpSR - vue « Session » (droits « session » ou « presence »)
 
-    Session : les soirees (la plus recente en haut) ; pour la soiree
-    choisie, qui l a ouverte, son etat, les presents, les SR verrouilles
-    de chacun et les points credites. Avant le verrouillage, on ne voit
-    que qui a pose ses SR, pas sur quoi.
-    Attribution : les objets attribues pendant la soiree choisie, avec le
-    classement complet en infobulle.
-    Les actions (ouvrir, verrouiller, lancer une attribution) arrivent
-    avec la livraison 4 ; ces vues sont en lecture pour l instant.
+    A gauche, les soirees (la plus recente en haut). A droite, pour la
+    soiree choisie : qui l a ouverte, son etat, les presents, les SR
+    verrouilles de chacun et les points credites. Avant le verrouillage,
+    on ne voit que qui a pose ses SR, pas sur quoi.
+    Actions selon les droits :
+      - ouvrir une soiree (raid de l instance propose d abord) ;
+      - verrouiller les SR (confirmation) : les membres de la guilde
+        presents dans le groupe recoivent leurs points ;
+      - « Ajouter les arrivants » : membres du groupe pas encore notes
+        presents (retardataires) ; clic droit sur un membre : present ou
+        absent ;
+      - fermer la soiree.
+    En mode demo : « Simuler un boss » (butin) et « Soiree automatique ».
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...
@@ -17,6 +22,7 @@ local UI = ns.UI
 local J = ns.Journal
 
 ns.ui = ns.ui or {}
+local S = { raid = nil }
 
 local function sessions()
     local st = ns.State()
@@ -40,12 +46,57 @@ local function stateText(s)
     return UI.Hex("good") .. L.S_OPEN .. "|r"
 end
 
-local function sessionLabel(s)
-    return ns.RaidName(s.r) .. "  " .. UI.Hex("dim") .. ns.Date(s.t) .. "|r"
+local function write(kind, fields)
+    local ok, why = ns.Write(kind, fields)
+    if not ok then ns.Panel.Notice(L.WRITE_FAILED:format(tostring(why)), true) end
+    return ok
 end
 
-------------------------------------------------------------------------------
--- Session
+-- presents a noter au verrouillage : groupe (membres de la guilde) + deja notes
+local function presentKeys(s)
+    local set, out = {}, {}
+    for _, k in ipairs(ns.Raid.GuildKeys()) do set[k] = true end
+    for k in pairs(s.present) do set[k] = true end
+    for k in pairs(set) do out[#out + 1] = k end
+    table.sort(out)
+    return out
+end
+
+local A = {}
+ns.SessionActions = A
+
+function A.Open(raid)
+    if not raid then return end
+    local e = write("open", { r = raid })
+    if e then ns.ui.session = J.Id(e) end
+    return e
+end
+
+function A.Lock(s, confirmed)
+    local pr = presentKeys(s)
+    if confirmed then return write("lock", { s = s.id, pr = pr }) end
+    ns.Prompt({
+        title = L.LOCK_TITLE, text = L.LOCK_TEXT:format(ns.RaidName(s.r), #pr), ok = L.LOCK,
+        onOK = function()
+            write("lock", { s = s.id, pr = pr })
+            return true
+        end,
+    })
+end
+
+function A.Arrivals(s)
+    local n = 0
+    for _, k in ipairs(ns.Raid.GuildKeys()) do
+        if not s.present[k] then
+            if write("pres", { s = s.id, p = k, on = true }) then n = n + 1 end
+        end
+    end
+    ns.Panel.Notice(L.ARRIVALS_DONE:format(n))
+    return n
+end
+
+function A.Close(s) return write("close", { s = s.id }) end
+
 ------------------------------------------------------------------------------
 
 local function buildSessionRow(list)
@@ -61,7 +112,7 @@ end
 local function updateSessionRow(r, s, index)
     r.d = s
     r:Shade(index, s.id == ns.ui.session)
-    r.cols.name:SetText(sessionLabel(s))
+    r.cols.name:SetText(ns.RaidName(s.r) .. "  " .. UI.Hex("dim") .. ns.Date(s.t) .. "|r")
     r.cols.st:SetText(stateText(s))
 end
 
@@ -70,13 +121,21 @@ local MCOLS = { { "name", 140 }, { "sr" }, { "here", 66, "CENTER" }, { "pts", 56
 local function buildMemberRow(list)
     local r = UI.Row(list)
     r.cols = UI.Columns(r, MCOLS)
+    r:SetScript("OnClick", function(self, button)
+        local s = current()
+        if button ~= "RightButton" or not s or s.closed or not ns.Can("presence") then return end
+        write("pres", { s = s.id, p = self.d.p, on = not self.d.here })
+    end)
     r:SetScript("OnEnter", function(self)
         local d = self.d
         local lines = {}
-        for _, i in ipairs(d.items or {}) do lines[#lines + 1] = ns.ItemText(i) end
+        if d.visible then
+            for _, i in ipairs(d.items or {}) do lines[#lines + 1] = ns.ItemText(i) end
+        end
         if d.got then
             for i, n in pairs(d.got) do lines[#lines + 1] = { L.FX:format("+" .. n, ns.Name(d.p), ns.Item(i) or ("#" .. i)), 1, 0.82, 0.25 } end
         end
+        if ns.Can("presence") then lines[#lines + 1] = { L.PRESENCE_TIP, 0.6, 0.6, 0.6 } end
         UI.Tip(self, ns.Name(d.p), lines)
     end)
     r:SetScript("OnLeave", UI.HideTip)
@@ -105,6 +164,10 @@ local function members(st, s)
     local srs = st.sr[rw] or {}
     local credited = st.credited[rw] or {}
     local seen, out = {}, {}
+    local inGroup = {}
+    if not s.closed and not s.locked then
+        for _, k in ipairs(ns.Raid.GuildKeys()) do inGroup[k] = true end
+    end
     local function add(p)
         if seen[p] then return end
         seen[p] = true
@@ -114,11 +177,12 @@ local function members(st, s)
             for _, n in pairs(c.got) do total = total + n end
         end
         out[#out + 1] = {
-            p = p, name = ns.Name(p), items = srs[p], here = s.present[p] == true,
+            p = p, name = ns.Name(p), items = srs[p], here = s.present[p] == true or inGroup[p] == true,
             visible = s.locked ~= nil or p == ns.Me(), got = (c and c.s == s.id) and c.got or nil, total = total,
         }
     end
     for p in pairs(s.present) do add(p) end
+    for p in pairs(inGroup) do add(p) end
     for p in pairs(srs) do add(p) end
     table.sort(out, function(a, b)
         if a.here ~= b.here then return a.here end
@@ -127,11 +191,11 @@ local function members(st, s)
     return out
 end
 
-local function buildSession(parent)
+local function build(parent)
     local f = CreateFrame("Frame", nil, parent)
     local left = UI.List(f, 22, buildSessionRow, updateSessionRow)
     left:SetPoint("TOPLEFT", 0, 0)
-    left:SetPoint("BOTTOMLEFT", 0, 0)
+    left:SetPoint("BOTTOMLEFT", 0, 28)
     left:SetWidth(232)
     left.emptyText:SetText(L.SESSION_EMPTY)
     f.left = left
@@ -146,22 +210,86 @@ local function buildSession(parent)
     sub:SetPoint("TOPRIGHT", -4, -20)
     sub:SetHeight(14)
     f.sub = sub
-    local soon = UI.Text(f, "GameFontDisableSmall")
-    soon:SetPoint("TOPLEFT", 244, -36)
-    soon:SetPoint("TOPRIGHT", -4, -36)
-    soon:SetHeight(14)
-    soon:SetText(L.SESSION_SOON)
+
+    -- ouvrir
+    local raid = UI.Cycle(f, 170, function()
+        local out = {}
+        for _, r in ipairs(ns.Raids()) do out[#out + 1] = { r.key, ns.RaidName(r) } end
+        return out
+    end, function() return S.raid end, function(v) S.raid = v end)
+    raid:SetPoint("TOPLEFT", 240, -38)
+    f.raid = raid
+    local open = UI.Button(f, L.OPEN, 90, function() A.Open(S.raid) end)
+    open:SetPoint("LEFT", raid, "RIGHT", 4, 0)
+    f.open = open
+    -- soiree en cours
+    local lock = UI.Button(f, L.LOCK, 100, function()
+        local s = current()
+        if s then A.Lock(s) end
+    end)
+    lock:SetPoint("TOPLEFT", 240, -38)
+    f.lock = lock
+    local arrivals = UI.Button(f, L.ARRIVALS, 140, function()
+        local s = current()
+        if s then A.Arrivals(s) end
+    end)
+    arrivals:SetPoint("LEFT", lock, "RIGHT", 4, 0)
+    arrivals.tip = { L.ARRIVALS, { L.ARRIVALS_TIP } }
+    f.arrivals = arrivals
+    local close = UI.Button(f, L.CLOSE, 90, function()
+        local s = current()
+        if s then A.Close(s) end
+    end)
+    close:SetPoint("LEFT", arrivals, "RIGHT", 4, 0)
+    f.close = close
+
+    -- demo
+    local boss = UI.Button(f, L.DEMO_BOSS, 114, function() ns.DemoLive.Boss() end)
+    boss:SetPoint("BOTTOMLEFT", 0, 0)
+    boss.tip = { L.DEMO_BOSS, { L.DEMO_BOSS_TIP } }
+    f.boss = boss
+    local auto = UI.Button(f, L.DEMO_AUTO, 114, function() ns.DemoLive.Auto() end)
+    auto:SetPoint("LEFT", boss, "RIGHT", 4, 0)
+    auto.tip = { L.DEMO_AUTO, { L.DEMO_AUTO_TIP } }
+    f.auto = auto
 
     local list = UI.List(f, 20, buildMemberRow, updateMemberRow)
-    list:SetPoint("TOPLEFT", 240, -56)
+    list:SetPoint("TOPLEFT", 240, -64)
     list:SetPoint("BOTTOMRIGHT", 0, 0)
     f.list = list
     return f
 end
 
-local function refreshSession(f)
+local function refresh(f)
     local s = current()
+    local live = ns.Distrib.LiveSession()
     f.left:SetData(sessions(), true)
+
+    -- raid propose : celui de l instance, sinon le premier
+    local ok = false
+    for _, r in ipairs(ns.Raids()) do
+        if r.key == S.raid then ok = true end
+    end
+    if not ok then S.raid = ns.Raid.CurrentRaidKey() or (ns.Raids()[1] and ns.Raids()[1].key) end
+    f.raid:Update()
+    local canSession = ns.Can("session")
+    f.raid:SetShown(canSession and not live)
+    f.open:SetShown(canSession and not live)
+    f.open:SetActive(S.raid ~= nil)
+    local mine = s and not s.closed
+    f.lock:SetShown(canSession and mine and not s.locked)
+    f.close:SetShown(canSession and mine)
+    f.arrivals:SetShown(ns.Can("presence") and mine)
+    if not f.lock:IsShown() then
+        f.arrivals:ClearAllPoints()
+        f.arrivals:SetPoint("TOPLEFT", 240, -38)
+    else
+        f.arrivals:ClearAllPoints()
+        f.arrivals:SetPoint("LEFT", f.lock, "RIGHT", 4, 0)
+    end
+    f.boss:SetShown(ns.demo ~= nil)
+    f.auto:SetShown(ns.demo ~= nil)
+
     if not s then
         f.head:SetText("")
         f.sub:SetText("")
@@ -180,95 +308,5 @@ ns.RegisterView({
     key = "session", order = 3,
     label = function() return L.TAB_SESSION end,
     visible = function() return ns.Can("session") or ns.Can("presence") end,
-    build = buildSession, refresh = refreshSession,
-})
-
-------------------------------------------------------------------------------
--- Attribution
-------------------------------------------------------------------------------
-
-local ACOLS = {
-    { "pad", 24 }, { "item" }, { "who", 130 }, { "cat", 64, "CENTER" }, { "roll", 40, "RIGHT" },
-    { "pts", 44, "RIGHT" }, { "total", 50, "RIGHT" },
-}
-
-local function buildAwardRow(list)
-    local r = UI.Row(list)
-    r.icon = UI.Icon(r, 18)
-    r.icon:SetPoint("LEFT", 4, 0)
-    r.cols = UI.Columns(r, ACOLS)
-    r:SetScript("OnEnter", function(self)
-        local rec = self.d
-        local e = rec.e
-        local lines = {}
-        local why = ns.Reason(rec)
-        if why then lines[#lines + 1] = { why, 1, 0.4, 0.4 } end
-        for x, q in ipairs(e.q or {}) do
-            lines[#lines + 1] = L.RANK_LINE:format(x, ns.Name(q[1]), ns.CatLabel(q[2]), q[3])
-        end
-        UI.Tip(self, nil, lines, e.i)
-    end)
-    r:SetScript("OnLeave", UI.HideTip)
-    return r
-end
-
-local function updateAwardRow(r, rec, index)
-    local e = rec.e
-    r.d = rec
-    r:Shade(index, e.p == ns.Me())
-    r.icon:SetItem(e.i)
-    local item = ns.ItemText(e.i)
-    if rec.st ~= "ok" then item = item .. "  " .. ns.Status(rec) end
-    r.cols.item:SetText(item)
-    r.cols.who:SetText(e.p and ns.ColorName(e.p) or "")
-    r.cols.cat:SetText(ns.CatLabel(e.c))
-    r.cols.roll:SetText(e.r and tostring(e.r) or "")
-    r.cols.pts:SetText((e.c == "sr" and e.pt) and tostring(e.pt) or "")
-    r.cols.total:SetText(e.r and (UI.Hex("gold") .. (e.r + ((e.c == "sr" and e.pt) or 0)) .. "|r") or "")
-end
-
-local function buildAward(parent)
-    local f = CreateFrame("Frame", nil, parent)
-    local pick = UI.Cycle(f, 260, function()
-        local out = {}
-        for _, s in ipairs(sessions()) do out[#out + 1] = { s.id, sessionLabel(s) } end
-        return out
-    end, function() return ns.ui.session end, function(v)
-        ns.ui.session = v
-        ns.Panel.Refresh()
-    end)
-    pick:SetPoint("TOPLEFT", 0, 0)
-    pick.tip = { L.TAB_SESSION, { L.CYCLE_TIP } }
-    f.pick = pick
-    local soon = UI.Text(f, "GameFontDisableSmall", "RIGHT")
-    soon:SetPoint("TOPLEFT", pick, "TOPRIGHT", 8, -4)
-    soon:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
-    soon:SetHeight(14)
-    soon:SetText(L.AWARD_SOON)
-
-    local list = UI.List(f, 22, buildAwardRow, updateAwardRow)
-    list:SetPoint("TOPLEFT", 0, -28)
-    list:SetPoint("BOTTOMRIGHT", 0, 0)
-    list.emptyText:SetText(L.AWARD_EMPTY)
-    f.list = list
-    return f
-end
-
-local function refreshAward(f)
-    local s = current()
-    f.pick:Update()
-    local out = {}
-    if s then
-        for _, rec in ipairs(ns.State().log) do
-            if rec.e.k == "award" and rec.e.s == s.id then out[#out + 1] = rec end
-        end
-    end
-    f.list:SetData(out, true)
-end
-
-ns.RegisterView({
-    key = "award", order = 4,
-    label = function() return L.TAB_AWARD end,
-    visible = function() return ns.Can("award") end,
-    build = buildAward, refresh = refreshAward,
+    build = build, refresh = refresh,
 })

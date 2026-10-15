@@ -33,8 +33,12 @@ CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   Sonde.lua          /csr sonde : mesure ce que le client permet (résultats dans CorpSRDB.sonde)
   Engine/Sync.lua    protocole de synchro de guilde (résumés, rattrapage en privé), Lua pur
   Comm.lua, Net.lua  transport par le canal d'addon (GUILD, WHISPER) et branchement sur le jeu
+  Raid.lua           groupe, butin ouvert, /roll lus dans le chat (modèle localisé)
+  Distrib.lua        le distributeur : attribution en direct, relance, validation, reste
+  DemoLive.lua       démo d'une soirée : groupe simulé, boss, jets simulés, soirée automatique
   UI/                style, panneau, vues (Mes SR, Points, Session, Attribution, Historique,
-                     Réglages, Raids), fenêtre /csr, onglet de la fenêtre Guilde & Communautés
+                     Réglages, Raids), fenêtre /csr, onglet de la fenêtre Guilde & Communautés,
+                     fenêtre côté raideur, bouton d'annonce sécurisé (/rw), boîte de saisie
 tests/               bancs hors jeu (fengari, Lua 5.3) + syntaxe Lua 5.1 (luaparse) ;
                      framestub.lua = faux jeu pour charger toute l'interface
 ```
@@ -53,5 +57,5 @@ npm test
 1. Moteur de règles, journal et bancs : **fait** (0.1.0).
 2. Onglet dans la fenêtre Guilde & Communautés, fenêtre `/csr`, vues, mode démo : **fait** (0.2.0), à vérifier en jeu.
 3. Synchro de guilde, droits et réglages du GM, raids et objets : **fait** (0.3.0), à vérifier en jeu à deux.
-4. Sessions, attribution, lecture des jets, fenêtre côté raideur ; le mode démo rejoue une soirée de raid complète.
+4. Sessions, attribution, lecture des jets, fenêtre côté raideur, corrections et annulations ; démo d'une soirée complète : **fait** (0.4.0), à vérifier en jeu.
 5. Essais en jeu.

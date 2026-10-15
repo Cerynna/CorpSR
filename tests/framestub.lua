@@ -148,6 +148,14 @@ function Methods:SetFontObject(f) self._font = f end
 function Methods:SetFont() self._font = true end
 function Methods:GetStringWidth() return #(self._text or "") * 6 end
 function Methods:Click(button) run(self, "OnClick", button or "LeftButton", false) end
+function Methods:SetAttribute(k, v)
+    self._attrs = self._attrs or {}
+    self._attrs[k] = v
+end
+function Methods:GetAttribute(k) return self._attrs and self._attrs[k] end
+function Methods:GetLeft() return 100 end
+function Methods:GetTop() return 500 end
+function Methods:GetEffectiveScale() return 1 end
 
 ------------------------------------------------------------------------------
 -- Environnement du jeu
@@ -204,9 +212,29 @@ function FS.Install(opts)
     }
     _G.ITEM_QUALITY_COLORS = { [4] = { hex = "|cffa335ee" } }
     _G.RAID_CLASS_COLORS = setmetatable({}, { __index = function() return { colorStr = "ffffffff" } end })
-    _G.UnitName = function() return "Ilona", "Ställer" end
+    -- groupe : FS.raid = { { "Prenom Nom", "Player-..." }, ... } (nil : seul)
+    FS.raid, FS.instance = nil, 0
+    local function unit(u)
+        if u == "player" then return { "Ilona Ställer", "Player-4620-00D54EFC" } end
+        local i = FS.raid and tonumber(u:match("^raid(%d+)$"))
+        return i and FS.raid[i]
+    end
+    _G.UnitName = function(u)
+        local x = unit(u)
+        if not x then return nil end
+        local first, last = x[1]:match("^(%S+) (.+)$")
+        return first or x[1], last
+    end
     _G.UnitClass = function() return "Prêtresse", "PRIEST" end
-    _G.UnitGUID = function() return "Player-4620-00D54EFC" end
+    _G.UnitGUID = function(u)
+        local x = unit(u)
+        return x and x[2]
+    end
+    _G.IsInRaid = function() return FS.raid ~= nil end
+    _G.IsInGroup = function() return FS.raid ~= nil end
+    _G.GetNumGroupMembers = function() return FS.raid and #FS.raid or 0 end
+    _G.GetInstanceInfo = function() return "Instance", "raid", 9, "", 40, 0, false, FS.instance end
+    _G.RANDOM_ROLL_RESULT = "%s obtient un %d (%d-%d)."
     _G.IsInGuild = function() return true end
     _G.C_GuildInfo = { GuildRoster = noop }
     FS.roster = opts.roster or {

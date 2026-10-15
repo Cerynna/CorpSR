@@ -25,7 +25,26 @@ local function buildRow(list)
     r.icon:SetPoint("LEFT", 4, 0)
     r.cols = UI.Columns(r, COLS)
     r:SetScript("OnEnter", function(self)
-        UI.Tip(self, nil, { { L.TIP_POINTS_OF:format(ns.Name(self.d.p), self.d.pts), 1, 0.82, 0.25 } }, self.d.item)
+        local lines = { { L.TIP_POINTS_OF:format(ns.Name(self.d.p), self.d.pts), 1, 0.82, 0.25 } }
+        if ns.Can("fix") then lines[#lines + 1] = { L.FIX_HINT, 0.6, 0.6, 0.6 } end
+        UI.Tip(self, nil, lines, self.d.item)
+    end)
+    -- clic droit (droit « fix ») : correction manuelle, raison obligatoire
+    r:SetScript("OnClick", function(self, button)
+        local d = self.d
+        if button ~= "RightButton" or not ns.Can("fix") then return end
+        ns.Prompt({
+            title = L.FIX_TITLE, text = L.FIX_TEXT:format(ns.Name(d.p), ns.Item(d.item) or ("#" .. d.item), d.pts),
+            fields = { { L.FIX_DELTA, "" }, { L.FIX_WHY, "" } }, ok = L.FIX_OK,
+            onOK = function(v)
+                local n = tonumber(v[1])
+                if not n or n == 0 or n ~= math.floor(n) or math.abs(n) > 100000 then return L.FIX_BAD_DELTA end
+                if not v[2]:find("%S") then return L.FIX_NEED_WHY end
+                local ok, why = ns.Write("fix", { p = d.p, i = d.item, d = n, y = v[2]:sub(1, 200) })
+                if not ok then return L.WRITE_FAILED:format(tostring(why)) end
+                return true
+            end,
+        })
     end)
     r:SetScript("OnLeave", UI.HideTip)
     return r
