@@ -419,11 +419,11 @@ function APPLY.award(st, e, _, rec, id)
     if R.LOOTS[e.c] then
         local l = st.looted[e.p]
         if not l then
-            l = { s = {}, rw = {} }
+            l = { s = {}, w = {} }
             st.looted[e.p] = l
         end
         l.s[s.id] = true
-        l.rw[rwKey(s.r, s.w)] = true
+        l.w[s.w] = true
     end
     st.awards[#st.awards + 1] = { id = id, s = s.id, r = s.r, w = s.w, i = e.i, p = e.p, c = e.c, roll = e.r, pt = e.pt, t = e.t }
     return true
@@ -447,7 +447,7 @@ local function newState()
         locks = {},     -- [raid|semaine] = heure du premier verrouillage
         credited = {},  -- [raid|semaine][joueur] = { s = session, got = { [itemID] = points } }
         pts = {},       -- [joueur][itemID] = points (en cours et en reserve)
-        looted = {},    -- [joueur] = { s = { [session] = true }, rw = { [raid|semaine] = true } }
+        looted = {},    -- [joueur] = { s = { [session] = true }, w = { [semaine] = true } }
         awards = {},
         log = {},       -- une ligne par ecriture, dans l ordre : { id, e, st, why, by, fx }
         byId = {},
@@ -539,12 +539,13 @@ end
 --- Heure du verrouillage des SR d un raid pour une semaine, ou nil.
 function J.Locked(st, r, w) return st.locks[rwKey(r, w)] end
 
---- Le joueur a-t-il deja loot (+1 DL) ? Portee selon les reglages.
+--- Le joueur a-t-il deja loot (+1 DL) ? Portee selon les reglages : la
+-- soiree, ou toute la semaine, tous raids confondus (choix du 15/10/2026).
 function J.Looted(st, p, s)
     local l = st.looted[p]
     if not (l and s) then return false end
     if st.cfg.dl == "session" then return l.s[s.id] == true end
-    return l.rw[rwKey(s.r, s.w)] == true
+    return l.w[s.w] == true
 end
 
 --- Ce que l attribution d un objet doit savoir d un joueur, dans une session.

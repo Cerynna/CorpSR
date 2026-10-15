@@ -238,13 +238,16 @@ Test("deja loot : la semaine par defaut, la soiree en reglage", function()
     Ok(not a, "soiree : A repart a zero au deuxieme soir")
 end)
 
-Test("deja loot : un autre raid ne compte pas", function()
+Test("deja loot a la semaine : un gain dans un autre raid compte aussi", function()
     local b = NewBook(ns, RANKS)
     b:Evening("GM", 1, { "A" }, { raid = "ONY", before_close = function(sid)
         b:E("GM", 1, "award", { s = sid, i = X, p = "A", c = "sr" })
     end })
     local sid = b:Evening("GM", 1, { "A" }, { open = true })
-    Ok(not J.Info(b:State(), sid, "A", Y).looted, "MC apres Onyxia")
+    Ok(J.Info(b:State(), sid, "A", Y).looted, "MC apres un gain a Onyxia")
+    -- la semaine suivante, plus rien
+    local sid2 = b:Evening("GM", 2, { "A" }, { open = true })
+    Ok(not J.Info(b:State(), sid2, "A", Y).looted, "semaine suivante")
 end)
 
 Test("objet dont personne ne veut : banque, desenchantement, jet libre", function()

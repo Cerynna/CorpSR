@@ -43,7 +43,7 @@ R.DEFAULTS = {
     pts    = 10,      -- points par SR
     nsr    = 2,       -- SR par raid et par semaine
     dbl    = true,    -- double SR (les deux sur le meme objet) permis
-    dl     = "week",  -- portee de « deja loot » : "week" (meme raid, meme semaine) ou "session"
+    dl     = "week",  -- portee de « deja loot » : "week" (la semaine, tous raids) ou "session"
     rolls  = { sr = 110, ms = 100, os = 50, mog = 20, free = 100 },
     rights = {},      -- [indice de grade] = { session = true, ... }
 }
