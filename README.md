@@ -5,9 +5,12 @@ L'addon est autonome : CorpUI est facultatif. Tout se passe dans le jeu, et la s
 
 ## Règles
 
-- 2 SR par raid et par semaine, double SR permis. Au verrouillage, chaque membre présent gagne +10 points par SR sur l'objet visé.
-- Les points sont gardés par joueur et par objet, et se cumulent de semaine en semaine. Quand on change d'objet, ceux de l'ancien restent en réserve. Un absent ne gagne rien. Celui qui gagne l'objet par SR repasse à 0 sur cet objet.
-- La fourchette du jet donne la catégorie. La priorité est stricte : **SR > +1 > +1 DL > +2 > Mog**.
+Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids changent, on enchaîne plusieurs raids dans une soirée).
+
+- **2 SR par semaine au total**, sur n'importe quels objets de n'importe quels raids. Double SR permis. On les repose chaque semaine. Ils restent modifiables jusqu'au verrouillage de la semaine.
+- **Points** : quand un objet tombe, chaque joueur qui l'a SR et qui est dans le raid à ce moment gagne +10 par SR dessus (+20 en double SR). Les présents font ensuite leur jet avec ces points. Le gagnant par SR repasse à 0 sur l'objet. Les absents ne gagnent rien. Les points de l'ancien objet restent en réserve quand on change d'objet.
+- **Objets** : pas de raids suivis. Les objets s'apprennent quand ils tombent : butin ouvert, jets de butin de groupe. N'importe qui peut en ajouter, en le glissant ou par son numéro.
+- **Jets** : la fourchette du jet donne la catégorie, et la priorité est stricte : **SR > +1 > +1 DL > +2 > Mog**.
 
   | Catégorie | Jet | Total |
   |---|---|---|
@@ -17,9 +20,10 @@ L'addon est autonome : CorpUI est facultatif. Tout se passe dans le jeu, et la s
   | +2 (seconde spé) | `/roll 50` | jet |
   | Mog | `/roll 20` | jet |
 
-- En cas d'égalité, on relance entre les ex æquo. S'il tombe N exemplaires, les N meilleurs gagnent. Seul le premier jet valable de chaque joueur compte.
+- En cas d'égalité, on relance entre les ex æquo. S'il tombe N exemplaires, les N meilleurs gagnent. Seul le premier jet valable compte.
 - Si personne ne veut l'objet, le distributeur choisit : jet libre, banque de guilde ou désenchantement.
 - Le GM règle les valeurs (points, nombre de SR, double SR, portée de « déjà loot », fourchettes). Il choisit aussi les droits grade par grade.
+- **Soirée automatique** chez le chef de raid : elle s'ouvre en entrant dans un raid, une seule par soir même sur plusieurs raids. Les SR se verrouillent au premier objet, l'attribution part à l'ouverture du butin et se valide après le délai.
 
 ## Organisation
 

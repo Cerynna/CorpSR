@@ -1,177 +1,156 @@
--- Points SR : credit au verrouillage, double SR, reserve, absence,
--- remise a 0, deux soirees dans la semaine, retardataires.
+-- Points SR (regles du 16/10/2026) : 2 SR par semaine au total, sur
+-- n importe quels objets ; on gagne les points d un SR quand l objet tombe
+-- et qu on est dans le raid (cr) ; credit une seule fois par drop ; le
+-- gagnant par SR repasse a 0 ; reserve gardee quand on change d objet.
 
 local ns = Engine()
 local J, R = ns.Journal, ns.Rules
-local X, Y = 17076, 18814
+local X, Y, Z = 17076, 18814, 16921
 local RANKS = { GM = 0, Off = 1, A = 5, B = 5, C = 5 }
+
+-- une soiree : ouverte, verrouillee, des drops { item, cr, award }, fermee
+local function evening(b, w, drops, keepOpen)
+    local _, sid = b:E("GM", w, "open", {})
+    b:E("GM", w, "lock", { s = sid, pr = {} })
+    for x, d in ipairs(drops or {}) do
+        local f = { s = sid, i = d.item, c = d.c or "ms", p = d.p or "C", r = d.r or 50, cr = d.cr, dr = d.dr or (sid .. "#" .. x) }
+        if d.c == "bank" or d.c == "de" then f.p = nil end
+        if d.pt then f.pt = d.pt end
+        b:E("GM", w, "award", f)
+    end
+    if not keepOpen then b:E("GM", w, "close", { s = sid }) end
+    return sid
+end
 
 Test("exemple de la semaine 4 : 80 points + 40 au jet = 120, il gagne", function()
     local b = NewBook(ns, RANKS)
-    local sid
-    for w = 1, 4 do
-        b:SR("A", w, { X, X })                 -- double SR chaque semaine
-        if w == 4 then b:SR("B", w, { X }) end  -- B arrive en semaine 4
-        sid = b:Evening("GM", w, { "A", "B" }, { open = (w == 4) })
+    -- trois semaines : X tombe, A (double SR, present) gagne ses 20 points,
+    -- mais l objet part a un autre ; A garde ses points
+    for w = 1, 3 do
+        b:SR("A", w, { X, X })
+        evening(b, w, { { item = X, cr = { "A" }, p = "C", c = "ms" } })
     end
+    Eq(J.Points(b:State(), "A", X), 60, "60 points apres trois drops")
+    b:SR("A", 4, { X, X })
+    b:SR("B", 4, { X })
+    local sid = evening(b, 4, {}, true)
     local st = b:State()
-    Eq(J.Points(st, "A", X), 80, "points de A (semaine en cours comprise)")
-    Eq(J.Points(st, "B", X), 10, "points de B")
-
+    -- semaine 4 : X tombe, A et B presents ; le jet compte le credit a venir
     local a = R.NewAttribution({ item = X, count = 1, settings = st.cfg, info = function(p)
-        local info = J.Info(st, sid, p, X)
+        local info = J.Info(st, sid, p, X, true)
         info.guild, info.present = true, true
         return info
     end })
     local ca = a:Roll("A", 40, 1, 110)
     local cb = a:Roll("B", 105, 1, 110)
+    Eq(ca.pts, 80, "80 points de A au moment du jet")
     Eq(ca.total, 120, "total de A")
-    Eq(cb.total, 115, "total de B")
-    local res = a:Result()
-    Eq(#res.winners, 1, "un gagnant")
-    Eq(res.winners[1].p, "A", "gagnant")
-    Ok(not res.tie, "pas d egalite")
-
-    -- l objet est donne : A repart de 0 sur cet objet, B garde ses points
-    b:E("GM", 4, "award", { s = sid, i = X, p = "A", c = "sr", r = 40, pt = 80 })
+    Eq(cb.total, 115, "total de B (10 + 105)")
+    Eq(a:Result().winners[1].p, "A", "A gagne")
+    b:E("GM", 4, "award", { s = sid, i = X, p = "A", c = "sr", r = 40, pt = 80, cr = { "A", "B" }, dr = "d4" })
     st = b:State()
-    Eq(J.Points(st, "A", X), 0, "A apres son gain")
-    Eq(J.Points(st, "B", X), 10, "B apres le gain de A")
+    Eq(J.Points(st, "A", X), 0, "A repart de 0")
+    Eq(J.Points(st, "B", X), 10, "B garde son credit du drop")
 end)
 
-Test("double SR : 20 points, SR simple : 10", function()
+Test("pas de drop, pas de points (meme present a la soiree)", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X, Y })
+    evening(b, 1, { { item = Z, cr = {} } })
+    local st = b:State()
+    Eq(J.Points(st, "A", X), 0, "X n est pas tombe")
+    Eq(J.Points(st, "A", Y), 0, "Y non plus")
+end)
+
+Test("absent au drop : aucun point ; present : +10, double SR : +20", function()
     local b = NewBook(ns, RANKS)
     b:SR("A", 1, { X, X })
-    b:SR("B", 1, { X, Y })
-    b:Evening("GM", 1, { "A", "B" })
+    b:SR("B", 1, { X })
+    b:SR("C", 1, { Y })
+    evening(b, 1, { { item = X, cr = { "A", "C" } } })     -- B absent ; C present mais SR sur Y
     local st = b:State()
-    Eq(J.Points(st, "A", X), 20, "double SR")
-    Eq(J.Points(st, "B", X), 10, "SR simple X")
-    Eq(J.Points(st, "B", Y), 10, "SR simple Y")
+    Eq(J.Points(st, "A", X), 20, "double SR present")
+    Eq(J.Points(st, "B", X), 0, "absent")
+    Eq(J.Points(st, "C", X), 0, "present sans SR sur X")
+end)
+
+Test("un drop credite une seule fois (deux exemplaires, reste)", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X })
+    evening(b, 1, {
+        { item = X, cr = { "A" }, p = "C", c = "ms", dr = "d1" },
+        { item = X, cr = { "A" }, c = "bank", dr = "d1" },
+    })
+    Eq(J.Points(b:State(), "A", X), 10, "une fois")
+    -- un autre drop du meme objet la meme semaine : encore
+    evening(b, 1, { { item = X, cr = { "A" }, p = "C", c = "ms", dr = "d2" } })
+    Eq(J.Points(b:State(), "A", X), 20, "deuxieme drop")
+end)
+
+Test("2 SR par semaine au total, sur n importe quels objets", function()
+    local b = NewBook(ns, RANKS)
+    local ok = b:SR("A", 1, { X, Z })          -- deux raids differents
+    local bad = b:SR("A", 1, { X, Y, Z })
+    local st = b:State()
+    Eq(st.byId[J.Id(ok)].st, "ok", "deux objets de raids differents")
+    Eq(st.byId[J.Id(bad)].why, "nsr", "trois : refuse")
+    Eq(table.concat(J.SR(st, 1, "A"), ","), X .. "," .. Z, "SR gardes")
+end)
+
+Test("SR a reposer chaque semaine", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X })
+    evening(b, 1, {})
+    Eq(J.SR(b:State(), 2, "A"), nil, "rien la semaine suivante")
+    evening(b, 2, { { item = X, cr = { "A" } } })
+    Eq(J.Points(b:State(), "A", X), 0, "pas de SR cette semaine : pas de points")
+end)
+
+Test("changement d objet : les points de l ancien restent en reserve", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X })
+    evening(b, 1, { { item = X, cr = { "A" } } })
+    b:SR("A", 2, { Y })
+    evening(b, 2, { { item = Y, cr = { "A" } } })
+    local st = b:State()
+    Eq(J.Points(st, "A", X), 10, "reserve X")
+    Eq(J.Points(st, "A", Y), 10, "Y")
+    b:SR("A", 3, { X })
+    evening(b, 3, { { item = X, cr = { "A" } } })
+    Eq(J.Points(b:State(), "A", X), 20, "X reprend ou il en etait")
 end)
 
 Test("double SR interdit par le GM : refuse", function()
     local b = NewBook(ns, RANKS)
     b:E("GM", 1, "cfg", { c = { dbl = false } })
     local e = b:SR("A", 1, { X, X })
-    b:SR("B", 1, { X, Y })
-    b:Evening("GM", 1, { "A", "B" })
-    local st = b:State()
-    local rec = st.byId[J.Id(e)]
-    Eq(rec.st, "refused", "double SR")
-    Eq(rec.why, "dbl", "raison")
-    Eq(J.Points(st, "A", X), 0, "aucun point")
-    Eq(J.Points(st, "B", X), 10, "B")
+    Eq(b:State().byId[J.Id(e)].why, "dbl", "raison")
 end)
 
-Test("trop de SR : refuse", function()
-    local b = NewBook(ns, RANKS)
-    local e = b:SR("A", 1, { X, Y, 1234 })
-    local st = b:State()
-    Eq(st.byId[J.Id(e)].why, "nsr", "raison")
-end)
-
-Test("changement d objet : les points de l ancien restent en reserve", function()
-    local b = NewBook(ns, RANKS)
-    b:SR("A", 1, { X }); b:Evening("GM", 1, { "A" })
-    b:SR("A", 2, { X }); b:Evening("GM", 2, { "A" })
-    b:SR("A", 3, { Y }); b:Evening("GM", 3, { "A" })
-    local st = b:State()
-    Eq(J.Points(st, "A", X), 20, "reserve X")
-    Eq(J.Points(st, "A", Y), 10, "nouvel objet Y")
-    b:SR("A", 4, { X }); b:Evening("GM", 4, { "A" })
-    st = b:State()
-    Eq(J.Points(st, "A", X), 30, "X reprend ou il en etait")
-    Eq(J.Points(st, "A", Y), 10, "Y en reserve")
-end)
-
-Test("absence : aucun gain, reserve intacte", function()
-    local b = NewBook(ns, RANKS)
-    b:SR("A", 1, { X }); b:Evening("GM", 1, { "A", "B" })
-    b:SR("A", 2, { X }); b:Evening("GM", 2, { "B" })      -- A absent
-    local st = b:State()
-    Eq(J.Points(st, "A", X), 10, "rien la semaine 2")
-    b:SR("A", 3, { X }); b:Evening("GM", 3, { "A" })
-    st = b:State()
-    Eq(J.Points(st, "A", X), 20, "reprend en semaine 3")
-end)
-
-Test("remise a 0 apres un gain par SR, les autres reserves ne bougent pas", function()
-    local b = NewBook(ns, RANKS)
-    b:SR("A", 1, { X, Y }); b:Evening("GM", 1, { "A" })
-    b:SR("A", 2, { X, Y })
-    b:Evening("GM", 2, { "A" }, { before_close = function(sid)
-        b:E("GM", 2, "award", { s = sid, i = X, p = "A", c = "sr", r = 50, pt = 20 })
-    end })
-    local st = b:State()
-    Eq(J.Points(st, "A", X), 0, "X gagne")
-    Eq(J.Points(st, "A", Y), 20, "Y intact")
-    b:SR("A", 3, { X, Y }); b:Evening("GM", 3, { "A" })
-    st = b:State()
-    Eq(J.Points(st, "A", X), 10, "X remonte")
-    Eq(J.Points(st, "A", Y), 30, "Y continue")
-end)
-
-Test("gain en +1 : les points SR ne bougent pas", function()
-    local b = NewBook(ns, RANKS)
-    b:SR("A", 1, { X }); b:Evening("GM", 1, { "A" }, { before_close = function(sid)
-        b:E("GM", 1, "award", { s = sid, i = X, p = "A", c = "ms", r = 77 })
-    end })
-    Eq(J.Points(b:State(), "A", X), 10, "points gardes")
-end)
-
-Test("meme raid deux soirs dans la semaine : credit une seule fois", function()
+Test("SR apres le verrouillage de la semaine : refuse", function()
     local b = NewBook(ns, RANKS)
     b:SR("A", 1, { X })
-    b:SR("B", 1, { X })
-    b:Evening("GM", 1, { "A" })          -- B absent le premier soir
-    b:Evening("GM", 1, { "A", "B" })     -- deuxieme soir
-    local st = b:State()
-    Eq(J.Points(st, "A", X), 10, "A credite une fois")
-    Eq(J.Points(st, "B", X), 10, "B credite au deuxieme soir")
-end)
-
-Test("SR apres le verrouillage : refuse, les SR de la semaine sont figes", function()
-    local b = NewBook(ns, RANKS)
-    b:SR("A", 1, { X })
-    b:Evening("GM", 1, { "A" }, { open = true })
+    evening(b, 1, {}, true)
     local late = b:SR("A", 1, { Y })
     local st = b:State()
     Eq(st.byId[J.Id(late)].why, "locked", "raison")
-    Eq(J.SR(st, "MC", 1, "A")[1], X, "SR fige")
-    -- une autre soiree de la semaine garde les memes SR
-    b:Evening("GM", 1, { "A" })
-    st = b:State()
-    Eq(J.Points(st, "A", Y), 0, "pas de point sur Y")
+    Eq(J.SR(st, 1, "A")[1], X, "SR fige")
+    -- une deuxieme soiree de la semaine ne rouvre rien
+    local again = b:SR("A", 1, { Z })
+    Eq(b:State().byId[J.Id(again)].why, "locked", "toujours fige")
 end)
 
-Test("retardataire ajoute apres le verrouillage, absent retire", function()
+Test("anciennes ecritures avec un raid : le dernier SR de la semaine compte", function()
     local b = NewBook(ns, RANKS)
-    b:SR("A", 1, { X })
-    b:SR("B", 1, { Y, Y })
-    local _, sid = b:E("GM", 1, "open", { r = "MC" })
-    b:E("GM", 1, "lock", { s = sid, pr = { "A" } })
-    Eq(J.Points(b:State(), "B", Y), 0, "B pas encore la")
-    b:E("GM", 1, "pres", { s = sid, p = "B", on = true })
-    Eq(J.Points(b:State(), "B", Y), 20, "B credite en arrivant")
-    b:E("GM", 1, "pres", { s = sid, p = "A", on = false })
-    local st = b:State()
-    Eq(J.Points(st, "A", X), 0, "A retire : credit repris")
-    Ok(not st.sessions[sid].present.A, "A n est plus present")
-end)
-
-Test("presence ajoutee avant le verrouillage", function()
-    local b = NewBook(ns, RANKS)
-    b:SR("C", 1, { X })
-    local _, sid = b:E("GM", 1, "open", { r = "MC" })
-    b:E("GM", 1, "pres", { s = sid, p = "C", on = true })
-    b:E("GM", 1, "lock", { s = sid, pr = {} })
-    Eq(J.Points(b:State(), "C", X), 10, "C credite au verrouillage")
+    b:SR("A", 1, { X }, "MC")
+    b:SR("A", 1, { Z }, "ONY")
+    Eq(table.concat(J.SR(b:State(), 1, "A"), ","), tostring(Z), "le dernier")
 end)
 
 Test("points par SR regles par le GM", function()
     local b = NewBook(ns, RANKS)
     b:E("GM", 1, "cfg", { c = { pts = 15 } })
-    b:SR("A", 1, { X, X }); b:Evening("GM", 1, { "A" })
+    b:SR("A", 1, { X, X })
+    evening(b, 1, { { item = X, cr = { "A" } } })
     Eq(J.Points(b:State(), "A", X), 30, "2 x 15")
 end)

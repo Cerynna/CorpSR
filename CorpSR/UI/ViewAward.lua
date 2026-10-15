@@ -406,7 +406,7 @@ local function refresh(f)
     refreshTimer(f)
     local s = D.LiveSession()
     local cur = D.cur
-    f.head:SetText(s and L.AW_SESSION:format(ns.RaidName(s.r)) or (UI.Hex("dim") .. L.AW_NO_SESSION .. "|r"))
+    f.head:SetText(s and L.AW_SESSION:format(ns.SessionName(s)) or (UI.Hex("dim") .. L.AW_NO_SESSION .. "|r"))
 
     -- butin
     local loot = ns.Raid.Loot()

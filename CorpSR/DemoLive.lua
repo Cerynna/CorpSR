@@ -70,14 +70,15 @@ function DL.Arrive()
     end
 end
 
+-- un boss de MC ou d Onyxia (la soiree enchaine les raids)
+local bossCount = 0
 local function raidOfTonight()
-    local s = D.LiveSession()
+    bossCount = bossCount + 1
     local st = ns.State()
-    local key = s and s.r or "MC"
-    return st.raids[key], s
+    return st.raids[(bossCount % 3 == 0) and "ONY" or "MC"] or st.raids.MC
 end
 
---- Butin d un boss : 3 objets du raid de la soiree.
+--- Butin d un boss : 3 objets de MC ou d Onyxia.
 function DL.Boss(items)
     if not ns.demo then return end
     local raid = raidOfTonight()
@@ -186,12 +187,12 @@ end
 -- Soiree automatique
 ------------------------------------------------------------------------------
 
--- objets du raid : le plus reserve par le groupe, et deux sans SR
+-- objets de MC : le plus reserve par le groupe, et deux sans SR
 local function pickItems(s)
     local st = ns.State()
-    local raid = st.raids[s.r]
+    local raid = st.raids.MC
     local count = {}
-    for p, items in pairs(st.sr[J.RWKey(s.r, s.w)] or {}) do
+    for p, items in pairs(st.sr[s.w] or {}) do
         if ns.demo.group.byKey[p] then
             for _, i in ipairs(items) do count[i] = (count[i] or 0) + 1 end
         end
@@ -217,18 +218,13 @@ function DL.Auto()
         local live = D.LiveSession()
         if live then A.Close(live) end
         P.Select("session")
-        A.Open("MC")
+        A.Open()
         s = D.LiveSession()
-        say("AUTO_OPEN", ns.RaidName("MC"))
+        say("AUTO_OPEN", ns.Date(ns.Now()))
     end)
     step(3, function()
         A.Lock(s, true)
         say("AUTO_LOCK")
-    end)
-    step(3, function()
-        local m = DL.Arrive()
-        A.Arrivals(s)
-        say("AUTO_LATE", m and m.name or "?")
     end)
     step(3, function()
         s = D.LiveSession()

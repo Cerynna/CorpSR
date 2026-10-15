@@ -67,14 +67,26 @@ function G.GuildKeys()
 end
 
 --- Raid suivi qui correspond a l instance ou l on est, ou nil.
-function G.CurrentRaidKey()
+--- Instance de raid ou l on est : cle du groupe d objets ("I" .. id),
+-- nom (dans la langue du client) et identifiant ; nil hors d un raid.
+function G.CurrentZone()
     if type(GetInstanceInfo) ~= "function" then return nil end
-    local inst = select(8, GetInstanceInfo())
-    if issecret(inst) or type(inst) ~= "number" then return nil end
+    local name, kind, _, _, _, _, _, inst = GetInstanceInfo()
+    if issecret(kind) or kind ~= "raid" or issecret(inst) or type(inst) ~= "number" or inst <= 0 then return nil end
+    if issecret(name) or type(name) ~= "string" or name == "" then name = nil end
+    return "I" .. inst, name, inst
+end
+
+-- compatibilite : groupe d objets de l instance, s il existe deja
+function G.CurrentRaidKey()
+    local key, _, inst = G.CurrentZone()
+    if not key then return nil end
+    local st = ns.State()
+    if st.raids[key] then return key end
     for _, r in ipairs(ns.Raids()) do
         if r.inst == inst then return r.key end
     end
-    return nil
+    return key
 end
 
 ------------------------------------------------------------------------------
@@ -92,36 +104,84 @@ local function readLoot()
     end
     if #items > 0 then
         G.loot = items
+        G.lootAt = GetTime and GetTime() or 0
         ns.Fire("loot")
         G.LearnLoot(n)
     end
 end
 
--- Objets vus en tombant : dans un raid suivi, les objets epiques (ou mieux)
--- du butin absents de la liste du raid y sont ajoutes (droit « raids »).
--- Les autres membres ne font rien : ce qu ils voient leur arrive par la
--- synchro quand un officier l ajoute.
+-- Objets vus en tombant (regle du 16/10 : on reserve ce qu on veut, ou
+-- on veut) : les objets epiques (ou mieux) d un raid, pas encore connus de
+-- la guilde, s ajoutent au groupe de l instance (« I » .. son id), par
+-- n importe quel membre qui a CorpSR (ajouter est ouvert a tous).
 G.MIN_QUALITY = 4
-function G.LearnLoot(n)
-    if ns.demo or not ns.Can("raids") or type(GetLootSlotInfo) ~= "function" then return end
-    local key = G.CurrentRaidKey()
-    local raid = key and ns.State().raids[key]
-    if not raid then return end
+
+local function known(id)
+    for _, r in pairs(ns.State().raids) do
+        if not r.gone and r.items[id] then return true end
+    end
+    return false
+end
+
+--- Inscrit des objets vus en tombant dans le groupe de l instance.
+function G.Learn(ids)
+    if ns.demo or not ns.InGuild() then return 0 end
+    local key, name, inst = G.CurrentZone()
+    if not key then return 0 end
     local add, seen = {}, {}
-    for i = 1, n do
-        local ok, _, _, _, _, quality = pcall(GetLootSlotInfo, i)
-        local link = ns.Api(GetLootSlotLink, i)
-        local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
-        if ok and id and not issecret(quality) and type(quality) == "number" and quality >= G.MIN_QUALITY
-            and not raid.items[id] and not seen[id] then
+    for _, id in ipairs(ids) do
+        if not known(id) and not seen[id] then
             seen[id] = true
             add[#add + 1] = id
         end
     end
-    if #add > 0 and ns.Write("raid", { r = key, add = add }) then
-        ns.Say(ns.L.LOOT_LEARNED:format(#add, ns.RaidName(raid)))
+    if #add == 0 then return 0 end
+    if not ns.Write("raid", { r = key, nm = name, inst = inst, add = add }) then return 0 end
+    ns.Say(ns.L.LOOT_LEARNED:format(#add, name or key))
+    return #add
+end
+
+function G.LearnLoot(n)
+    if type(GetLootSlotInfo) ~= "function" then return end
+    local ids = {}
+    for i = 1, n do
+        local ok, _, _, _, _, quality = pcall(GetLootSlotInfo, i)
+        local link = ns.Api(GetLootSlotLink, i)
+        local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+        if ok and id and not issecret(quality) and type(quality) == "number" and quality >= G.MIN_QUALITY then
+            ids[#ids + 1] = id
+        end
+    end
+    G.Learn(ids)
+end
+
+-- Butin de groupe : chaque objet a jouer ouvre une fenetre de jet chez tout
+-- le raid (START_LOOT_ROLL). On l ajoute au butin du moment (la liste
+-- repart a zero apres une minute sans rien) et on l apprend apres un court
+-- delai au hasard, pour que vingt membres n ecrivent pas tous la meme chose
+-- (si un autre l a deja inscrit entre-temps, on ne fait rien).
+local function onRoll(rollID)
+    if type(GetLootRollItemLink) ~= "function" then return end
+    local link = ns.Api(GetLootRollItemLink, rollID)
+    local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+    if not id then return end
+    local now = GetTime and GetTime() or 0
+    if now - (G.lootAt or -1e9) > 60 then G.loot = {} end
+    G.lootAt = now
+    G.loot[#G.loot + 1] = id
+    ns.Fire("loot")
+    -- pcall rend ok, texture, nom, nombre, qualite... : la qualite est 5e
+    local quality = type(GetLootRollItemInfo) == "function" and select(5, pcall(GetLootRollItemInfo, rollID))
+    if type(quality) == "number" and not issecret(quality) and quality >= G.MIN_QUALITY then
+        local wait = 2 + math.random(10)
+        if C_Timer and C_Timer.After then
+            C_Timer.After(wait, function() G.Learn({ id }) end)
+        else
+            G.Learn({ id })
+        end
     end
 end
+ns.Event("START_LOOT_ROLL", onRoll)
 
 ns.Event("LOOT_OPENED", readLoot)
 

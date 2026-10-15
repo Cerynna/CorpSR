@@ -85,7 +85,7 @@ Test("reglages : le GM modifie, publie ; un novice ne peut rien changer", functi
     f.values[1]:Click("LeftButton")          -- +10 : 21
     FS.shift = false
     f.values[3]:Click("LeftButton")          -- double SR : non
-    f.grid[3][5]:Click("LeftButton")         -- Membre : droit d annuler
+    f.grid[3][4]:Click("LeftButton")         -- Membre : droit d annuler
     Ok(ns.SettingsView.dirty, "changements en cours")
     Ok(FS.Texts(f):find("Changements non publiés", 1, true), "signale")
     f.publish:Click()
@@ -117,31 +117,32 @@ Test("reglages : le GM modifie, publie ; un novice ne peut rien changer", functi
     Eq(#FS.errors, 0, "erreurs")
 end)
 
-Test("vue Raids : le GM ajoute un raid du catalogue, des objets, en retire", function()
+Test("vue Raids : le GM range les objets appris (ajout, retrait, raid retire)", function()
     local FS, ns = Game({ roster = {
         { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" },
         { "Sylva Brumeval", "Officier", 1, "DRUID", "Player-4620-000000BB" },
     } })
     local P = ns.Panel
     P.CloseIntro()
+    -- des objets appris en raid (groupe de l instance) et un ajoute a la main
+    ns.Write("raid", { r = "I409", nm = "Coeur du Magma", inst = 409, add = { 17076, 18814 } })
+    ns.MineView.AddItem(19019)
     Ok(P.tabs.raids and P.tabs.raids:IsShown(), "onglet Raids pour le GM")
     P.tabs.raids:Click()
     FS.Layout()
     local f = P.frames.raids
-    Ok(FS.Texts(f):find("Catalogue", 1, true), "catalogue propose")
-    f.add:Click()
-    local st = ns.State()
-    Ok(st.raids.MC and #st.raids.MC.list == 29, "MC ajoute avec ses objets")
-    Ok(not st.raids.ONY, "un seul raid ajoute par clic")
+    Eq(#f.raids.data, 2, "deux groupes (instance, a la main)")
+    ns.ui.editRaid = "I409"
+    ns.Panel.Refresh()
     -- objet glisse sur la case
-    FS.cursor = { "item", 19019 }
+    FS.cursor = { "item", 19020 }
     f.zone:Click()
-    Ok(ns.State().raids.MC.items[19019], "objet glisse ajoute")
+    Ok(ns.State().raids.I409.items[19020], "objet glisse ajoute")
     Eq(FS.cursor, nil, "curseur vide")
     -- numero tape
-    f.idBox:SetText("19020")
+    f.idBox:SetText("19021")
     f.idBox._scripts.OnEnterPressed(f.idBox)
-    Ok(ns.State().raids.MC.items[19020], "objet tape ajoute")
+    Ok(ns.State().raids.I409.items[19021], "objet tape ajoute")
     f.idBox:SetText("abc")
     f.idBox._scripts.OnEnterPressed(f.idBox)
     Ok(P.foot:GetText():find("invalide", 1, true), "numero refuse")
@@ -150,21 +151,17 @@ Test("vue Raids : le GM ajoute un raid du catalogue, des objets, en retire", fun
     local row = f.items.rows[1]
     local id = row.d
     row:Click("RightButton")
-    Ok(not ns.State().raids.MC.items[id], "objet retire")
-    -- le raid suivant du catalogue, puis retrait de MC
-    f.add:Click()
-    Ok(ns.State().raids.ONY, "Onyxia ajoute")
-    Ok(FS.Texts(f):find("Tous les raids du catalogue", 1, true), "catalogue epuise")
-    ns.ui.editRaid = "MC"
+    Ok(not ns.State().raids.I409.items[id], "objet retire")
+    -- retrait du groupe entier
     f.drop:Click()
-    Ok(ns.State().raids.MC.gone, "MC retire")
+    Ok(ns.State().raids.I409.gone, "groupe retire")
     -- tout part a la guilde
     local n = 0
     for _ = 1, 20 do FS.Tick(0.5) end
     for _, m in ipairs(FS.sent) do
         if m.text:find("^E:") then n = n + 1 end
     end
-    Ok(n >= 6, "ecritures envoyees : " .. n)
+    Ok(n >= 5, "ecritures envoyees : " .. n)
     Eq(#FS.errors, 0, "erreurs")
 end)
 

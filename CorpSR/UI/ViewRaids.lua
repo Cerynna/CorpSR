@@ -1,15 +1,12 @@
 --[[--------------------------------------------------------------------------
     CorpSR - vue « Raids » (droit « raids », le GM l a toujours)
 
-    La liste des raids suivis et de leurs objets, ecrite au journal comme
-    le reste (donc diffusee a la guilde et historisee) :
-      - ajouter un raid du catalogue (Engine/Catalog.lua : MC, Onyxia),
-        avec ses objets ; retirer un raid (les points restent ; on peut
-        le rajouter) ;
-      - ajouter un objet : le glisser depuis les sacs (ou un lien tenu au
-        curseur) sur la case, ou taper son numero ; le retirer : clic droit.
-    Le glisser passe par GetCursorInfo / ClearCursor : aucun crochet sur
-    les liens du chat.
+    Les objets que la guilde peut reserver, ranges par raid. Ils
+    s apprennent tout seuls quand ils tombent (Raid.lua) et n importe qui
+    peut en ajouter depuis « Mes SR ». Ici, ceux qui ont le droit font le
+    menage : retirer un objet (clic droit), retirer un raid entier (les
+    points restent), ajouter un objet au raid choisi (glisser ou numero).
+    Le glisser passe par GetCursorInfo / ClearCursor : aucun crochet.
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...
@@ -17,7 +14,6 @@ local L = ns.L
 local UI = ns.UI
 
 ns.ui = ns.ui or {}
-local S = { pick = nil }
 
 local function selected()
     local raids = ns.Raids()
@@ -26,20 +22,6 @@ local function selected()
     end
     ns.ui.editRaid = raids[1] and raids[1].key
     return raids[1]
-end
-
--- raids du catalogue pas encore suivis
-local function missing()
-    local st, out = ns.State(), {}
-    for _, c in ipairs(ns.Catalog) do
-        local r = st.raids[c.key]
-        if not r or r.gone then out[#out + 1] = c end
-    end
-    return out
-end
-
-local function catalogName(c)
-    return ns.RaidName({ key = c.key, inst = c.inst, nm = L["RAID_" .. c.key] })
 end
 
 local function write(fields)
@@ -103,32 +85,8 @@ end
 local function build(parent)
     local f = CreateFrame("Frame", nil, parent)
 
-    -- catalogue
-    local pick = UI.Cycle(f, 200, function()
-        local out = {}
-        for _, c in ipairs(missing()) do out[#out + 1] = { c.key, L.RAIDS_CATALOG:format(catalogName(c)) } end
-        if #out == 0 then out[1] = { false, L.RAIDS_ALL_ADDED } end
-        return out
-    end, function() return S.pick end, function(v) S.pick = v end)
-    pick:SetPoint("TOPLEFT", 0, 0)
-    pick.tip = { L.RAIDS_CATALOG:format("..."), { L.CYCLE_TIP } }
-    f.pick = pick
-    local add = UI.Button(f, L.RAIDS_ADD, 70, function()
-        -- l ecriture rafraichit la vue (et le choix du catalogue) : on fige
-        -- le raid choisi avant d ecrire
-        local key, chosen = S.pick, nil
-        for _, c in ipairs(missing()) do
-            if c.key == key then chosen = c end
-        end
-        if not chosen then return end
-        ns.ui.editRaid = chosen.key
-        write({ r = chosen.key, nm = catalogName(chosen), inst = chosen.inst, add = chosen.items })
-    end)
-    add:SetPoint("LEFT", pick, "RIGHT", 4, 0)
-    f.add = add
-
     local list = UI.List(f, 22, buildRaidRow, updateRaidRow)
-    list:SetPoint("TOPLEFT", 0, -28)
+    list:SetPoint("TOPLEFT", 0, 0)
     list:SetPoint("BOTTOMLEFT", 0, 28)
     list:SetWidth(230)
     list.emptyText:SetText(L.RAIDS_EMPTY)
@@ -187,14 +145,6 @@ local function build(parent)
 end
 
 local function refresh(f)
-    local miss = missing()
-    local found = false
-    for _, c in ipairs(miss) do
-        if c.key == S.pick then found = true end
-    end
-    if not found then S.pick = miss[1] and miss[1].key or false end
-    f.pick:Update()
-    f.add:SetActive(#miss > 0)
     local r = selected()
     f.raids:SetData(ns.Raids(), true)
     f.drop:SetActive(r ~= nil)

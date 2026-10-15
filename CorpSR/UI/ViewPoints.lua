@@ -66,13 +66,11 @@ local function rows()
     -- SR de la semaine de chacun : [joueur][itemID] = true
     local cur = {}
     -- (ceux des autres seulement apres le verrouillage : avant, ils sont caches)
-    for _, r in ipairs(ns.Raids()) do
-        local locked = J.Locked(st, r.key, w) ~= nil
-        for p, items in pairs(st.sr[J.RWKey(r.key, w)] or {}) do
-            if locked or p == ns.Me() then
-                cur[p] = cur[p] or {}
-                for _, i in ipairs(items) do cur[p][i] = true end
-            end
+    local locked = J.Locked(st, w) ~= nil
+    for p, items in pairs(st.sr[w] or {}) do
+        if locked or p == ns.Me() then
+            cur[p] = cur[p] or {}
+            for _, i in ipairs(items) do cur[p][i] = true end
         end
     end
     local out = {}

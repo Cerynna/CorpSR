@@ -37,11 +37,12 @@ R.LEFTOVER = { free = true, bank = true, de = true }
 R.LOOTS = { sr = true, ms = true, dl = true }
 
 -- droits que le GM accorde grade par grade (le GM, grade 0, a tout)
-R.RIGHTS = { "session", "presence", "award", "fix", "undo", "raids" }
+-- (« presence » a disparu le 16/10 : les points ne dependent plus de la soiree)
+R.RIGHTS = { "session", "award", "fix", "undo", "raids" }
 
 R.DEFAULTS = {
     pts    = 10,      -- points par SR
-    nsr    = 2,       -- SR par raid et par semaine
+    nsr    = 2,       -- SR par semaine (au total, tous raids confondus)
     dbl    = true,    -- double SR (les deux sur le meme objet) permis
     dl     = "week",  -- portee de « deja loot » : "week" (la semaine, tous raids) ou "session"
     rolls  = { sr = 110, ms = 100, os = 50, mog = 20, free = 100 },

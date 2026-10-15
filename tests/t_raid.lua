@@ -17,25 +17,20 @@ local function clickPromptOK(ns)
     box.ok:Click()
 end
 
-Test("demo : ouvrir, verrouiller (confirmation), arrivant, fermer", function()
+Test("demo : ouvrir la soiree, verrouiller (confirmation), fermer", function()
     local FS, ns, P, D, J = demoGame(0)
     P.tabs.session:Click()
     local f = P.frames.session
     Ok(f.open:IsShown(), "bouton ouvrir")
     f.open:Click()
     local s = D.LiveSession()
-    Ok(s and s.r == "MC", "soiree MC ouverte")
+    Ok(s and s.r == nil, "soiree ouverte, sans raid")
+    Ok(ns.SessionName(s):find("Soirée du", 1, true), "nom de la soiree")
     f.lock:Click()
     clickPromptOK(ns)
     s = D.LiveSession()
     Ok(s.locked, "verrouillee")
-    local n = 0
-    for _ in pairs(s.present) do n = n + 1 end
-    Eq(n, 20, "les 20 membres de la guilde du groupe")
-    Ok(J.Locked(ns.State(), "MC", ns.Week()), "SR de la semaine fermes")
-    local m = ns.DemoLive.Arrive()
-    f.arrivals:Click()
-    Ok(D.LiveSession().present[m.key], "retardataire present")
+    Ok(J.Locked(ns.State(), ns.Week()), "SR de la semaine fermes")
     f.close:Click()
     Eq(D.LiveSession(), nil, "fermee")
     Eq(#FS.errors, 0, "erreurs")
@@ -238,7 +233,6 @@ Test("soiree automatique de la demo : tout le deroule", function()
     end
     Eq(kinds.open, 1, "ouverture")
     Eq(kinds.lock, 1, "verrouillage")
-    Ok((kinds.pres or 0) >= 1, "retardataire")
     Ok((kinds.award or 0) >= 3, "attributions : " .. (kinds.award or 0))
     Eq(kinds.fix, 1, "correction")
     Eq(kinds.close, 1, "fermeture")
@@ -281,7 +275,7 @@ Test("corrections (Points) et annulations (Historique) par clic droit", function
     Eq(#FS.errors, 0, "erreurs")
 end)
 
-Test("objets vus en tombant : epiques absents ajoutes a la liste du raid (droit raids)", function()
+Test("objets vus en tombant : epiques inconnus ajoutes au groupe de l instance, par tous", function()
     local FS, ns = Game({ roster = { { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" } } })
     ns.Panel.CloseIntro()
     ns.Write("raid", { r = "MC", nm = "MC", inst = 409, add = { 16800 } })
@@ -291,16 +285,17 @@ Test("objets vus en tombant : epiques absents ajoutes a la liste du raid (droit 
     _G.GetLootSlotLink = function(i) return "|Hitem:" .. loot[i][1] .. "::|h" end
     _G.GetLootSlotInfo = function(i) return "tex", "nom", 1, nil, loot[i][2] end
     FS.Fire("LOOT_OPENED")
-    local raid = ns.State().raids.MC
-    Ok(raid.items[19019], "epique ajoute")
+    local raid = ns.State().raids.I409
+    Ok(raid and raid.items[19019], "epique ajoute au groupe de l instance")
     Ok(not raid.items[18000], "rare ignore")
-    Eq(#raid.list, 2, "pas de doublon")
+    Ok(not raid.items[16800], "deja connu (MC) : pas en double")
+    Eq(raid.nm, "Instance", "nom de l instance")
     Ok(FS.printed[#FS.printed]:find("1 objet", 1, true), "message")
     -- hors instance suivie : rien
     FS.instance = 0
     loot = { { 19020, 4 } }
     FS.Fire("LOOT_OPENED")
-    Ok(not ns.State().raids.MC.items[19020], "rien hors du raid")
+    Ok(not ns.State().raids.I409.items[19020], "rien hors d un raid")
     -- sans le droit : rien
     FS.instance = 409
     ns.StartDemo(4)
@@ -310,5 +305,5 @@ Test("objets vus en tombant : epiques absents ajoutes a la liste du raid (droit 
     FS.RunTimers()
     loot = { { 19021, 4 } }
     FS.Fire("LOOT_OPENED")
-    Ok(not ns.State().raids.MC.items[19021], "rien sans le droit")
+    Ok(ns.State().raids.I409.items[19021], "un novice apprend aussi")
 end)

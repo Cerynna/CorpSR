@@ -29,10 +29,7 @@ local function itemList(items)
     return table.concat(out, ", ")
 end
 
-local function sessionRaid(st, sid)
-    local s = st.sessions[sid]
-    return s and ns.RaidName(s.r) or "?"
-end
+local function sessionRaid(st, sid) return ns.SessionName(st.sessions[sid]) end
 
 --- Phrase lisible d une ligne du journal.
 function ns.Describe(rec, st)
@@ -41,16 +38,14 @@ function ns.Describe(rec, st)
     local k = e.k
     if k == "sr" then
         -- les SR des autres restent caches jusqu au verrouillage
-        if e.a ~= ns.Me() and #e.i > 0 and not J.Locked(st, e.r, e.w) then
-            return L.D_SR_HIDDEN:format(ns.RaidName(e.r))
+        if e.a ~= ns.Me() and #e.i > 0 and not J.Locked(st, e.w) then
+            return L.D_SR_HIDDEN:format(ns.WeekLabel(e.w))
         end
-        return L.D_SR:format(ns.RaidName(e.r), (#e.i > 0) and itemList(e.i) or L.D_SR_NONE)
+        return L.D_SR:format(ns.WeekLabel(e.w), (#e.i > 0) and itemList(e.i) or L.D_SR_NONE)
     elseif k == "open" then
-        return L.D_OPEN:format(ns.RaidName(e.r))
+        return e.r and L.D_OPEN:format(ns.RaidName(e.r)) or L.D_OPEN_EVENING
     elseif k == "lock" then
-        local total = 0
-        for _, x in ipairs(rec.fx or {}) do total = total + x.d end
-        return L.D_LOCK:format(sessionRaid(st, e.s), #e.pr, total)
+        return L.D_LOCK_WEEK:format(ns.WeekLabel(e.w))
     elseif k == "pres" then
         return (e.on and L.D_PRES_ON or L.D_PRES_OFF):format(ns.ColorName(e.p), sessionRaid(st, e.s))
     elseif k == "close" then

@@ -2,11 +2,13 @@
     CorpSR - mode demo : une guilde simulee (Lua pur)
 
     Fabrique une fausse guilde de 24 membres (plus le joueur, au grade de
-    son choix) et cinq semaines d historique passees par le vrai moteur :
-    SR, absences, verrouillages, attributions (SR, +1, +1 DL, +2, mog,
+    son choix) et cinq semaines d historique passees par le vrai moteur
+    (regles du 16/10) : 2 SR par semaine sur n importe quels objets, une
+    soiree qui enchaine MC puis Onyxia, absences, points credites aux
+    presents quand l objet tombe, attributions (SR, +1, +1 DL, +2, mog,
     banque, desenchantement), egalites relancees, correction avec raison,
-    attribution annulee puis refaite, retardataire, ecriture refusee faute
-    de droit, SR pose apres le verrouillage. La semaine en cours a ses SR
+    attribution annulee puis refaite, ecriture refusee faute de droit, SR
+    pose apres le verrouillage. La semaine en cours a ses SR
     poses mais pas encore verrouilles : le joueur peut jouer avec les siens.
     Tout est reproductible (generateur pseudo-aleatoire a graine fixe) et
     rien n est jamais envoye a la guilde.
@@ -118,138 +120,164 @@ function D.Build(o)
     local MC, ONY = catalog("MC"), catalog("ONY")
     local function weekStart(w) return o.nextReset - WEEK * (W - w + 1) end
 
-    -- reglages et raids, au debut de l historique
+    -- reglages et groupes d objets (dans la vraie guilde, ils s apprennent
+    -- en tombant), au debut de l historique
     local t0 = weekStart(W - D.WEEKS) + 600
     E(GM, t0, "cfg", { c = { rights = {
-        [1] = { session = true, presence = true, award = true, fix = true, undo = true, raids = true },
-        [2] = { presence = true },
+        [1] = { session = true, award = true, fix = true, undo = true, raids = true },
+        [2] = { session = true },
     } } })
     E(GM, t0 + 60, "raid", { r = "MC", nm = o.raids.MC, inst = MC.inst, add = MC.items })
     E(GM, t0 + 120, "raid", { r = "ONY", nm = o.raids.ONY, inst = ONY.inst, add = ONY.items })
 
-    -- envies de chacun (2 objets, parfois un double SR)
+    -- envies de chacun : 2 SR par semaine, n importe quel raid (parfois double)
+    local all = {}
+    for _, i in ipairs(MC.items) do all[#all + 1] = i end
+    for _, i in ipairs(ONY.items) do all[#all + 1] = i end
+    -- objets convoites : plusieurs candidats par objet, donc des perdants dont
+    -- les points montent de drop en drop
+    local popular = {}
+    for x = 1, 9 do popular[#popular + 1] = MC.items[x] end
+    for x = 1, 3 do popular[#popular + 1] = ONY.items[x] end
     local wishes = {}
     for _, m in ipairs(people) do
-        local w2 = pick(rng, MC.items, 2)
+        local w2 = pick(rng, popular, 2)
         if rng(10) <= 3 then w2[2] = w2[1] end
-        wishes[m.key] = { MC = w2, ONY = pick(rng, ONY.items, 1) }
+        wishes[m.key] = w2
     end
 
-    -- une soiree de raid : ouverture, presents, verrouillage, butin, fermeture
-    local function evening(w, raid, drops, opts)
-        opts = opts or {}
-        local start = weekStart(w)
-        local r = (raid == "MC") and MC or ONY
-        -- SR de la semaine (avant la soiree)
-        for i, m in ipairs(people) do
-            local want = wishes[m.key][raid]
-            if raid == "MC" or i % 2 == 0 or m.key == o.me then
-                E(m.key, start + 86400 + i * 97, "sr", { r = raid, i = { want[1], want[2] } })
+    -- objets qui tombent : une partie parmi les envies du groupe (pour que
+    -- la demo montre des points qui montent), le reste au hasard
+    local function drops(r, n, present)
+        local inRaid = {}
+        for _, i in ipairs(r.items) do inRaid[i] = true end
+        local wanted, out, used = {}, {}, {}
+        for _, m in ipairs(people) do
+            if present[m.key] then
+                for _, i in ipairs(wishes[m.key]) do
+                    if inRaid[i] then wanted[#wanted + 1] = i end
+                end
             end
         end
-        if not drops then return end
+        local guard = 0
+        while #out < n and guard < 200 do
+            guard = guard + 1
+            local pool = (#out < math.ceil(n / 2) and #wanted > 0) and wanted or r.items
+            local i = pool[rng(#pool)]
+            if not used[i] then
+                used[i] = true
+                out[#out + 1] = i
+            end
+        end
+        return out
+    end
+
+    -- une soiree : SR de la semaine, ouverture, verrouillage, plusieurs
+    -- raids d affilee (MC puis Onyxia), butin, fermeture
+    local function evening(w, raids, opts)
+        opts = opts or {}
+        local start = weekStart(w)
+        for i, m in ipairs(people) do
+            E(m.key, start + 86400 + i * 97, "sr", { i = { wishes[m.key][1], wishes[m.key][2] } })
+        end
         local by = (w % 2 == 0) and OFF1 or OFF2
-        local tr = start + 2 * 86400 + 20 * 3600 + 1800 + ((raid == "ONY") and 7200 or 0)
-        local _, sid = E(by, tr, "open", { r = raid })
+        local tr = start + 2 * 86400 + 20 * 3600 + 1800
+        local _, sid = E(by, tr, "open", {})
         local present, pr = {}, {}
         for _, m in ipairs(people) do
             local away = rng(100) <= 15
             if m.key == o.me then away = (w == W - 3) end
-            if opts.late == m.key then away = true end
             if not away then
                 present[m.key] = true
                 pr[#pr + 1] = m.key
             end
         end
         E(by, tr + 900, "lock", { s = sid, pr = pr })
-        if opts.late then
-            E(by, tr + 1500, "pres", { s = sid, p = opts.late, on = true })
-            present[opts.late] = true
-        end
         if opts.afterLock then
-            E(opts.afterLock, tr + 1600, "sr", { r = raid, i = { r.items[1] } })
+            E(opts.afterLock, tr + 1600, "sr", { i = { MC.items[1] } })
         end
 
-        local t = tr + 2400
-        for d, item in ipairs(pick(rng, r.items, drops)) do
-            t = t + 900
-            local st = J.Replay(list)
-            local function info(p)
-                local inf = J.Info(st, sid, p, item)
-                inf.guild, inf.present = true, present[p] == true
-                return inf
-            end
-            local a = R.NewAttribution({ item = item, count = 1, settings = st.cfg, info = info })
-            local any = false
-            for _, m in ipairs(people) do
-                if present[m.key] and info(m.key).sr > 0 then
-                    a:Roll(m.key, rng(st.cfg.rolls.sr), 1, st.cfg.rolls.sr)
-                    any = true
+        local t, n = tr + 2400, 0
+        for _, rd in ipairs(raids) do
+            local r = (rd[1] == "MC") and MC or ONY
+            for _, item in ipairs(drops(r, rd[2], present)) do
+                n = n + 1
+                t = t + 900
+                local st = J.Replay(list)
+                -- presents qui l ont SR : credites a ce drop, et leur jet compte deja ces points
+                local cr = {}
+                for _, m in ipairs(people) do
+                    if present[m.key] and J.SRCount(st, w, m.key, item) > 0 then cr[#cr + 1] = m.key end
                 end
-            end
-            if not any then
-                local takers = rng(4) - 1
-                for _, m in ipairs(pick(rng, people, takers)) do
-                    if present[m.key] then
-                        local max = ({ st.cfg.rolls.ms, st.cfg.rolls.ms, st.cfg.rolls.os, st.cfg.rolls.mog })[rng(4)]
-                        a:Roll(m.key, rng(max), 1, max)
+                local function info(p)
+                    local inf = J.Info(st, sid, p, item, present[p] == true)
+                    inf.guild, inf.present = true, present[p] == true
+                    return inf
+                end
+                local a = R.NewAttribution({ item = item, count = 1, settings = st.cfg, info = info })
+                for _, p in ipairs(cr) do a:Roll(p, rng(st.cfg.rolls.sr), 1, st.cfg.rolls.sr) end
+                if #cr == 0 then
+                    for _, m in ipairs(pick(rng, people, rng(4) - 1)) do
+                        if present[m.key] then
+                            local max = ({ st.cfg.rolls.ms, st.cfg.rolls.ms, st.cfg.rolls.os, st.cfg.rolls.mog })[rng(4)]
+                            a:Roll(m.key, rng(max), 1, max)
+                        end
                     end
                 end
-            end
-            local res = a:Result()
-            while res.tie do
-                local tied = res.tie.list
-                a:Reroll()
-                for _, c in ipairs(tied) do
-                    local max = R.RangeOf(st.cfg, c.cat)
-                    a:Roll(c.p, rng(max), 1, max)
-                end
-                res = a:Result()
-            end
-            local win = res.winners[1]
-            if win then
-                local q = {}
-                for x, c in ipairs(res.list) do q[x] = { c.p, c.cat, c.roll } end
-                if opts.mistake and d == 1 then
-                    -- erreur du distributeur : mauvais joueur, annulee puis refaite
-                    local wrong
-                    for _, m in ipairs(people) do
-                        if present[m.key] and m.key ~= win.p and not wrong then wrong = m.key end
+                local res = a:Result()
+                while res.tie do
+                    local tied = res.tie.list
+                    a:Reroll()
+                    for _, c in ipairs(tied) do
+                        local max = R.RangeOf(st.cfg, c.cat)
+                        a:Roll(c.p, rng(max), 1, max)
                     end
-                    local bad = E(by, t, "award", { s = sid, i = item, p = wrong, c = "ms", r = win.roll })
-                    E(by, t + 60, "undo", { ref = J.Id(bad), y = o.texts.undo })
-                    t = t + 120
+                    res = a:Result()
                 end
-                E(by, t, "award", { s = sid, i = item, p = win.p, c = win.cat, r = win.roll, pt = win.pts, q = q })
-                -- un objet gagne par SR : on vise autre chose ensuite
-                if win.cat == "sr" then
-                    local wl = wishes[win.p][raid]
-                    local nw = pick(rng, r.items, 1, wl)[1] or wl[1]
-                    if wl[1] == item then wl[1] = nw end
-                    if wl[2] == item then wl[2] = nw end
+                local dr = sid .. "#" .. n
+                local win = res.winners[1]
+                if win then
+                    local q = {}
+                    for x, c in ipairs(res.list) do q[x] = { c.p, c.cat, c.roll } end
+                    if opts.mistake and n == 1 then
+                        -- erreur du distributeur : mauvais joueur, annulee puis refaite
+                        local wrong
+                        for _, m in ipairs(people) do
+                            if present[m.key] and m.key ~= win.p and not wrong then wrong = m.key end
+                        end
+                        local bad = E(by, t, "award", { s = sid, i = item, p = wrong, c = "ms", r = win.roll, cr = cr, dr = dr })
+                        E(by, t + 60, "undo", { ref = J.Id(bad), y = o.texts.undo })
+                        t = t + 120
+                    end
+                    E(by, t, "award", { s = sid, i = item, p = win.p, c = win.cat, r = win.roll, pt = win.pts, q = q, cr = cr, dr = dr })
+                    -- un objet gagne par SR : on vise autre chose ensuite
+                    if win.cat == "sr" then
+                        local wl = wishes[win.p]
+                        local nw = pick(rng, all, 1, wl)[1] or wl[1]
+                        if wl[1] == item then wl[1] = nw end
+                        if wl[2] == item then wl[2] = nw end
+                    end
+                else
+                    E(by, t, "award", { s = sid, i = item, c = (n % 2 == 0) and "bank" or "de", cr = cr, dr = dr })
                 end
-            else
-                E(by, t, "award", { s = sid, i = item, c = (d % 2 == 0) and "bank" or "de" })
             end
         end
         if opts.fix then E(by, t + 300, "fix", opts.fix) end
         if opts.cheat then
             E(NOVICE, t + 360, "fix", { p = NOVICE, i = MC.items[1], d = 50, y = o.texts.cheat })
         end
-        E(by, tr + 4 * 3600, "close", { s = sid })
+        E(by, tr + 5 * 3600, "close", { s = sid })
     end
 
     for w = W - D.WEEKS, W - 1 do
         local opts = {}
-        if w == W - 4 then opts.fix = { p = key(14), i = wishes[key(14)].MC[1], d = 10, y = o.texts.fix } end
+        if w == W - 4 then opts.fix = { p = key(14), i = wishes[key(14)][1], d = 10, y = o.texts.fix } end
         if w == W - 3 then opts.mistake = true end
-        if w == W - 2 then
-            opts.cheat = true
-            opts.late = key(17)
-        end
+        if w == W - 2 then opts.cheat = true end
         if w == W - 1 then opts.afterLock = key(12) end
-        evening(w, "MC", 7, opts)
-        if w >= W - 2 then evening(w, "ONY", 3) end
+        local raids = { { "MC", 7 } }
+        if w >= W - 2 then raids[2] = { "ONY", 3 } end      -- Onyxia + MC en une soiree
+        evening(w, raids, opts)
     end
 
     -- semaine en cours : SR poses, pas encore de soiree
@@ -257,9 +285,8 @@ function D.Build(o)
     local span = math.max(1, o.now - start - 60)
     for i, m in ipairs(people) do
         if m.key ~= o.me and rng(10) <= 8 then
-            local want = wishes[m.key].MC
             local t = start + math.floor(span * i / (#people + 2))
-            E(m.key, t, "sr", { r = "MC", i = { want[1], want[2] } })
+            E(m.key, t, "sr", { i = { wishes[m.key][1], wishes[m.key][2] } })
         end
     end
 

@@ -53,24 +53,19 @@ local function loot(FS, items)
     FS.Fire("LOOT_OPENED")
 end
 
-Test("chef de raid : soiree a l entree, retardataire, butin, jet lu, validation", function()
+Test("chef de raid : soiree a l entree, butin, jet lu, validation", function()
     local FS, ns = realGame(true)
     local D = ns.Distrib
     FS.instance = 409
     FS.Fire("PLAYER_ENTERING_WORLD")
     FS.RunTimers()
     local s = D.LiveSession()
-    Ok(s and s.r == "MC", "soiree ouverte en entrant")
+    Ok(s, "soiree ouverte en entrant")
     Ok(FS.printed[#FS.printed]:find("automatiquement", 1, true), "prevenu dans le chat")
     loot(FS, { 17076 })
     Ok(D.cur and D.cur.item == 17076, "attribution lancee a l ouverture du butin")
     s = D.LiveSession()
-    Ok(s.locked and s.present["4620-000000AA"], "verrouillee avec les presents")
-    -- un retardataire arrive
-    table.insert(FS.raid, { "Sylva Brumeval", "Player-4620-000000BB" })
-    FS.Fire("GROUP_ROSTER_UPDATE")
-    FS.RunTimers()
-    Ok(D.LiveSession().present["4620-000000BB"], "retardataire note present")
+    Ok(s.locked, "SR de la semaine verrouilles au premier objet")
     FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 64 (1-100).")
     advance(FS, 25)
     local a = ns.State().awards[#ns.State().awards]

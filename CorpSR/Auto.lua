@@ -5,11 +5,10 @@
     Chez UN seul joueur, le chef de raid qui a les droits « session » et
     « award » (pour qu il n y ait jamais deux soirees ou deux attributions
     en double), et si le reglage « Auto » n est pas coupe :
-      - en entrant dans l instance d un raid suivi, en raid : la soiree
-        s ouvre (les soirees encore ouvertes d avant se ferment) ;
+      - en entrant dans une instance de raid, en raid : la soiree s ouvre
+        (une seule par soir, meme si l on enchaine plusieurs raids ; celles
+        restees ouvertes d avant se ferment) ;
       - les SR se verrouillent au premier objet attribue (Distrib.Start) ;
-      - un membre de la guilde qui rejoint le groupe ensuite est note
-        present (retardataire) ;
       - a l ouverture du butin : CorpSR s ouvre sur Attribution et lance le
         premier objet du raid (ou epique) pas encore attribue ;
       - apres le delai (15 s par defaut, repousse quand un jet arrive) :
@@ -53,60 +52,54 @@ end
 
 local function now() return GetTime and GetTime() or 0 end
 
--- soiree ouverte pour ce raid cette semaine
-local function liveFor(raid)
-    local st, w = ns.State(), ns.Week()
-    for x = #st.order, 1, -1 do
-        local s = st.sessions[st.order[x]]
-        if not s.closed and s.r == raid and s.w == w then return s end
-    end
+-- soiree en cours : ouverte cette semaine, il y a moins de 12 h (une soiree
+-- peut enchainer plusieurs raids : Onyxia, Hyjal, les Tumulaires...)
+local function liveRecent()
+    local s = D.LiveSession()
+    if s and s.w == ns.Week() and ns.Now() - s.t < 12 * 3600 then return s end
     return nil
 end
 
---- Soiree du raid ouverte (l ouvre au besoin, ferme les autres).
-function A.EnsureSession(raid)
-    local s = liveFor(raid)
+--- Soiree ouverte (l ouvre au besoin ; ferme celles restees ouvertes).
+function A.EnsureSession()
+    local s = liveRecent()
     if s then return s end
     local st = ns.State()
     for _, sid in ipairs(st.order) do
         if not st.sessions[sid].closed then ns.Write("close", { s = sid }) end
     end
-    if ns.Write("open", { r = raid }) then
-        ns.Say(L.AUTO_OPENED:format(ns.RaidName(raid)))
-        return liveFor(raid)
+    if ns.Write("open", {}) then
+        ns.Say(L.AUTO_OPENED_EVENING)
+        return liveRecent()
     end
     return nil
 end
 
--- en raid, dans l instance d un raid suivi
+-- en raid, dans une instance de raid (n importe laquelle)
 local function zoneCheck()
     if ns.demo or not A.Leader() or not (IsInRaid and IsInRaid()) then return end
-    local raid = ns.Raid.CurrentRaidKey()
-    if raid then A.EnsureSession(raid) end
-end
-
--- retardataires : membres de la guilde arrives dans le groupe apres le verrouillage
-function A.Arrivals()
-    if not A.Leader() then return 0 end
-    local s = D.LiveSession()
-    if not (s and s.locked) then return 0 end
-    local n = 0
-    for _, k in ipairs(ns.Raid.GuildKeys()) do
-        if not s.present[k] and ns.Write("pres", { s = s.id, p = k, on = true }) then n = n + 1 end
-    end
-    return n
+    if ns.Raid.CurrentZone() then A.EnsureSession() end
 end
 
 ------------------------------------------------------------------------------
 -- Butin : objets a attribuer, l un apres l autre
 ------------------------------------------------------------------------------
 
---- Objets du butin pas encore attribues pendant la soiree (raid suivi ou epiques).
+--- Objets du butin pas encore attribues pendant la soiree : epiques (ou
+-- mieux), ou deja connus de la guilde, ou reserves cette semaine.
 function A.Queue()
     local s = D.LiveSession()
     if not s then return {} end
     local st = ns.State()
-    local raid = st.raids[s.r]
+    local known = {}
+    for _, r in pairs(st.raids) do
+        if not r.gone then
+            for i in pairs(r.items) do known[i] = true end
+        end
+    end
+    for _, items in pairs(st.sr[s.w] or {}) do
+        for _, i in ipairs(items) do known[i] = true end
+    end
     local given = {}
     for _, a in ipairs(st.awards) do
         if a.s == s.id then given[a.i] = (given[a.i] or 0) + 1 end
@@ -116,7 +109,7 @@ function A.Queue()
         local _, _, quality = ns.Item(id)
         if (given[id] or 0) > 0 then
             given[id] = given[id] - 1
-        elseif (raid and raid.items[id]) or (type(quality) == "number" and quality >= 4) then
+        elseif known[id] or (type(quality) == "number" and quality >= 4) then
             out[#out + 1] = id
         end
     end
@@ -149,10 +142,7 @@ end
 --- Le butin s ouvre.
 function A.OnLoot()
     if not A.Leader() then return end
-    if not D.LiveSession() then
-        local raid = ns.demo and "MC" or ns.Raid.CurrentRaidKey()
-        if not (raid and A.EnsureSession(raid)) then return end
-    end
+    if not D.LiveSession() and not A.EnsureSession() then return end
     A.Next()
 end
 
@@ -188,11 +178,6 @@ end)
 
 ns.Event("PLAYER_ENTERING_WORLD", function() ns.Later("autoZone", 3, zoneCheck) end)
 ns.Event("ZONE_CHANGED_NEW_AREA", function() ns.Later("autoZone", 3, zoneCheck) end)
-ns.Event("GROUP_ROSTER_UPDATE", function()
-    ns.Later("autoArrivals", 3, function()
-        if not ns.demo then A.Arrivals() end
-    end)
-end)
 
 -- echeances : quatre fois par seconde, seulement pendant une attribution
 local pulse = CreateFrame("Frame")

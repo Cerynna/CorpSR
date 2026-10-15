@@ -52,7 +52,9 @@ local function send(kind, data)
 end
 
 --- Lance une attribution. Rend l attribution, ou nil et la raison.
-function D.Start(item, count, free)
+-- drop : { dr, cr } d un drop deja commence (jet libre d un reste), pour
+-- qu il ne credite pas deux fois.
+function D.Start(item, count, free, drop)
     if not ns.Can("award") then return nil, "right" end
     local s = D.LiveSession()
     if not s then return nil, "session" end
@@ -68,10 +70,27 @@ function D.Start(item, count, free)
     local roster = ns.Roster()
     local cur = { id = newId(), sid = s.id, item = item, count = count or 1, free = free and true or false,
         group = ns.Raid.Members(), names = {} }
+    -- le drop : les membres de la guilde presents qui l ont SR cette semaine
+    -- gagnent leurs points (regle du 16/10), une seule fois par drop ; leur
+    -- jet compte deja ces points
+    cur.dr = drop and drop.dr or cur.id
+    if drop and drop.cr then
+        cur.cr = drop.cr
+    else
+        cur.cr = {}
+        local st = ns.State()
+        for _, m in ipairs(cur.group.list) do
+            if m.guild and J.SRCount(st, s.w, m.key, item) > 0 then cur.cr[#cur.cr + 1] = m.key end
+        end
+        table.sort(cur.cr)
+    end
+    local credited = {}
+    for _, k in ipairs(cur.cr) do credited[k] = true end
     cur.attr = R.NewAttribution({
         item = item, count = cur.count, settings = ns.State().cfg, free = cur.free,
         info = function(p)
-            local inf = J.Info(ns.State(), s.id, p, item)
+            local st = ns.State()
+            local inf = J.Info(st, s.id, p, item, credited[p] and not J.Dropped(st, cur.dr))
             inf.guild = roster.byKey[p] ~= nil
             inf.present = cur.group.byKey[p] ~= nil
             return inf
@@ -164,15 +183,15 @@ function D.Validate()
         if ns.db and not ns.Roster().byKey[c.p] and cur.names[c.p] then ns.db.names[c.p] = cur.names[c.p] end
         local ok, why = ns.Write("award", {
             s = cur.sid, i = cur.item, p = c.p, c = c.cat, r = c.roll,
-            pt = (c.cat == "sr") and c.pts or nil, q = q,
+            pt = (c.cat == "sr") and c.pts or nil, q = q, dr = cur.dr, cr = cur.cr,
         })
         if not ok then return nil, why end
     end
     D.last = { item = cur.item, winners = res.winners, names = cur.names }
     local left = cur.count - #res.winners
-    local item, sid = cur.item, cur.sid
+    local l = { item = cur.item, count = left, sid = cur.sid, dr = cur.dr, cr = cur.cr }
     D.Finish()
-    if left > 0 then D.leftover = { item = item, count = left, sid = sid } end
+    if left > 0 then D.leftover = l end
     ns.Fire("distrib", "validated")
     return #res.winners, left
 end
@@ -184,9 +203,9 @@ function D.NoTaker()
     local res = cur.attr:Result()
     local left = cur.count - #cur.attr.won
     if #res.winners > 0 and not res.tie then return end
-    local item, sid = cur.item, cur.sid
+    local l = { item = cur.item, count = math.max(1, left), sid = cur.sid, dr = cur.dr, cr = cur.cr }
     D.Finish()
-    D.leftover = { item = item, count = math.max(1, left), sid = sid }
+    D.leftover = l
     ns.Fire("distrib", "leftover")
 end
 
@@ -196,10 +215,10 @@ function D.Leftover(choice)
     if not l then return nil end
     if choice == "free" then
         D.leftover = nil
-        return D.Start(l.item, l.count, true)
+        return D.Start(l.item, l.count, true, { dr = l.dr, cr = l.cr })
     end
     for _ = 1, l.count do
-        local ok, why = ns.Write("award", { s = l.sid, i = l.item, c = choice })
+        local ok, why = ns.Write("award", { s = l.sid, i = l.item, c = choice, dr = l.dr, cr = l.cr })
         if not ok then return nil, why end
     end
     D.leftover = nil

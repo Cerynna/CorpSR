@@ -17,14 +17,20 @@
       k  type, puis ses champs :
         cfg    c                      reglages complets (GM seulement)
         raid   r, nm, inst, add, del, drop
-                                      raid r : nom, instance, objets ajoutes / retires
-        sr     r, i                   SR de l AUTEUR pour le raid r, semaine w (i = itemIDs)
-        open   r                      ouvre une session ; son id = celui de l ecriture
-        lock   s, pr                  verrouille les SR ; pr = presents (credit des points)
-        pres   s, p, on               presence d un joueur (retardataire, absent)
-        close  s                      ferme la session
-        award  s, i, p, c, r, pt, q   objet i a p : categorie c, jet r, points pt,
-                                      q = classement { {p, c, r}... } (transparence)
+                                      groupe d objets r (un raid, appris en tombant) :
+                                      ajouter est ouvert a tous, retirer demande le droit
+        sr     i                      SR de l AUTEUR pour la semaine w (i = itemIDs,
+                                      n importe lesquels, n importe quel raid)
+        open   (r)                    ouvre une soiree (plusieurs raids possibles) ;
+                                      son id = celui de l ecriture
+        lock   s, pr                  verrouille les SR de la semaine
+        pres   s, p, on               presence (information seulement)
+        close  s                      ferme la soiree
+        award  s, i, p, c, r, pt, q, dr, cr
+                                      objet i a p : categorie c, jet r, points pt,
+                                      q = classement { {p, c, r}... } (transparence),
+                                      dr = drop (attribution), cr = presents qui l ont
+                                      SR : credites au drop (une fois par drop)
         fix    p, i, d, y             correction de d points, raison y obligatoire
         undo   ref, y                 annule l ecriture ref, raison y obligatoire
 
@@ -34,7 +40,10 @@
       2. annulations, de la derniere a la premiere (annuler une annulation
          retablit l ecriture) ; les reglages ne s annulent pas, le GM en
          publie de nouveaux ;
-      3. effets, dans l ordre : SR, sessions, credits, attributions...
+      3. effets, dans l ordre : SR, soirees, attributions (credits au drop)...
+    Regles du 16/10/2026 : 2 SR par semaine au total, sur n importe quels
+    objets ; on gagne les points d un SR quand l objet tombe et qu on est
+    dans le raid ; le gagnant par SR repasse a 0 sur l objet.
     Une ecriture refusee reste dans le journal, avec sa raison.
 ----------------------------------------------------------------------------]]
 
@@ -52,7 +61,7 @@ J.WEEK = 7 * 24 * 3600
 -- droit demande par chaque type d ecriture (sr : chacun pour lui-meme)
 local RIGHT = {
     raid = "raids", open = "session", lock = "session", close = "session",
-    pres = "presence", award = "award", fix = "fix", undo = "undo",
+    pres = "session", award = "award", fix = "fix", undo = "undo",
 }
 J.RIGHT = RIGHT
 
@@ -93,8 +102,8 @@ local FORM = {
             and (e.del == nil or isList(e.del, 300, isItem))
             and (e.drop == nil or type(e.drop) == "boolean")
     end,
-    sr = function(e) return isStr(e.r, 32) and isList(e.i, 10, isItem) end,
-    open = function(e) return isStr(e.r, 32) end,
+    sr = function(e) return (e.r == nil or isStr(e.r, 32)) and isList(e.i, 10, isItem) end,
+    open = function(e) return e.r == nil or isStr(e.r, 32) end,
     lock = function(e) return isKey(e.s) and isList(e.pr, 80, isKey) end,
     pres = function(e) return isKey(e.s) and isKey(e.p) and type(e.on) == "boolean" end,
     close = function(e) return isKey(e.s) end,
@@ -105,6 +114,8 @@ local FORM = {
         if e.p ~= nil and not isKey(e.p) then return false end
         if e.r ~= nil and not isInt(e.r, 0, 100000) then return false end
         if e.pt ~= nil and not isInt(e.pt, 0, 1000000) then return false end
+        if e.dr ~= nil and not isStr(e.dr, 80) then return false end
+        if e.cr ~= nil and not isList(e.cr, 40, isKey) then return false end
         return e.q == nil or isList(e.q, 80, function(x)
             return type(x) == "table" and isKey(x[1]) and type(x[2]) == "string" and isInt(x[3], 0, 100000)
         end)
@@ -235,8 +246,6 @@ local function before(x, y)
 end
 J.Before = before
 
-local function rwKey(r, w) return r .. "|" .. num(w) end
-J.RWKey = rwKey
 
 local function getPts(st, p, i)
     local t = st.pts[p]
@@ -252,54 +261,31 @@ local function setPts(st, p, i, v)
     if v == 0 then t[i] = nil else t[i] = v end
 end
 
-local function sortedItems(map)
-    local list = {}
-    for i in pairs(map) do list[#list + 1] = i end
-    sort(list)
-    return list
+-- SR d un joueur pour une semaine (liste d itemIDs) ou nil
+local function srOf(st, w, p)
+    local t = st.sr[w]
+    return t and t[p]
 end
 
--- credit des SR verrouilles d un joueur present, une fois par raid et semaine
-local function credit(st, s, p, cfg, fx)
-    local rw = rwKey(s.r, s.w)
-    local done = st.credited[rw]
-    if not done then
-        done = {}
-        st.credited[rw] = done
+-- nombre de SR d un joueur sur un objet, une semaine donnee
+local function srCount(st, w, p, item)
+    local n = 0
+    for _, i in ipairs(srOf(st, w, p) or {}) do
+        if i == item then n = n + 1 end
     end
-    if done[p] then return end
-    local srs = st.sr[rw] and st.sr[rw][p]
-    if not srs or #srs == 0 then return end
-    local got = {}
-    for _, i in ipairs(srs) do got[i] = (got[i] or 0) + cfg.pts end
-    done[p] = { s = s.id, got = got }
-    for _, i in ipairs(sortedItems(got)) do
-        setPts(st, p, i, getPts(st, p, i) + got[i])
-        fx[#fx + 1] = { p = p, i = i, d = got[i] }
-    end
+    return n
 end
 
--- retrait d un present apres le verrouillage : on reprend son credit
-local function debit(st, s, p, cfg, fx)
-    local rw = rwKey(s.r, s.w)
-    local c = st.credited[rw] and st.credited[rw][p]
-    if not (c and c.s == s.id) then return end
-    st.credited[rw][p] = nil
-    for _, i in ipairs(sortedItems(c.got)) do
-        local b = getPts(st, p, i)
-        local v = b - c.got[i]
-        if v < 0 then v = 0 end
-        setPts(st, p, i, v)
-        fx[#fx + 1] = { p = p, i = i, d = v - b }
-    end
-    -- present a une autre soiree verrouillee du meme raid cette semaine
-    for _, sid in ipairs(st.order) do
-        local o = st.sessions[sid]
-        if o ~= s and o.r == s.r and o.w == s.w and o.locked and o.present[p] then
-            credit(st, o, p, cfg, fx)
-            return
+local function uniqueSorted(list)
+    local seen, out = {}, {}
+    for _, x in ipairs(list or {}) do
+        if not seen[x] then
+            seen[x] = true
+            out[#out + 1] = x
         end
     end
+    sort(out)
+    return out
 end
 
 local APPLY = {}
@@ -320,7 +306,7 @@ function APPLY.raid(st, e)
         st.raidOrder[#st.raidOrder + 1] = e.r
     end
     r.gone = nil
-    if e.nm then r.nm = e.nm end
+    if e.nm and (e.del or not r.nm) then r.nm = e.nm end
     if e.inst then r.inst = e.inst end
     for _, i in ipairs(e.add or {}) do
         if not r.items[i] then
@@ -339,9 +325,10 @@ function APPLY.raid(st, e)
     return true
 end
 
+-- SR : 2 par semaine au total (reglage), sur n importe quels objets ; le
+-- raid d une ancienne ecriture (champ r) ne compte plus
 function APPLY.sr(st, e, cfg)
-    local rw = rwKey(e.r, e.w)
-    if st.locks[rw] then return false, "locked" end
+    if st.locks[e.w] then return false, "locked" end
     if #e.i > cfg.nsr then return false, "nsr" end
     if not cfg.dbl then
         local seen = {}
@@ -350,10 +337,10 @@ function APPLY.sr(st, e, cfg)
             seen[i] = true
         end
     end
-    local t = st.sr[rw]
+    local t = st.sr[e.w]
     if not t then
         t = {}
-        st.sr[rw] = t
+        st.sr[e.w] = t
     end
     t[e.a] = (#e.i > 0) and copy(e.i) or nil
     return true
@@ -372,31 +359,22 @@ local function liveSession(st, sid)
     return s
 end
 
-function APPLY.lock(st, e, cfg, rec)
+-- verrouillage : fige les SR de la semaine (le premier de la semaine compte)
+function APPLY.lock(st, e)
     local s, why = liveSession(st, e.s)
     if not s then return false, why end
     if s.locked then return false, "already" end
     s.locked = e.t
-    local rw = rwKey(s.r, s.w)
-    if not st.locks[rw] then st.locks[rw] = e.t end
-    -- presents : la liste du verrouillage et ceux deja ajoutes a la main
+    if not st.locks[s.w] then st.locks[s.w] = e.t end
     for _, p in ipairs(e.pr) do s.present[p] = true end
-    rec.fx = {}
-    for _, p in ipairs(sortedItems(s.present)) do credit(st, s, p, cfg, rec.fx) end
     return true
 end
 
-function APPLY.pres(st, e, cfg, rec)
+-- presence : simple information (les points ne dependent plus de la soiree)
+function APPLY.pres(st, e)
     local s, why = liveSession(st, e.s)
     if not s then return false, why end
-    rec.fx = {}
-    if e.on then
-        s.present[e.p] = true
-        if s.locked then credit(st, s, e.p, cfg, rec.fx) end
-    else
-        s.present[e.p] = nil
-        if s.locked then debit(st, s, e.p, cfg, rec.fx) end
-    end
+    s.present[e.p] = e.on or nil
     return true
 end
 
@@ -407,14 +385,31 @@ function APPLY.close(st, e)
     return true
 end
 
-function APPLY.award(st, e, _, rec, id)
+-- Attribution. Le drop d un objet (dr : identifiant de l attribution, sinon
+-- l ecriture elle-meme) credite une seule fois, meme s il y a plusieurs
+-- exemplaires ou un reste : chaque joueur de cr (ceux qui l ont SR et sont
+-- dans le raid quand il tombe) gagne les points de ses SR dessus cette
+-- semaine. Puis un gain par SR remet le gagnant a 0 sur l objet.
+function APPLY.award(st, e, cfg, rec, id)
     local s, why = liveSession(st, e.s)
     if not s then return false, why end
     rec.fx = {}
+    local drop = e.dr or id
+    if not st.drops[drop] then
+        st.drops[drop] = true
+        for _, p in ipairs(uniqueSorted(e.cr)) do
+            local n = srCount(st, s.w, p, e.i)
+            if n > 0 then
+                local d = n * cfg.pts
+                setPts(st, p, e.i, getPts(st, p, e.i) + d)
+                rec.fx[#rec.fx + 1] = { p = p, i = e.i, d = d }
+            end
+        end
+    end
     if e.c == "sr" then
         local b = getPts(st, e.p, e.i)
         setPts(st, e.p, e.i, 0)
-        rec.fx[1] = { p = e.p, i = e.i, d = -b }
+        rec.fx[#rec.fx + 1] = { p = e.p, i = e.i, d = -b }
     end
     if R.LOOTS[e.c] then
         local l = st.looted[e.p]
@@ -425,7 +420,7 @@ function APPLY.award(st, e, _, rec, id)
         l.s[s.id] = true
         l.w[s.w] = true
     end
-    st.awards[#st.awards + 1] = { id = id, s = s.id, r = s.r, w = s.w, i = e.i, p = e.p, c = e.c, roll = e.r, pt = e.pt, t = e.t }
+    st.awards[#st.awards + 1] = { id = id, s = s.id, r = s.r, w = s.w, i = e.i, p = e.p, c = e.c, roll = e.r, pt = e.pt, t = e.t, dr = drop }
     return true
 end
 
@@ -443,15 +438,21 @@ local function newState()
         cfg = R.Settings(nil),
         raids = {}, raidOrder = {},
         sessions = {}, order = {},
-        sr = {},        -- [raid|semaine][joueur] = { itemID, itemID }
-        locks = {},     -- [raid|semaine] = heure du premier verrouillage
-        credited = {},  -- [raid|semaine][joueur] = { s = session, got = { [itemID] = points } }
+        sr = {},        -- [semaine][joueur] = { itemID, itemID }
+        locks = {},     -- [semaine] = heure du premier verrouillage
+        drops = {},     -- [identifiant du drop] = true : points deja credites
         pts = {},       -- [joueur][itemID] = points (en cours et en reserve)
         looted = {},    -- [joueur] = { s = { [session] = true }, w = { [semaine] = true } }
         awards = {},
         log = {},       -- une ligne par ecriture, dans l ordre : { id, e, st, why, by, fx }
         byId = {},
     }
+end
+
+-- droit demande par une ecriture : ajouter des objets est ouvert a tous
+local function rightOf(e)
+    if e.k == "raid" and not e.del and not e.drop then return nil end
+    return RIGHT[e.k]
 end
 
 --- Rejoue une liste d ecritures (deja controlees par J.Check).
@@ -470,6 +471,7 @@ function J.Replay(list)
     local cfg = R.Settings(nil)
     local valid, why = {}, {}
     for i, e in ipairs(sorted) do
+        local right = rightOf(e)
         if e.k == "cfg" then
             if e.rk == 0 then
                 cfg = R.Settings(e.c)
@@ -477,7 +479,7 @@ function J.Replay(list)
             else
                 why[i] = "right"
             end
-        elseif e.k == "sr" or R.Can(cfg, e.rk, RIGHT[e.k]) then
+        elseif e.k == "sr" or not right or R.Can(cfg, e.rk, right) then
             valid[i] = true
         else
             why[i] = "right"
@@ -530,14 +532,14 @@ end
 
 J.Points = getPts
 
---- SR d un joueur pour un raid et une semaine (liste d itemIDs) ou nil.
-function J.SR(st, r, w, p)
-    local t = st.sr[rwKey(r, w)]
-    return t and t[p]
-end
+--- SR d un joueur pour une semaine (liste d itemIDs) ou nil.
+function J.SR(st, w, p) return srOf(st, w, p) end
 
---- Heure du verrouillage des SR d un raid pour une semaine, ou nil.
-function J.Locked(st, r, w) return st.locks[rwKey(r, w)] end
+--- Nombre de SR d un joueur sur un objet, une semaine donnee.
+function J.SRCount(st, w, p, item) return srCount(st, w, p, item) end
+
+--- Heure du verrouillage des SR d une semaine, ou nil.
+function J.Locked(st, w) return st.locks[w] end
 
 --- Le joueur a-t-il deja loot (+1 DL) ? Portee selon les reglages : la
 -- soiree, ou toute la semaine, tous raids confondus (choix du 15/10/2026).
@@ -549,18 +551,20 @@ function J.Looted(st, p, s)
 end
 
 --- Ce que l attribution d un objet doit savoir d un joueur, dans une session.
--- Rend { sr = nombre de SR sur l objet, pts, looted } (guild et present
--- viennent du jeu).
-function J.Info(st, sid, p, item)
+-- Rend { sr = nombre de SR sur l objet, pts, looted }. pending : le drop
+-- n est pas encore credite et le joueur est du raid : ses points comptent
+-- deja le credit a venir (le jet se fait avec). guild et present viennent
+-- du jeu.
+function J.Info(st, sid, p, item, pending)
     local s = st.sessions[sid]
     local info = { sr = 0, pts = getPts(st, p, item), looted = J.Looted(st, p, s) }
-    if s then
-        for _, i in ipairs(J.SR(st, s.r, s.w, p) or {}) do
-            if i == item then info.sr = info.sr + 1 end
-        end
-    end
+    if s then info.sr = srCount(st, s.w, p, item) end
+    if pending and info.sr > 0 then info.pts = info.pts + info.sr * st.cfg.pts end
     return info
 end
+
+--- Le drop dr a-t-il deja credite ses points ?
+function J.Dropped(st, dr) return st.drops[dr] == true end
 
 ------------------------------------------------------------------------------
 -- Magasin : la liste sauvegardee, sans doublon, et son rejeu en cache

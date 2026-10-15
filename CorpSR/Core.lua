@@ -227,10 +227,18 @@ function ns.Raids()
 end
 
 function ns.RaidName(r)
+    if r == nil then return "" end
     if type(r) == "string" then r = ns.State().raids[r] or { key = r } end
     local zone = r.inst and GetRealZoneText and api(GetRealZoneText, r.inst)
     if type(zone) == "string" and zone ~= "" then return zone end
     return r.nm or r.key
+end
+
+--- Nom d une soiree : son raid (anciennes soirees) ou « soiree du jj/mm ».
+function ns.SessionName(s)
+    if not s then return "?" end
+    if s.r then return ns.RaidName(s.r) end
+    return L.EVENING:format(ns.Date(s.t))
 end
 
 -- noms d objets : le client les charge a la demande

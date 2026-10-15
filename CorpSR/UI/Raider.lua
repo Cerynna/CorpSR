@@ -76,7 +76,7 @@ local function choices(c)
     if c.free then
         out[1] = { "free", r.free }
     else
-        local info = J.Info(st, c.sid, ns.Me(), c.item)
+        local info = J.Info(st, c.sid, ns.Me(), c.item, true)
         if info.sr > 0 then out[#out + 1] = { "sr", r.sr } end
         out[#out + 1] = { info.looted and "dl" or "ms", r.ms }
         out[#out + 1] = { "os", r.os }
@@ -98,7 +98,7 @@ local function render()
     local c = cur
     win.icon:SetItem(c.item)
     win.item:SetText(ns.ItemText(c.item) .. ((c.count or 1) > 1 and ("  ×" .. c.count) or ""))
-    local info = J.Info(ns.State(), c.sid, ns.Me(), c.item)
+    local info = J.Info(ns.State(), c.sid, ns.Me(), c.item, true)
     win.info:SetText(L.RAIDER_INFO:format(info.pts, info.sr) .. (c.tieCat and ("  " .. UI.Hex("gold") .. L.RAIDER_TIE .. "|r") or ""))
     local list = choices(c)
     for i, b in ipairs(win.buttons) do
