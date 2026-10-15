@@ -58,4 +58,5 @@ npm test
 2. Onglet dans la fenêtre Guilde & Communautés, fenêtre `/csr`, vues, mode démo : **fait** (0.2.0), à vérifier en jeu.
 3. Synchro de guilde, droits et réglages du GM, raids et objets : **fait** (0.3.0), à vérifier en jeu à deux.
 4. Sessions, attribution, lecture des jets, fenêtre côté raideur, corrections et annulations ; démo d'une soirée complète : **fait** (0.4.0), à vérifier en jeu.
-5. Essais en jeu.
+   Ensuite (0.4.1 et 0.4.2) : journal rangé par guilde, résumés consolidés pour les vieilles semaines, objets vus en tombant ajoutés au raid, colonne « CorpSR » (qui a l'addon) et avertissement de version.
+5. Essais en jeu : démo et outils du GM vus sans erreur le 15/10 ; reste à voir en raid (verrou des messages, /roll en instance) et à deux membres (synchro, fenêtre côté raideur).
