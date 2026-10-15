@@ -44,6 +44,8 @@ Sync.IDLE = 20          -- semaine demandee liberee apres 20 s sans ecriture rec
 Sync.RETRY = 5          -- on reessaie les resumes en attente toutes les 5 s
 Sync.BATCH = 6          -- ecritures par message R
 Sync.MAX_DEFER = 300    -- ecritures en attente de la liste de guilde
+Sync.KEEP = 8           -- semaines recentes detaillees dans un resume diffuse ;
+                        -- les plus anciennes y tiennent en une seule empreinte
 
 local O = {}
 O.__index = O
@@ -61,7 +63,9 @@ function Sync.New(opts)
         deferred = {},      -- ecritures en direct d expediteurs pas encore connus
         lastSame = -1e9,    -- dernier resume identique au notre vu sur GUILD
         lastSent = -1e9,    -- notre dernier resume diffuse
-        stats = { E = 0, S = 0, Q = 0, I = 0, G = 0, R = 0, rejected = 0, added = 0 },
+        stats = { E = 0, S = 0, Q = 0, I = 0, G = 0, R = 0, W = 0, rejected = 0, added = 0 },
+        week = opts.week, version = opts.version, onPeer = opts.onPeer,
+        wantFull = {},      -- [pair] = heure : detail des vieilles semaines deja demande
     }, O)
     o.nextPeriodic = o.now() + Sync.PERIOD * (0.5 + o.random(100) / 200)
     return o
@@ -79,19 +83,36 @@ end
 function O:later(delay, fn) self.jobs[#self.jobs + 1] = { at = self.now() + delay, fn = fn } end
 
 --- Resume de notre journal : { n, h, w = { [semaine] = { n, h } } }.
-function O:Summary()
+-- Consolide (si l on connait la semaine en cours) : seules les Sync.KEEP
+-- dernieres semaines sont detaillees, les plus anciennes tiennent dans
+-- o = { n, h } (c = premiere semaine detaillee). full : tout detaille.
+-- cutoff : imposer la limite d un pair (pour comparer a l identique).
+function O:Summary(full, cutoff)
     local w = self.store:Summary()
-    local n, h = 0, 5381
+    if full then
+        cutoff = nil
+    elseif not cutoff and self.week then
+        cutoff = self.week() - Sync.KEEP + 1
+    end
+    local n, h, on, oh = 0, 5381, 0, 5381
     local weeks = {}
     for k in pairs(w) do weeks[#weeks + 1] = k end
     table.sort(weeks)
     local out = {}
     for _, k in ipairs(weeks) do
+        local line = k .. ":" .. w[k].h .. ";"
         n = n + w[k].n
-        h = J.Hash(k .. ":" .. w[k].h .. ";", h)
-        out[k] = { w[k].n, w[k].h }
+        h = J.Hash(line, h)
+        if cutoff and k < cutoff then
+            on = on + w[k].n
+            oh = J.Hash(line, oh)
+        else
+            out[k] = { w[k].n, w[k].h }
+        end
     end
-    return { n = n, h = h, w = out }
+    local s = { n = n, h = h, w = out }
+    if cutoff then s.o, s.c = { on, oh }, cutoff end
+    return s
 end
 
 -- ajoute des ecritures recues ; rend le nombre de nouvelles
@@ -118,6 +139,7 @@ function O:Written(e) self:out("E", e, "GUILD") end
 function O:Announce(ask)
     local s = self:Summary()
     s.a = ask or nil
+    s.v = self.version
     self.lastSent = self.now()
     self:out("S", s, "GUILD")
 end
@@ -170,6 +192,10 @@ function O:OnMessage(kind, payload, channel, sender, noDefer)
     if who.key == self.me then return end       -- notre propre echo
     local data = J.Decode(payload)
     if data == nil then return end
+    -- qui a CorpSR (et quelle version, annoncee dans les resumes)
+    if self.onPeer then
+        self.onPeer(who.key, (kind == "S" and type(data) == "table" and type(data.v) == "string") and data.v or nil)
+    end
     fn(self, data, channel, sender, who)
 end
 
@@ -219,10 +245,18 @@ end
 -- (Sync.IDLE secondes sans rien : liberee). Le resume du pair est garde
 -- pour reessayer plus tard les semaines encore reservees.
 function O:consider(key, sender, s)
-    local mine = self:Summary()
+    local compact = s.o ~= nil
+    local mine = self:Summary(not compact, compact and s.c or nil)
     if s.n == mine.n and s.h == mine.h then
         self.peers[key] = nil
         return
+    end
+    local now0 = self.now()
+    -- vieilles semaines differentes : on demande le detail (resume complet)
+    if compact and type(s.o) == "table" and (mine.o[1] ~= s.o[1] or mine.o[2] ~= s.o[2])
+        and (self.wantFull[key] or 0) <= now0 then
+        self.wantFull[key] = now0 + Sync.BUSY
+        self:out("W", {}, "WHISPER", sender)
     end
     local weeks, a, b = diff(mine, s)
     if #weeks == 0 then
@@ -262,8 +296,15 @@ function O:consider(key, sender, s)
     self:out("Q", { ws = ws, all = all }, "WHISPER", sender)
 end
 
+-- demande du detail de toutes les semaines : resume complet, en prive
+function H.W(self, _, channel, sender)
+    if channel ~= "WHISPER" then return end
+    self:out("S", self:Summary(true), "WHISPER", sender)
+end
+
 function H.S(self, s, channel, sender, who)
     if type(s) ~= "table" or type(s.w) ~= "table" or type(s.n) ~= "number" then return end
+    if s.o ~= nil and (type(s.o) ~= "table" or type(s.c) ~= "number") then return end
     local now = self.now()
     local mine = self:Summary()
     if channel == "GUILD" and s.n == mine.n and s.h == mine.h then self.lastSame = now end

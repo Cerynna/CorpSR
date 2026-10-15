@@ -25,6 +25,51 @@ local function member(sender)
     return nil
 end
 
+-- qui a CorpSR : [cle] = { t = GetTime(), v = version annoncee }
+ns.peers = {}
+
+local function digits(v)
+    local out = {}
+    for d in tostring(v or ""):gmatch("%d+") do out[#out + 1] = tonumber(d) end
+    return out
+end
+
+--- La version a est-elle plus recente que b ?
+function ns.Newer(a, b)
+    local x, y = digits(a), digits(b)
+    for i = 1, math.max(#x, #y) do
+        local p, q = x[i] or 0, y[i] or 0
+        if p ~= q then return p > q end
+    end
+    return false
+end
+
+local warned
+local function onPeer(key, version)
+    local p = ns.peers[key] or {}
+    p.t = GetTime()
+    if version then p.v = version end
+    ns.peers[key] = p
+    if version and not warned and ns.Newer(version, ns.VERSION) then
+        warned = true
+        ns.Say(L.NEWER:format(version, ns.VERSION))
+    end
+end
+
+--- Version de CorpSR vue chez un membre (nil : pas vu ; "?" : vu, version inconnue).
+function ns.PeerVersion(key)
+    if key == ns.me then return ns.VERSION end
+    -- demo : environ deux membres sur trois ont l addon
+    if ns.demo then
+        local m = ns.demo.roster.byKey[key]
+        if m and #m.name % 3 ~= 0 then return ns.VERSION end
+        return nil
+    end
+    local p = ns.peers[key]
+    if not p then return nil end
+    return p.v or "?"
+end
+
 local function tick()
     if ns.sync then ns.sync:Tick() end
     if ns.Panel and ns.Panel.UpdateFoot then ns.Panel.UpdateFoot() end
@@ -35,6 +80,7 @@ local function start()
     if not ns.GuildRoster().byKey[ns.me] then return end
     ns.sync = ns.Sync.New({
         store = ns.store, me = ns.me, member = member,
+        week = function() return ns.Week() end, version = ns.VERSION, onPeer = onPeer,
         now = function() return GetTime() end,
         send = function(kind, payload, channel, target) ns.Comm.Send(kind, payload, channel, target) end,
         changed = function() ns.Later("synced", 0.5, function() ns.Fire("data") end) end,

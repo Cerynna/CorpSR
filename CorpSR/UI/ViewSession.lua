@@ -116,7 +116,7 @@ local function updateSessionRow(r, s, index)
     r.cols.st:SetText(stateText(s))
 end
 
-local MCOLS = { { "name", 140 }, { "sr" }, { "here", 66, "CENTER" }, { "pts", 56, "RIGHT" } }
+local MCOLS = { { "name", 140 }, { "sr" }, { "addon", 50, "CENTER" }, { "here", 66, "CENTER" }, { "pts", 56, "RIGHT" } }
 
 local function buildMemberRow(list)
     local r = UI.Row(list)
@@ -135,6 +135,8 @@ local function buildMemberRow(list)
         if d.got then
             for i, n in pairs(d.got) do lines[#lines + 1] = { L.FX:format("+" .. n, ns.Name(d.p), ns.Item(i) or ("#" .. i)), 1, 0.82, 0.25 } end
         end
+        local v = ns.PeerVersion and ns.PeerVersion(d.p)
+        lines[#lines + 1] = v and { L.ADDON_HAS:format(v), 0.3, 0.88, 0.42 } or { L.ADDON_NONE, 0.6, 0.6, 0.6 }
         if ns.Can("presence") then lines[#lines + 1] = { L.PRESENCE_TIP, 0.6, 0.6, 0.6 } end
         UI.Tip(self, ns.Name(d.p), lines)
     end)
@@ -155,6 +157,8 @@ local function updateMemberRow(r, d, index)
     else
         r.cols.sr:SetText(UI.Hex("dim") .. L.SR_NONE .. "|r")
     end
+    local v = ns.PeerVersion and ns.PeerVersion(d.p)
+    r.cols.addon:SetText(v and (UI.Hex("good") .. v .. "|r") or (UI.Hex("dim") .. "-|r"))
     r.cols.here:SetText(d.here and (UI.Hex("good") .. L.PRESENT .. "|r") or (UI.Hex("dim") .. L.ABSENT .. "|r"))
     r.cols.pts:SetText(d.total > 0 and (UI.Hex("gold") .. "+" .. d.total .. "|r") or "")
 end

@@ -93,6 +93,33 @@ local function readLoot()
     if #items > 0 then
         G.loot = items
         ns.Fire("loot")
+        G.LearnLoot(n)
+    end
+end
+
+-- Objets vus en tombant : dans un raid suivi, les objets epiques (ou mieux)
+-- du butin absents de la liste du raid y sont ajoutes (droit « raids »).
+-- Les autres membres ne font rien : ce qu ils voient leur arrive par la
+-- synchro quand un officier l ajoute.
+G.MIN_QUALITY = 4
+function G.LearnLoot(n)
+    if ns.demo or not ns.Can("raids") or type(GetLootSlotInfo) ~= "function" then return end
+    local key = G.CurrentRaidKey()
+    local raid = key and ns.State().raids[key]
+    if not raid then return end
+    local add, seen = {}, {}
+    for i = 1, n do
+        local ok, _, _, _, _, quality = pcall(GetLootSlotInfo, i)
+        local link = ns.Api(GetLootSlotLink, i)
+        local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+        if ok and id and not issecret(quality) and type(quality) == "number" and quality >= G.MIN_QUALITY
+            and not raid.items[id] and not seen[id] then
+            seen[id] = true
+            add[#add + 1] = id
+        end
+    end
+    if #add > 0 and ns.Write("raid", { r = key, add = add }) then
+        ns.Say(ns.L.LOOT_LEARNED:format(#add, ns.RaidName(raid)))
     end
 end
 

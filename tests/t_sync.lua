@@ -29,7 +29,7 @@ local function Net(opts)
         for _, e in ipairs(entries or {}) do c.store:Add(copyEntry(e)) end
         self.roster[name] = { key = key, rank = rank }
         c.sync = Sync.New({
-            store = c.store, me = key,
+            store = c.store, me = key, week = opts.week, version = opts.version,
             now = function() return net.t end,
             random = function(n) return net.rng(n) end,
             send = function(kind, payload, channel, target) net:post(c, kind, payload, channel, target) end,
@@ -229,4 +229,65 @@ Test("expediteur pas encore dans la liste de guilde : le message attend", functi
     a.blind = false
     a.sync:RosterChanged()
     Eq(a.store:Count(), #BASE + 1, "accepte une fois la liste lue")
+end)
+
+-- consolidation : semaines recentes detaillees, les vieilles en une empreinte
+local function consolidated(fn)
+    local keep = Sync.KEEP
+    Sync.KEEP = 2
+    local ok, err = pcall(fn)
+    Sync.KEEP = keep
+    if not ok then error(err, 0) end
+end
+local WEEKFN = function() return J.Week(NOW, RESET) end
+
+Test("consolidation : resume diffuse plus court, memes totaux", function()
+    consolidated(function()
+        local net = Net({ week = WEEKFN })
+        local a = net:client("Alice", "K-01", 1, BASE)
+        local compact, full = a.sync:Summary(), a.sync:Summary(true)
+        Ok(compact.o and compact.c, "vieilles semaines regroupees")
+        Eq(compact.n, full.n, "meme total")
+        Eq(compact.h, full.h, "meme empreinte globale")
+        Ok(#J.Encode(compact) < #J.Encode(full), "plus court : " .. #J.Encode(compact) .. " < " .. #J.Encode(full))
+    end)
+end)
+
+Test("consolidation : vieilles semaines differentes, detail demande puis rattrapage", function()
+    consolidated(function()
+        local net = Net({ week = WEEKFN })
+        local a = net:client("Alice", "K-01", 1, BASE)
+        local old = {}
+        for i, e in ipairs(BASE) do
+            if i % 5 ~= 0 then old[#old + 1] = e end
+        end
+        local c = net:client("Chloe", "K-03", 4, old)
+        c.sync:Login()
+        net:run(90)
+        Ok((net.count.W or 0) >= 1, "detail demande")
+        same(a, c, "Chloe")
+    end)
+end)
+
+Test("consolidation : nouveau membre au journal vide", function()
+    consolidated(function()
+        local net = Net({ week = WEEKFN })
+        local a = net:client("Alice", "K-01", 1, BASE)
+        local b = net:client("Bruno", "K-02", 3, BASE)
+        local d = net:client("Dany", "K-04", 4, {})
+        d.sync:Login()
+        net:run(90)
+        same(a, d, "Dany")
+    end)
+end)
+
+Test("version annoncee dans les resumes", function()
+    local net = Net({ version = "1.2.3" })
+    local a = net:client("Alice", "K-01", 1, BASE)
+    local b = net:client("Bruno", "K-02", 3, BASE)
+    local seen = {}
+    b.sync.onPeer = function(key, v) seen[key] = v or seen[key] end
+    a.sync:Announce(false)
+    net:run(2)
+    Eq(seen["K-01"], "1.2.3", "version vue")
 end)

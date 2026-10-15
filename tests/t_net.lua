@@ -173,3 +173,25 @@ Test("un novice ne voit pas l onglet Raids", function()
     ns.Panel.CloseIntro()
     Ok(not (ns.Panel.tabs.raids and ns.Panel.tabs.raids:IsShown()), "cache")
 end)
+
+Test("version plus recente vue dans la guilde : prevenu une fois", function()
+    local FS, ns = Game({ roster = {
+        { "Ilona Ställer", "Novice", 4, "PRIEST", "Player-4620-00D54EFC" },
+        { "Garmor Hautcœur", "Maître de guilde", 0, "WARRIOR", "Player-4620-000000AA" },
+    } })
+    local J = ns.Journal
+    local function sendS(v)
+        for _, p in ipairs(ns.Comm.Pack("S", J.Encode({ n = 0, h = 5381, w = {}, v = v }))) do
+            FS.Fire("CHAT_MSG_ADDON", "CorpSR", p, "GUILD", "Garmor Hautcœur")
+        end
+    end
+    local before = #FS.printed
+    sendS("0.0.1")
+    Eq(#FS.printed, before, "plus ancienne : rien")
+    sendS("9.9.9")
+    Ok(FS.printed[#FS.printed]:find("9.9.9", 1, true), "prevenu")
+    sendS("9.9.9")
+    Eq(#FS.printed, before + 1, "une seule fois")
+    Eq(ns.PeerVersion("4620-000000AA"), "9.9.9", "version gardee")
+    Ok(ns.Newer("0.10.0", "0.9.9") and not ns.Newer("0.4.2", "0.4.2"), "comparaison des versions")
+end)

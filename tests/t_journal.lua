@@ -294,3 +294,17 @@ Test("liste des raids et de leurs objets", function()
     Ok(st.raids.ONY.gone, "raid retire")
     Eq(st.byId[J.Id(bad)].why, "right", "simple membre")
 end)
+
+Test("caches du magasin : resume et ids remis a jour apres un ajout", function()
+    local b = bigBook()
+    local s = J.NewStore({})
+    for _, e in ipairs(b.list) do s:Add(e) end
+    local before = s:Summary()[3]
+    local ids = #s:Ids(3)
+    Ok(s:Summary() == s:Summary(), "resume en cache")
+    s:Add({ a = "GM", t = 999999999, n = 1, rk = 0, w = 3, k = "fix", p = "A", i = X, d = 1, y = "x" })
+    local after = s:Summary()[3]
+    Eq(after.n, before.n + 1, "resume recalcule")
+    Ok(after.h ~= before.h, "empreinte changee")
+    Eq(#s:Ids(3), ids + 1, "ids recalcules")
+end)

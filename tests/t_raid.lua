@@ -280,3 +280,35 @@ Test("corrections (Points) et annulations (Historique) par clic droit", function
     Ok(not box:IsShown(), "pas de boite sans le droit")
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+Test("objets vus en tombant : epiques absents ajoutes a la liste du raid (droit raids)", function()
+    local FS, ns = Game({ roster = { { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" } } })
+    ns.Panel.CloseIntro()
+    ns.Write("raid", { r = "MC", nm = "MC", inst = 409, add = { 16800 } })
+    FS.instance = 409
+    local loot = { { 19019, 4 }, { 16800, 4 }, { 18000, 3 } }
+    _G.GetNumLootItems = function() return #loot end
+    _G.GetLootSlotLink = function(i) return "|Hitem:" .. loot[i][1] .. "::|h" end
+    _G.GetLootSlotInfo = function(i) return "tex", "nom", 1, nil, loot[i][2] end
+    FS.Fire("LOOT_OPENED")
+    local raid = ns.State().raids.MC
+    Ok(raid.items[19019], "epique ajoute")
+    Ok(not raid.items[18000], "rare ignore")
+    Eq(#raid.list, 2, "pas de doublon")
+    Ok(FS.printed[#FS.printed]:find("1 objet", 1, true), "message")
+    -- hors instance suivie : rien
+    FS.instance = 0
+    loot = { { 19020, 4 } }
+    FS.Fire("LOOT_OPENED")
+    Ok(not ns.State().raids.MC.items[19020], "rien hors du raid")
+    -- sans le droit : rien
+    FS.instance = 409
+    ns.StartDemo(4)
+    ns.StopDemo()
+    FS.roster[1][3] = 4
+    FS.Fire("GUILD_ROSTER_UPDATE")
+    FS.RunTimers()
+    loot = { { 19021, 4 } }
+    FS.Fire("LOOT_OPENED")
+    Ok(not ns.State().raids.MC.items[19021], "rien sans le droit")
+end)

@@ -593,6 +593,8 @@ function S:Add(e)
     self.byId[id] = e
     self.list[#self.list + 1] = e
     self.dirty = true
+    self.sumCache = nil
+    if self.idsCache then self.idsCache[e.w] = nil end
     return "new"
 end
 
@@ -615,19 +617,25 @@ function S:State()
     return self.state
 end
 
---- Identifiants d une semaine, tries.
+--- Identifiants d une semaine, tries (gardes en cache jusqu au prochain
+-- ajout dans cette semaine : ne pas modifier la liste rendue).
 function S:Ids(w)
-    local ids = {}
+    self.idsCache = self.idsCache or {}
+    local ids = self.idsCache[w]
+    if ids then return ids end
+    ids = {}
     for _, e in ipairs(self.list) do
         if e.w == w then ids[#ids + 1] = J.Id(e) end
     end
     sort(ids)
+    self.idsCache[w] = ids
     return ids
 end
 
 --- Resume par semaine : [semaine] = { n = nombre, h = empreinte des ids }.
 -- Deux membres qui ont le meme resume ont les memes ecritures.
 function S:Summary()
+    if self.sumCache then return self.sumCache end
     local byWeek = {}
     for _, e in ipairs(self.list) do
         local t = byWeek[e.w]
@@ -644,6 +652,7 @@ function S:Summary()
         for _, id in ipairs(ids) do h = J.Hash(id .. ";", h) end
         sum[w] = { n = #ids, h = h }
     end
+    self.sumCache = sum
     return sum
 end
 
