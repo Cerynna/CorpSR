@@ -30,6 +30,29 @@ for (const f of walk(ADDON, [])) {
   }
 }
 
+// 1 bis. textures : chaque Interface\AddOns\CorpSR\... cite dans le code
+// ou le .toc existe en .tga 32 bits non compresse, cotes en puissances de 2
+const media = new Set();
+for (const f of [...walk(ADDON, []), path.join(ADDON, 'CorpSR.toc')]) {
+  const text = fs.readFileSync(f, 'utf8').replace(/\\\\/g, '\\');
+  for (const m of text.matchAll(/Interface\\AddOns\\CorpSR\\([\w\\]+)/g)) media.add(m[1]);
+}
+if (fs.readFileSync(path.join(ADDON, 'Core.lua'), 'utf8').includes('"\\\\Media\\\\CorpSR"')) media.add('Media\\CorpSR');
+for (const m of media) {
+  const file = path.join(ADDON, ...m.split('\\')) + '.tga';
+  const pow2 = n => n > 0 && (n & (n - 1)) === 0;
+  let why = null;
+  if (!fs.existsSync(file)) why = 'absente';
+  else {
+    const h = fs.readFileSync(file).subarray(0, 18);
+    const w = h[12] | (h[13] << 8), hh = h[14] | (h[15] << 8);
+    if (h[2] !== 2 || h[16] !== 32) why = 'pas un TGA 32 bits non compresse';
+    else if (!pow2(w) || !pow2(hh)) why = `cotes ${w}x${hh}`;
+  }
+  if (why) { failed++; console.log(`TEXTURE ${m} : ${why}`); }
+}
+if (media.size === 0) { failed++; console.log('TEXTURE : aucune trouvee'); }
+
 // 2. bancs
 const slash = p => p.split(path.sep).join('/');
 const tests = fs.readdirSync(__dirname).filter(f => /^t_.*\.lua$/.test(f) && (!only || f.includes(only))).sort();

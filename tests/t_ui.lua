@@ -258,3 +258,11 @@ Test("Reglages : le GM reinitialise tout (mot a taper), un novice ne voit pas le
     Ok(not ns.ResetAll(), "novice : refuse")
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+-- (le fichier Media/CorpSR.tga, 64x64 32 bits, est controle par run.js)
+Test("icone de CorpSR : la notre, partout", function()
+    local FS, ns = open()
+    Eq(ns.ICON, "Interface\\AddOns\\CorpSR\\Media\\CorpSR", "chemin")
+    Ok(ADDON_TOC:find("## IconTexture: " .. ns.ICON, 1, true), "liste des addons")
+    Eq(#FS.errors, 0, "erreurs")
+end)

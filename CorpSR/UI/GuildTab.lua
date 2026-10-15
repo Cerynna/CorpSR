@@ -37,7 +37,7 @@ ns.GuildTab = G
 
 local BLIZZ = { "ChatTab", "RosterTab", "GuildBenefitsTab", "GuildInfoTab", "GuildPreferredPlaySettingsTab" }
 local STRATA = { "BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP" }
-local ICON = "Interface\\Icons\\INV_Misc_Coin_01"
+local ICON = ns.ICON
 
 local cf, tab, host, watch
 local opened   -- { mode = displayMode a l ouverture }

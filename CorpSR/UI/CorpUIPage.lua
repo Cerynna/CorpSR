@@ -66,7 +66,7 @@ CUI.RegisterModule({
     command = "sr",
     alias = "csr",
     panelName = PANEL,
-    icon = "Interface\\Icons\\INV_Misc_Coin_01",
+    icon = ns.ICON,
     title = function() return "CorpSR" end,
     desc = function() return L.CORPUI_DESC end,
     Slash = function() open() end,

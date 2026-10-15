@@ -22,6 +22,9 @@ local function meta(field)
     return ok and v or nil
 end
 ns.VERSION = meta("Version") or "?"
+-- icone de CorpSR (Media/CorpSR.tga, 64x64, peinte avec Nano Banana) ;
+-- un nouveau fichier n est vu qu apres un redemarrage complet du jeu
+ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\CorpSR"
 
 local function say(msg)
     local f = DEFAULT_CHAT_FRAME

@@ -26,6 +26,10 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 - Le GM peut **tout réinitialiser** (Réglages, mot RESET à taper) : points, SR, soirées, historique, objets, réglages et droits repartent de zéro pour toute la guilde. Les membres connectés effacent tout de suite, les absents à leur connexion (0.4.6 ou plus) ; une écriture d’avant la réinitialisation est ensuite refusée partout.
 - **Soirée automatique** chez le chef de raid : elle s'ouvre en entrant dans un raid, une seule par soir même sur plusieurs raids. Les SR se verrouillent au premier objet, l'attribution part à l'ouverture du butin et se valide après le délai.
 
+## Icône
+
+`CorpSR/Media/CorpSR.tga` (64x64, TGA 32 bits) est peinte avec Nano Banana. Elle sert pour le bouton de la minicarte, la liste des addons, l’onglet de la fenêtre de guilde et la page `/corp`. La planche d’origine (6 propositions, un seul tirage) et le script de découpe sont dans `art/` : `powershell -File art/icons.ps1` refait les 6 icônes en 64x64 et un aperçu, sans nouveau tirage. Un nouveau fichier de texture n’est vu qu’après un redémarrage complet du jeu.
+
 ## Organisation
 
 ```

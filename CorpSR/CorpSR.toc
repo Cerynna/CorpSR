@@ -11,9 +11,9 @@
 ## Notes-zhCN: 公会软预定（积分制）：每周 2 个 SR，可选任意物品，物品掉落时获得积分，掷骰 + 积分。仅通过公会同步。输入 /csr
 ## Notes-zhTW: 公會軟預定（積分制）：每週 2 個 SR，可選任意物品，物品掉落時獲得積分，擲骰 + 積分。僅透過公會同步。輸入 /csr
 ## Notes-koKR: 포인트 기반 길드 소프트 예약: 아무 아이템에나 주당 SR 2개, 아이템이 나오면 포인트 획득, 주사위 + 포인트. 길드를 통해서만 동기화. /csr 입력
-## IconTexture: Interface\Icons\INV_Misc_Coin_01
+## IconTexture: Interface\AddOns\CorpSR\Media\CorpSR
 ## Author: ceryn
-## Version: 0.4.6
+## Version: 0.4.7
 ## OptionalDeps: CorpUI
 ## SavedVariables: CorpSRDB
 
