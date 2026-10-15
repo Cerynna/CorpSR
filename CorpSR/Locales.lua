@@ -84,7 +84,7 @@ locales.enUS = {
 
     SET_VALUES = "Values", SET_PTS = "Points per SR: %d", SET_NSR = "SR per week: %d", SET_DBL = "Double SR: %s",
     SET_DL = "\"Already looted\" lasts: %s", DL_WEEK = "the week", DL_SESSION = "the evening", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "Raids followed", SET_RAID = "%s: %d items", SET_NO_RAID = "No raid yet.", SET_RIGHTS = "Rights by rank",
+    SET_RAIDS = "Known items", SET_RAID = "%s: %d items", SET_NO_RAID = "No item known yet.", SET_RIGHTS = "Rights by rank",
     SET_ONLY_GM = "Only the GM changes the settings.",
 
     SYNC_BUSY = "sync: %d queued", SYNC_ASKED = "sync requested from the guild.",
@@ -255,7 +255,7 @@ locales.frFR = {
 
     SET_VALUES = "Valeurs", SET_PTS = "Points par SR : %d", SET_NSR = "SR par semaine : %d", SET_DBL = "Double SR : %s",
     SET_DL = "« Déjà loot » vaut pour : %s", DL_WEEK = "la semaine", DL_SESSION = "la soirée", SET_ROLL = "%s : /roll %d",
-    SET_RAIDS = "Raids suivis", SET_RAID = "%s : %d objets", SET_NO_RAID = "Aucun raid pour l'instant.", SET_RIGHTS = "Droits par grade",
+    SET_RAIDS = "Objets connus", SET_RAID = "%s : %d objets", SET_NO_RAID = "Aucun objet connu pour l'instant.", SET_RIGHTS = "Droits par grade",
     SET_ONLY_GM = "Seul le GM change les réglages.",
 
     SYNC_BUSY = "synchro : %d en file", SYNC_ASKED = "synchro demandée à la guilde.",
@@ -430,7 +430,7 @@ locales.deDE = {
 
     SET_VALUES = "Werte", SET_PTS = "Punkte pro SR: %d", SET_NSR = "SR pro Woche: %d", SET_DBL = "Doppel-SR: %s",
     SET_DL = "„Hat schon Beute“ gilt für: %s", DL_WEEK = "die Woche", DL_SESSION = "den Abend", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "Verfolgte Schlachtzüge", SET_RAID = "%s: %d Gegenstände", SET_NO_RAID = "Noch kein Schlachtzug.", SET_RIGHTS = "Rechte je Rang",
+    SET_RAIDS = "Bekannte Gegenstände", SET_RAID = "%s: %d Gegenstände", SET_NO_RAID = "Noch kein Gegenstand bekannt.", SET_RIGHTS = "Rechte je Rang",
     SET_ONLY_GM = "Nur der Gildenmeister ändert die Optionen.",
 
     SYNC_BUSY = "Abgleich: %d in der Schlange", SYNC_ASKED = "Abgleich bei der Gilde angefragt.",
@@ -610,7 +610,7 @@ locales.esES = {
 
     SET_VALUES = "Valores", SET_PTS = "Puntos por SR: %d", SET_NSR = "SR por semana: %d", SET_DBL = "Doble SR: %s",
     SET_DL = "«Ya con botín» dura: %s", DL_WEEK = "la semana", DL_SESSION = "la noche", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "Bandas seguidas", SET_RAID = "%s: %d objetos", SET_NO_RAID = "Aún no hay bandas.", SET_RIGHTS = "Derechos por rango",
+    SET_RAIDS = "Objetos conocidos", SET_RAID = "%s: %d objetos", SET_NO_RAID = "Aún no hay objetos conocidos.", SET_RIGHTS = "Derechos por rango",
     SET_ONLY_GM = "Solo el maestro cambia los ajustes.",
 
     SYNC_BUSY = "sincronización: %d en cola", SYNC_ASKED = "sincronización pedida a la hermandad.",
@@ -789,7 +789,7 @@ locales.ptBR = {
 
     SET_VALUES = "Valores", SET_PTS = "Pontos por SR: %d", SET_NSR = "SR por semana: %d", SET_DBL = "SR duplo: %s",
     SET_DL = "\"Já saqueou\" vale por: %s", DL_WEEK = "a semana", DL_SESSION = "a noite", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "Raides acompanhadas", SET_RAID = "%s: %d itens", SET_NO_RAID = "Ainda sem raide.", SET_RIGHTS = "Direitos por patente",
+    SET_RAIDS = "Itens conhecidos", SET_RAID = "%s: %d itens", SET_NO_RAID = "Ainda nenhum item conhecido.", SET_RIGHTS = "Direitos por patente",
     SET_ONLY_GM = "Só o mestre muda os ajustes.",
 
     SYNC_BUSY = "sincronização: %d na fila", SYNC_ASKED = "sincronização pedida à guilda.",
@@ -964,7 +964,7 @@ locales.itIT = {
 
     SET_VALUES = "Valori", SET_PTS = "Punti per SR: %d", SET_NSR = "SR per settimana: %d", SET_DBL = "Doppio SR: %s",
     SET_DL = "«Già bottino» vale per: %s", DL_WEEK = "la settimana", DL_SESSION = "la serata", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "Incursioni seguite", SET_RAID = "%s: %d oggetti", SET_NO_RAID = "Ancora nessuna incursione.", SET_RIGHTS = "Diritti per grado",
+    SET_RAIDS = "Oggetti conosciuti", SET_RAID = "%s: %d oggetti", SET_NO_RAID = "Ancora nessun oggetto conosciuto.", SET_RIGHTS = "Diritti per grado",
     SET_ONLY_GM = "Solo il capogilda cambia le opzioni.",
 
     SYNC_BUSY = "sincronizzazione: %d in coda", SYNC_ASKED = "sincronizzazione chiesta alla gilda.",
@@ -1142,7 +1142,7 @@ locales.ruRU = {
 
     SET_VALUES = "Значения", SET_PTS = "Очков за SR: %d", SET_NSR = "SR в неделю: %d", SET_DBL = "Двойной SR: %s",
     SET_DL = "«Уже с добычей» действует: %s", DL_WEEK = "неделю", DL_SESSION = "вечер", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "Рейды", SET_RAID = "%s: предметов %d", SET_NO_RAID = "Рейдов пока нет.", SET_RIGHTS = "Права по званиям",
+    SET_RAIDS = "Известные предметы", SET_RAID = "%s: предметов %d", SET_NO_RAID = "Пока нет известных предметов.", SET_RIGHTS = "Права по званиям",
     SET_ONLY_GM = "Настройки меняет только глава гильдии.",
 
     SYNC_BUSY = "синхронизация: в очереди %d", SYNC_ASKED = "синхронизация запрошена у гильдии.",
@@ -1314,7 +1314,7 @@ locales.zhCN = {
 
     SET_VALUES = "数值", SET_PTS = "每个 SR 积分：%d", SET_NSR = "每周 SR：%d", SET_DBL = "双 SR：%s",
     SET_DL = "“已拾取”持续：%s", DL_WEEK = "一周", DL_SESSION = "一次活动", SET_ROLL = "%s：/roll %d",
-    SET_RAIDS = "跟踪的副本", SET_RAID = "%s：%d 件物品", SET_NO_RAID = "还没有副本。", SET_RIGHTS = "各会阶权限",
+    SET_RAIDS = "已知物品", SET_RAID = "%s：%d 件物品", SET_NO_RAID = "还没有已知物品。", SET_RIGHTS = "各会阶权限",
     SET_ONLY_GM = "只有会长能修改设置。",
 
     SYNC_BUSY = "同步：队列中 %d 条", SYNC_ASKED = "已向公会请求同步。", SYNC_OFF = "同步未开始：尚未读取公会名单。", SET_PUBLISH = "发布", SET_RESET = "撤销更改",
@@ -1466,7 +1466,7 @@ locales.zhTW = {
 
     SET_VALUES = "數值", SET_PTS = "每個 SR 積分：%d", SET_NSR = "每週 SR：%d", SET_DBL = "雙 SR：%s",
     SET_DL = "「已拾取」持續：%s", DL_WEEK = "一週", DL_SESSION = "一次活動", SET_ROLL = "%s：/roll %d",
-    SET_RAIDS = "追蹤的副本", SET_RAID = "%s：%d 件物品", SET_NO_RAID = "還沒有副本。", SET_RIGHTS = "各階級權限",
+    SET_RAIDS = "已知物品", SET_RAID = "%s：%d 件物品", SET_NO_RAID = "還沒有已知物品。", SET_RIGHTS = "各階級權限",
     SET_ONLY_GM = "只有會長能修改設定。",
 
     SYNC_BUSY = "同步：佇列中 %d 則", SYNC_ASKED = "已向公會請求同步。", SYNC_OFF = "同步未開始：尚未讀取公會名單。", SET_PUBLISH = "發布", SET_RESET = "取消變更",
@@ -1618,7 +1618,7 @@ locales.koKR = {
 
     SET_VALUES = "값", SET_PTS = "SR당 포인트: %d", SET_NSR = "주당 SR: %d", SET_DBL = "이중 SR: %s",
     SET_DL = "\"이미 획득\" 기간: %s", DL_WEEK = "한 주", DL_SESSION = "한 일정", SET_ROLL = "%s: /roll %d",
-    SET_RAIDS = "추적 공격대", SET_RAID = "%s: 아이템 %d개", SET_NO_RAID = "아직 공격대가 없습니다.", SET_RIGHTS = "등급별 권한",
+    SET_RAIDS = "알려진 아이템", SET_RAID = "%s: 아이템 %d개", SET_NO_RAID = "아직 알려진 아이템이 없습니다.", SET_RIGHTS = "등급별 권한",
     SET_ONLY_GM = "길드장만 설정을 바꿀 수 있습니다.",
 
     SYNC_BUSY = "동기화: 대기 %d개", SYNC_ASKED = "길드에 동기화를 요청했습니다.", SYNC_OFF = "동기화 미시작: 길드 명단을 아직 읽지 않았습니다.", SET_PUBLISH = "게시",

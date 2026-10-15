@@ -8,6 +8,7 @@ local FS = { frames = {}, timers = {}, time = 100, server = 1792086934, untilRes
     loaded = {}, printed = {}, errors = {} }
 
 local Methods = {}
+FS.Methods = Methods   -- pour art/windows (visuels) : y ajouter ce que le jeu retient
 local MT = {}
 local function noop() end
 MT.__index = function(_, k)

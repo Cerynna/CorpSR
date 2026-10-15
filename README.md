@@ -30,6 +30,18 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 
 `CorpSR/Media/CorpSR.tga` (64x64, TGA 32 bits) est peinte avec Nano Banana. Elle sert pour le bouton de la minicarte, la liste des addons, l’onglet de la fenêtre de guilde et la page `/corp`. La planche d’origine (6 propositions, un seul tirage) et le script de découpe sont dans `art/` : `powershell -File art/icons.ps1` refait les 6 icônes en 64x64 et un aperçu, sans nouveau tirage. Un nouveau fichier de texture n’est vu qu’après un redémarrage complet du jeu.
 
+## Visuels des fenêtres
+
+`art/windows/` dessine les fenêtres de CorpSR sans le jeu : `render.lua` rejoue l’addon dans le faux jeu des bancs (mode démo, en français), calcule la place de chaque élément à partir de ses ancres, comme le moteur du jeu, et `build.js` en fait du HTML.
+
+```
+node art/windows/fetch-items.js      # noms frFR et icônes des objets (Wowhead), une fois
+node art/windows/render.js           # scenes.json : 12 fenêtres
+node art/windows/build.js preview    # preview.html (aperçu local)
+```
+
+`build.js icons <dossier>` et `build.js canvas <dossier>` préparent les planches de la toile de design « Fenêtres de CorpSR ».
+
 ## Organisation
 
 ```
