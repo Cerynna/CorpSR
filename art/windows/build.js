@@ -48,11 +48,28 @@ function wowText(t, base) {
 
 const FONT = "'Marcellus', 'Friz Quadrata TT', Georgia, serif";
 
+const GLYPHS = {
+  'interface\\buttons\\arrow-down-up': { color: '#ffd100',
+    svg: '<path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="COLOR" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
+  'interface\\buttons\\arrow-up-up': { color: '#ffd100',
+    svg: '<path d="M4 9.5 L8 5.5 L12 9.5" fill="none" stroke="COLOR" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
+  'interface\\common\\ui-searchbox-icon': { color: '#9e9eae',
+    svg: '<circle cx="7" cy="7" r="4.2" fill="none" stroke="COLOR" stroke-width="1.8"/><path d="M10.2 10.2 L14 14" stroke="COLOR" stroke-width="2" stroke-linecap="round"/>' },
+  'interface\\buttons\\ui-checkbox-check': { color: '#ffd100',
+    svg: '<path d="M4.5 8.3 L7 10.8 L11.8 5" fill="none" stroke="COLOR" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' },
+};
+
 function element(it, img) {
   const box = `position: absolute; left: ${px(it.x)}; top: ${px(it.y)}; width: ${px(it.w)}; height: ${px(it.h)}`;
   const op = it.a < 1 ? `; opacity: ${it.a}` : '';
   if (it.k === 'tex') {
     if (it.color) return `<div style="${box}; background: ${rgba(it.color)}${op}"></div>`;
+    // textures d interface du jeu : dessinees en SVG (fleche, loupe, coche)
+    const glyph = GLYPHS[(it.img || '').replace(/\//g, '\\')];
+    if (glyph) {
+      const col = it.vc ? rgba(it.vc) : glyph.color;
+      return `<svg aria-hidden="true" viewBox="0 0 16 16" style="${box}${op}">${glyph.svg.replace(/COLOR/g, col)}</svg>`;
+    }
     const src = img(it.img);
     if (!src) return '';
     const tc = it.tc && it.tc.length >= 4 ? it.tc : [0, 1, 0, 1];

@@ -22,6 +22,7 @@ local OWN = {
     border = { 0, 0, 0 }, accent = { 0.84, 0.36, 1.00 }, gold = { 1.00, 0.82, 0.25 },
     text = { 0.86, 0.84, 0.90 }, dim = { 0.55, 0.55, 0.60 },
     good = { 0.30, 0.88, 0.42 }, bad = { 1.00, 0.32, 0.32 },
+    field = { 0.018, 0.02, 0.026 }, line = { 0.27, 0.27, 0.33 },
 }
 
 --- Couleur { r, g, b } : celle de CorpUI s il est la, sinon la notre.
@@ -148,59 +149,329 @@ end
 
 --- Bouton qui fait defiler des choix (gauche : suivant, droite : precedent).
 -- options() rend { { value, label }... } ; get() la valeur ; set(valeur).
-function UI.Cycle(parent, width, options, get, set)
-    local b = UI.Button(parent, "", width)
-    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+------------------------------------------------------------------------------
+-- Controles « comme sur le web » : champ de saisie, liste deroulante, case
+-- a cocher, compteur - / +. Tous nos cadres et textures (aucun modele de
+-- Blizzard a logique) ; la liste ouverte se ferme au clic ailleurs
+-- (GLOBAL_MOUSE_DOWN, comme l onglet de la fenetre de guilde).
+------------------------------------------------------------------------------
+
+local ARROW = "Interface\\Buttons\\Arrow-Down-Up"
+local LOUPE = "Interface\\Common\\UI-Searchbox-Icon"
+local CHECK = "Interface\\Buttons\\UI-CheckBox-Check"
+UI.ARROW, UI.LOUPE, UI.CHECK = ARROW, LOUPE, CHECK
+
+--- Habillage d un champ : fond creuse, liseré gris (accent au focus).
+function UI.FieldSkin(f)
+    local line = f:CreateTexture(nil, "BACKGROUND", nil, -7)
+    line:SetPoint("TOPLEFT", -1, 1)
+    line:SetPoint("BOTTOMRIGHT", 1, -1)
+    UI.Paint(line, "line")
+    local bg = f:CreateTexture(nil, "BACKGROUND", nil, -6)
+    bg:SetAllPoints()
+    UI.Paint(bg, "field")
+    f.csrBorder, f.csrBg = line, bg
+    function f:SetFocusLook(on) UI.Paint(line, on and "accent" or "line") end
+    return bg
+end
+
+--- Champ de saisie. o = { placeholder, numeric, max, icon (texture a gauche),
+-- clear (bouton × quand il y a du texte, Echap vide), keep (garder le texte
+-- apres Entree), onEnter(texte), onChange(texte) }.
+function UI.Field(parent, width, o)
+    o = o or {}
+    local e = CreateFrame("EditBox", nil, parent)
+    e:SetSize(width, 22)
+    e:SetAutoFocus(false)
+    e:SetFontObject("GameFontHighlightSmall")
+    if o.numeric then e:SetNumeric(true) end
+    e:SetMaxLetters(o.max or 40)
+    UI.FieldSkin(e)
+    local left, right = 7, o.clear and 20 or 7
+    if o.icon then
+        local ic = e:CreateTexture(nil, "OVERLAY")
+        ic:SetSize(12, 12)
+        ic:SetPoint("LEFT", 6, 0)
+        ic:SetTexture(o.icon)
+        ic:SetVertexColor(0.62, 0.62, 0.68)
+        left = 22
+    end
+    e:SetTextInsets(left, right, 0, 0)
+    local hint = UI.Text(e, "GameFontDisableSmall")
+    hint:SetPoint("LEFT", left, 0)
+    hint:SetPoint("RIGHT", -right, 0)
+    hint:SetHeight(16)
+    hint:SetText(o.placeholder or "")
+    e.hint = hint
+    local x
+    if o.clear then
+        x = CreateFrame("Button", nil, e)
+        x:SetSize(16, 16)
+        x:SetPoint("RIGHT", -3, 0)
+        local t = UI.Text(x, "GameFontHighlightSmall", "CENTER")
+        t:SetAllPoints()
+        t:SetText("×")
+        t:SetTextColor(0.62, 0.62, 0.68)
+        x:SetScript("OnClick", function()
+            e:SetText("")
+            e:ClearFocus()
+        end)
+        e.clearBtn = x
+    end
+    local function sync()
+        local empty = (e:GetText() or "") == ""
+        hint:SetShown(empty and not e:HasFocus())
+        if x then x:SetShown(not empty) end
+    end
+    e:SetScript("OnEditFocusGained", function(self)
+        self:SetFocusLook(true)
+        sync()
+    end)
+    e:SetScript("OnEditFocusLost", function(self)
+        self:SetFocusLook(false)
+        sync()
+    end)
+    e:SetScript("OnEscapePressed", function(self)
+        if o.clear then self:SetText("") end
+        self:ClearFocus()
+    end)
+    e:SetScript("OnEnterPressed", function(self)
+        local v = self:GetText() or ""
+        if not o.keep then self:SetText("") end
+        self:ClearFocus()
+        if o.onEnter then o.onEnter(v) end
+    end)
+    e:SetScript("OnTextChanged", function(self)
+        sync()
+        if o.onChange then o.onChange(self:GetText() or "") end
+    end)
+    sync()
+    return e
+end
+
+--- Champ de recherche (loupe, ×) ; onChange(texte en minuscules).
+function UI.Search(parent, width, onChange)
+    return UI.Field(parent, width, {
+        placeholder = L.SEARCH, icon = LOUPE, clear = true, keep = true,
+        onChange = function(t) if onChange then onChange(t:lower()) end end,
+    })
+end
+
+-- la liste ouverte (une seule a la fois), posee sous son bouton
+local MENU_ROWS, MENU_H = 10, 20
+local menu
+
+local function buildMenu()
+    menu = CreateFrame("Frame", nil, UIParent)
+    menu:SetFrameStrata("FULLSCREEN_DIALOG")
+    menu:EnableMouse(true)
+    menu:EnableMouseWheel(true)
+    UI.Skin(menu, "panel", 0.99)
+    menu.rows, menu.offset = {}, 0
+    local thumb = menu:CreateTexture(nil, "OVERLAY")
+    thumb:SetWidth(3)
+    UI.Paint(thumb, "accent", 0.8)
+    menu.thumb = thumb
+    menu:Hide()
+    menu:SetScript("OnEvent", function(self)
+        if not self:IsMouseOver() and not (self.owner and self.owner:IsMouseOver()) then self:Hide() end
+    end)
+    menu:SetScript("OnShow", function(self) pcall(self.RegisterEvent, self, "GLOBAL_MOUSE_DOWN") end)
+    menu:SetScript("OnHide", function(self)
+        pcall(self.UnregisterEvent, self, "GLOBAL_MOUSE_DOWN")
+        if self.owner then self.owner:SetFocusLook(false) end
+        self.owner = nil
+    end)
+    menu:SetScript("OnMouseWheel", function(self, d)
+        local max = math.max(0, #self.list - MENU_ROWS)
+        self.offset = math.max(0, math.min(max, self.offset - d))
+        self:Fill()
+    end)
+    function menu:Fill()
+        local list, cur = self.list, self.get()
+        local n = math.min(#list, MENU_ROWS)
+        for i = 1, n do
+            local r = self.rows[i]
+            if not r then
+                r = CreateFrame("Button", nil, self)
+                r:SetHeight(MENU_H)
+                r:SetPoint("TOPLEFT", 2, -2 - (i - 1) * MENU_H)
+                r:SetPoint("TOPRIGHT", -6, -2 - (i - 1) * MENU_H)
+                local hl = r:CreateTexture(nil, "HIGHLIGHT")
+                hl:SetAllPoints()
+                UI.Paint(hl, "accent", 0.18)
+                local mark = r:CreateTexture(nil, "ARTWORK")
+                mark:SetPoint("TOPLEFT")
+                mark:SetPoint("BOTTOMLEFT")
+                mark:SetWidth(2)
+                UI.Paint(mark, "accent")
+                r.mark = mark
+                local fs = UI.Text(r, "GameFontHighlightSmall")
+                fs:SetPoint("LEFT", 8, 0)
+                fs:SetPoint("RIGHT", -4, 0)
+                fs:SetHeight(16)
+                r.label = fs
+                r:SetScript("OnClick", function(row)
+                    local owner = menu.owner
+                    menu:Hide()
+                    if owner then owner:Choose(row.value) end
+                end)
+                self.rows[i] = r
+            end
+            local o = list[self.offset + i]
+            r.value = o[1]
+            local on = o[1] == cur
+            r.mark:SetShown(on)
+            r.label:SetText(on and (UI.Hex("gold") .. o[2] .. "|r") or o[2])
+            r:Show()
+        end
+        for i = n + 1, #self.rows do self.rows[i]:Hide() end
+        local h = n * MENU_H + 4
+        self:SetHeight(h)
+        if #list > MENU_ROWS then
+            local th = math.max(12, (h - 4) * MENU_ROWS / #list)
+            self.thumb:ClearAllPoints()
+            self.thumb:SetPoint("TOPRIGHT", -1, -2 - (h - 4 - th) * self.offset / (#list - MENU_ROWS))
+            self.thumb:SetHeight(th)
+            self.thumb:Show()
+        else
+            self.thumb:Hide()
+        end
+    end
+end
+
+--- La liste ouverte, s il y en a une (bancs).
+function UI.Menu() return menu end
+function UI.CloseMenu() if menu then menu:Hide() end end
+
+--- Liste deroulante : le choix en cours et une fleche ; un clic ouvre la
+-- liste des choix. options() rend { { valeur, libelle }... } ; get() la
+-- valeur ; set(valeur). b:Choose(valeur) choisit sans ouvrir.
+function UI.Select(parent, width, options, get, set)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(width, 22)
+    UI.FieldSkin(b)
+    local fs = UI.Text(b, "GameFontHighlightSmall")
+    fs:SetPoint("LEFT", 7, 0)
+    fs:SetPoint("RIGHT", -20, 0)
+    fs:SetHeight(16)
+    b.label = fs
+    local arrow = b:CreateTexture(nil, "OVERLAY")
+    arrow:SetSize(12, 12)
+    arrow:SetPoint("RIGHT", -5, -1)
+    arrow:SetTexture(ARROW)
+    arrow:SetVertexColor(0.8, 0.8, 0.86)
+    b.arrow = arrow
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    UI.Paint(hl, "accent", 0.1)
+    function b:SetLabel(t) fs:SetText(t) end
+    function b:SetActive(on)
+        self.locked = not on
+        arrow:SetShown(on)
+        fs:SetAlpha(on and 1 or 0.6)
+    end
     function b:Update()
         local cur, list = get(), options()
         local label = list[1] and list[1][2] or ""
         for _, o in ipairs(list) do
             if o[1] == cur then label = o[2] end
         end
-        self:SetLabel(label .. "  " .. UI.Hex("gold") .. "»|r")
+        fs:SetText(label)
     end
-    b:SetScript("OnClick", function(self, button)
-        local list, cur = options(), get()
-        if #list == 0 then return end
-        local idx = 1
-        for i, o in ipairs(list) do
-            if o[1] == cur then idx = i end
-        end
-        idx = idx + ((button == "RightButton") and -1 or 1)
-        if idx > #list then idx = 1 elseif idx < 1 then idx = #list end
-        set(list[idx][1])
+    function b:Choose(v)
+        set(v)
         self:Update()
+    end
+    function b:Open()
+        local list = options()
+        if self.locked or #list == 0 then return end
+        if not menu then buildMenu() end
+        if menu.owner and menu.owner ~= self then menu:Hide() end
+        menu.owner, menu.list, menu.get, menu.offset = self, list, get, 0
+        local cur = get()
+        for i, o in ipairs(list) do
+            if o[1] == cur then menu.offset = math.max(0, math.min(i - 1, #list - MENU_ROWS)) end
+        end
+        menu:ClearAllPoints()
+        menu:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 0, -3)
+        menu:SetWidth(math.max(self:GetWidth() or width, 120))
+        menu:Fill()
+        menu:Show()
+        self:SetFocusLook(true)
+    end
+    b:SetScript("OnClick", function(self)
+        if menu and menu:IsShown() and menu.owner == self then menu:Hide() else self:Open() end
     end)
+    b:SetScript("OnHide", function(self)
+        if menu and menu.owner == self then menu:Hide() end
+    end)
+    b:SetScript("OnEnter", function(self)
+        if self.tip then UI.Tip(self, self.tip[1], self.tip[2]) end
+    end)
+    b:SetScript("OnLeave", UI.HideTip)
+    return b
+end
+UI.Cycle = UI.Select   -- ancien nom (bascule au clic), meme signature
+
+--- Case a cocher. b:SetValue(coche, change) ; change : liseré or (brouillon).
+function UI.Check(parent, onClick)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(14, 14)
+    UI.FieldSkin(b)
+    local mark = b:CreateTexture(nil, "OVERLAY")
+    mark:SetPoint("TOPLEFT", -3, 3)
+    mark:SetPoint("BOTTOMRIGHT", 3, -3)
+    mark:SetTexture(CHECK)
+    mark:Hide()
+    b.mark = mark
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    UI.Paint(hl, "accent", 0.25)
+    function b:SetValue(on, changed)
+        mark:SetShown(on)
+        UI.Paint(self.csrBorder, changed and "gold" or "line")
+    end
+    b:SetScript("OnClick", onClick)
+    b:SetScript("OnEnter", function(self)
+        if self.tip then UI.Tip(self, self.tip[1], self.tip[2]) end
+    end)
+    b:SetScript("OnLeave", UI.HideTip)
     return b
 end
 
---- Champ de recherche ; onChange(texte).
-function UI.Search(parent, width, onChange)
-    local e = CreateFrame("EditBox", nil, parent)
-    e:SetSize(width, 20)
-    e:SetAutoFocus(false)
-    e:SetFontObject("GameFontHighlightSmall")
-    e:SetTextInsets(6, 6, 0, 0)
-    e:SetMaxLetters(40)
-    UI.Skin(e, "panel", 0.9)
-    local hint = UI.Text(e, "GameFontDisableSmall")
-    hint:SetPoint("LEFT", 6, 0)
-    hint:SetPoint("RIGHT", -6, 0)
-    hint:SetHeight(16)
-    hint:SetText(L.SEARCH)
-    local function sync() hint:SetShown((e:GetText() or "") == "" and not e:HasFocus()) end
-    e:SetScript("OnEscapePressed", function(self)
-        self:SetText("")
-        self:ClearFocus()
-    end)
-    e:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    e:SetScript("OnEditFocusGained", sync)
-    e:SetScript("OnEditFocusLost", sync)
-    e:SetScript("OnTextChanged", function(self)
-        sync()
-        if onChange then onChange((self:GetText() or ""):lower()) end
-    end)
-    return e
+--- Compteur : [-] valeur [+]. onStep(-1 ou +1) ; f:SetValue(texte, change) ;
+-- f:SetLocked(vrai) : la valeur seule, sans boutons.
+function UI.Stepper(parent, width, onStep)
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(width, 20)
+    local minus = UI.Button(f, "-", 20, function() onStep(-1) end)
+    minus:SetHeight(20)
+    minus:SetPoint("LEFT", 0, 0)
+    local plus = UI.Button(f, "+", 20, function() onStep(1) end)
+    plus:SetHeight(20)
+    plus:SetPoint("RIGHT", 0, 0)
+    local box = CreateFrame("Frame", nil, f)
+    box:SetPoint("TOPLEFT", 23, 0)
+    box:SetPoint("BOTTOMRIGHT", -23, 0)
+    UI.FieldSkin(box)
+    local v = UI.Text(box, "GameFontHighlightSmall", "CENTER")
+    v:SetPoint("LEFT", 2, 0)
+    v:SetPoint("RIGHT", -2, 0)
+    v:SetHeight(16)
+    f.value, f.minus, f.plus, f.box = v, minus, plus, box
+    function f:SetValue(text, changed)
+        v:SetText(changed and (UI.Hex("gold") .. text .. "|r") or text)
+        UI.Paint(box.csrBorder, changed and "gold" or "line")
+    end
+    function f:SetLocked(on)
+        minus:SetShown(not on)
+        plus:SetShown(not on)
+        box:ClearAllPoints()
+        box:SetPoint("TOPLEFT", on and 0 or 23, 0)
+        box:SetPoint("BOTTOMRIGHT", on and 0 or -23, 0)
+    end
+    return f
 end
 
 --- Icone d objet avec liseré.

@@ -101,7 +101,7 @@ local function build(parent)
     f.drop = drop
 
     -- objets du raid choisi : case de depot, numero, liste
-    local zone = UI.Button(f, L.RAIDS_DROPZONE, 170)
+    local zone = UI.Button(f, L.RAIDS_DROPZONE, 150)
     zone:SetPoint("TOPLEFT", 242, -28)
     local function received()
         if not GetCursorInfo then return end
@@ -115,24 +115,16 @@ local function build(parent)
     zone:SetScript("OnClick", received)
     f.zone = zone
 
-    local idBox = CreateFrame("EditBox", nil, f)
-    idBox:SetSize(80, 22)
+    local idBox = UI.Field(f, 116, { placeholder = L.RAIDS_ID, numeric = true, max = 8, onEnter = addItem })
     idBox:SetPoint("LEFT", zone, "RIGHT", 6, 0)
-    idBox:SetAutoFocus(false)
-    idBox:SetNumeric(true)
-    idBox:SetMaxLetters(8)
-    idBox:SetFontObject("GameFontHighlightSmall")
-    idBox:SetTextInsets(6, 6, 0, 0)
-    UI.Skin(idBox, "panel", 0.9)
-    idBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     local function addTyped()
-        addItem(idBox:GetText())
+        local v = idBox:GetText()
         idBox:SetText("")
         idBox:ClearFocus()
+        addItem(v)
     end
-    idBox:SetScript("OnEnterPressed", addTyped)
     f.idBox = idBox
-    local addId = UI.Button(f, L.RAIDS_ITEM_ADD, 110, addTyped)
+    local addId = UI.Button(f, L.RAIDS_ITEM_ADD, 104, addTyped)
     addId:SetPoint("LEFT", idBox, "RIGHT", 6, 0)
     addId.tip = { L.RAIDS_ID, { L.RAIDS_ITEM_ADD } }
 

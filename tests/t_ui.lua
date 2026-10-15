@@ -108,13 +108,24 @@ Test("Points, Historique, Reglages, Session : contenu", function()
             Ok(J.Locked(ns.State(), "MC", ns.Week()), "en cours d un autre visible avant verrouillage")
         end
     end
-    h.kind:Click("LeftButton")       -- SR
+    -- liste deroulante : un clic l ouvre, on choisit « SR »
+    h.kind:Click("LeftButton")
+    local menu = ns.UI.Menu()
+    Ok(menu and menu:IsShown(), "liste ouverte")
+    local row
+    for _, r in ipairs(menu.rows) do
+        if r:IsShown() and r.value == "sr" then row = r end
+    end
+    row:Click()
+    Ok(not menu:IsShown(), "liste fermee apres le choix")
     FS.Layout()
     for _, r in ipairs(h.list.rows) do
         if r:IsShown() then Eq(r.d.e.k, "sr", "filtre SR") end
     end
     tab(P, "settings"):Click()
-    Ok(FS.Texts(P.frames.settings):find("Points par SR : 10", 1, true), "valeurs")
+    Ok(FS.Texts(P.frames.settings):find("Points par SR", 1, true), "libelle")
+    Eq(P.frames.settings.values[1].ctl.value:GetText(), "10", "valeur dans le compteur")
+    Eq(P.frames.settings.values[4].ctl.label:GetText(), "La semaine", "liste « deja loot »")
     Ok(FS.Texts(P.frames.settings):find("Cœur du Magma : 29 objets", 1, true), "raids")
     tab(P, "session"):Click()
     FS.Layout()
@@ -264,5 +275,42 @@ Test("icone de CorpSR : la notre, partout", function()
     local FS, ns = open()
     Eq(ns.ICON, "Interface\\AddOns\\CorpSR\\Media\\CorpSR", "chemin")
     Ok(ADDON_TOC:find("## IconTexture: " .. ns.ICON, 1, true), "liste des addons")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
+Test("controles web : champ (texte indicatif, croix, Entree), liste fermee au clic ailleurs", function()
+    local FS, ns, P = open()
+    P.CloseIntro()
+    ns.StartDemo(0)
+    tab(P, "mine"):Click()
+    FS.Layout()
+    local f = P.frames.mine
+    -- champ du numero d objet : texte indicatif tant qu il est vide
+    Ok(f.num.hint:IsShown(), "texte indicatif")
+    Eq(f.num.hint:GetText(), "Numéro d'objet", "texte indicatif traduit")
+    f.num:SetText("19019")
+    Ok(not f.num.hint:IsShown(), "indicatif cache des qu on tape")
+    f.num:GetScript("OnEnterPressed")(f.num)
+    Ok(ns.State().raids.MISC and ns.State().raids.MISC.items[19019], "Entree : objet ajoute")
+    Eq(f.num:GetText(), "", "champ vide apres Entree")
+    -- recherche : la croix vide le champ
+    local search
+    for _, c in ipairs(f._children) do
+        if c._kind == "EditBox" and c.clearBtn then search = c end
+    end
+    search:SetText("gants")
+    Ok(search.clearBtn:IsShown(), "croix visible")
+    search.clearBtn:Click()
+    Eq(search:GetText(), "", "croix : champ vide")
+    Ok(not search.clearBtn:IsShown(), "croix cachee")
+    -- liste deroulante : se ferme au clic ailleurs
+    f.group:Click()
+    local menu = ns.UI.Menu()
+    Ok(menu:IsShown(), "liste ouverte")
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    Ok(not menu:IsShown(), "fermee au clic ailleurs")
+    f.group:Click()
+    tab(P, "points"):Click()
+    Ok(not menu:IsShown(), "fermee quand la vue change")
     Eq(#FS.errors, 0, "erreurs")
 end)

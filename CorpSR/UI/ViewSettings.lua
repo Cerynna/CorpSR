@@ -3,11 +3,12 @@
 
     Visible de tous : valeurs (points par SR, nombre de SR, double SR,
     portee de « deja loot », fourchettes de jet) et tableau des droits,
-    grade par grade. Le GM les modifie ici : clic sur une valeur (gauche
-    +1, droit -1, Maj : 10 d un coup ; oui/non et portee : bascule), clic
-    sur une case de droit ; puis « Publier » ecrit des reglages complets au
-    journal, diffuses a toute la guilde. Seuls ceux du GM comptent (le
-    rejeu refuse les autres).
+    grade par grade. Le GM les modifie ici avec des controles « comme sur
+    le web » : compteurs - / + (Maj : 10 d un coup), case a cocher, liste
+    deroulante, cases des droits ; puis « Publier » ecrit des reglages
+    complets au journal, diffuses a toute la guilde. Seuls ceux du GM
+    comptent (le rejeu refuse les autres). Un changement pas encore publie
+    est souligne en or.
     « Tout reinitialiser » (GM seul, mot RESET a taper) : tout repart de
     zero pour toute la guilde (ecriture « reset », voir Engine/Journal.lua).
 ----------------------------------------------------------------------------]]
@@ -18,7 +19,8 @@ local UI = ns.UI
 local R = ns.Rules
 
 local S = { draft = nil, dirty = false }
-local RIGHT_X, CELL, ROW = 236, 46, 18
+local VAL_W, CTL_W, LINE = 258, 96, 22                 -- colonne des valeurs
+local RIGHT_X, NAME_W, CELL = 270, 90, 50              -- tableau des droits
 
 -- reglages de travail : ceux du journal tant qu on n a rien change
 local function draft()
@@ -31,60 +33,54 @@ local function changed()
     ns.Panel.Refresh()
 end
 
-local function step(button)
-    local n = (IsShiftKeyDown and IsShiftKeyDown()) and 10 or 1
-    return (button == "RightButton") and -n or n
-end
+local function stepSize() return (IsShiftKeyDown and IsShiftKeyDown()) and 10 or 1 end
 
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
--- lignes de valeurs : texte(d), action(d, bouton) pour le GM, bascule ?
+-- libelle d un texte « Libelle : %d » des traductions, sans sa valeur
+local SENT = 7777777
+local function label(fmt, cat)
+    local s
+    if cat then
+        s = fmt:format(cat, SENT)
+    elseif fmt:find("%%d") then
+        s = fmt:format(SENT)
+    else
+        s = fmt:format("\31")
+    end
+    s = s:gsub(tostring(SENT), ""):gsub("\31", ""):gsub("%s+$", "")
+    s = s:gsub(":$", ""):gsub("：$", ""):gsub("%s+$", "")
+    return s
+end
+
+local function cap(s) return (s:gsub("^%l", string.upper)) end
+
+-- valeurs : genre (compteur, case, liste), libelle, lecture, changement
 local VALUES = {
-    { function(d) return L.SET_PTS:format(d.pts) end, function(d, b) d.pts = clamp(d.pts + step(b), 1, 1000) end },
-    { function(d) return L.SET_NSR:format(d.nsr) end, function(d, b) d.nsr = clamp(d.nsr + step(b), 1, 10) end },
-    { function(d) return L.SET_DBL:format(d.dbl and L.YES or L.NO) end, function(d) d.dbl = not d.dbl end, true },
-    { function(d) return L.SET_DL:format(d.dl == "session" and L.DL_SESSION or L.DL_WEEK) end,
-        function(d) d.dl = (d.dl == "session") and "week" or "session" end, true },
-    { function(d) return L.SET_ROLL:format(ns.CatLabel("sr"), d.rolls.sr) end,
-        function(d, b) d.rolls.sr = clamp(d.rolls.sr + step(b), 2, 100000) end },
-    { function(d) return L.SET_ROLL:format(ns.CatLabel("ms") .. " / " .. ns.CatLabel("dl"), d.rolls.ms) end,
-        function(d, b) d.rolls.ms = clamp(d.rolls.ms + step(b), 2, 100000) end },
-    { function(d) return L.SET_ROLL:format(ns.CatLabel("os"), d.rolls.os) end,
-        function(d, b) d.rolls.os = clamp(d.rolls.os + step(b), 2, 100000) end },
-    { function(d) return L.SET_ROLL:format(ns.CatLabel("mog"), d.rolls.mog) end,
-        function(d, b) d.rolls.mog = clamp(d.rolls.mog + step(b), 2, 100000) end },
+    { "num", function() return label(L.SET_PTS) end, function(d) return d.pts end,
+        function(d, n) d.pts = clamp(d.pts + n, 1, 1000) end },
+    { "num", function() return label(L.SET_NSR) end, function(d) return d.nsr end,
+        function(d, n) d.nsr = clamp(d.nsr + n, 1, 10) end },
+    { "bool", function() return label(L.SET_DBL) end, function(d) return d.dbl end,
+        function(d) d.dbl = not d.dbl end },
+    { "dl", function() return label(L.SET_DL) end, function(d) return d.dl end },
+    { "num", function() return label(L.SET_ROLL, ns.CatLabel("sr")) end, function(d) return d.rolls.sr end,
+        function(d, n) d.rolls.sr = clamp(d.rolls.sr + n, 2, 100000) end },
+    { "num", function() return label(L.SET_ROLL, ns.CatLabel("ms") .. " / " .. ns.CatLabel("dl")) end,
+        function(d) return d.rolls.ms end, function(d, n) d.rolls.ms = clamp(d.rolls.ms + n, 2, 100000) end },
+    { "num", function() return label(L.SET_ROLL, ns.CatLabel("os")) end, function(d) return d.rolls.os end,
+        function(d, n) d.rolls.os = clamp(d.rolls.os + n, 2, 100000) end },
+    { "num", function() return label(L.SET_ROLL, ns.CatLabel("mog")) end, function(d) return d.rolls.mog end,
+        function(d, n) d.rolls.mog = clamp(d.rolls.mog + n, 2, 100000) end },
 }
 
 local function header(parent, text, y, x, w)
     local fs = UI.Text(parent, "GameFontNormal")
     fs:SetPoint("TOPLEFT", x or 4, y)
-    fs:SetPoint("TOPRIGHT", parent, "TOPLEFT", (x or 4) + (w or 226), y)
+    fs:SetPoint("TOPRIGHT", parent, "TOPLEFT", (x or 4) + (w or VAL_W), y)
     fs:SetHeight(18)
     fs:SetText(text)
     return fs
-end
-
--- une case cliquable (texte a l interieur)
-local function cell(parent, x, y, w, justify, onClick)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetPoint("TOPLEFT", x, y)
-    b:SetSize(w, ROW)
-    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    local hl = b:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetAllPoints()
-    UI.Paint(hl, "accent", 0.15)
-    b.hl = hl
-    local fs = UI.Text(b, "GameFontHighlightSmall", justify)
-    fs:SetPoint("LEFT", 2, 0)
-    fs:SetPoint("RIGHT", -2, 0)
-    fs:SetHeight(16)
-    b.text = fs
-    b:SetScript("OnClick", onClick)
-    b:SetScript("OnEnter", function(self)
-        if self.tip then UI.Tip(self, self.tip[1], self.tip[2]) end
-    end)
-    b:SetScript("OnLeave", UI.HideTip)
-    return b
 end
 
 -- les reglages de travail different-ils de ceux en vigueur ?
@@ -127,19 +123,49 @@ local function build(parent)
     header(f, L.SET_VALUES, -2)
     f.values = {}
     for i, v in ipairs(VALUES) do
-        f.values[i] = cell(f, 0, -4 - i * ROW, 226, "LEFT", function(_, button)
-            if not ns.IsGM() then return end
-            v[2](draft(), button)
-            changed()
-        end)
+        local y = -24 - (i - 1) * LINE
+        local lab = UI.Text(f, "GameFontHighlightSmall")
+        lab:SetPoint("TOPLEFT", 4, y - 2)
+        lab:SetPoint("TOPRIGHT", f, "TOPLEFT", VAL_W - CTL_W - 6, y - 2)
+        lab:SetHeight(16)
+        local ctl
+        if v[1] == "num" then
+            ctl = UI.Stepper(f, CTL_W, function(sign)
+                if not ns.IsGM() then return end
+                v[4](draft(), sign * stepSize())
+                changed()
+            end)
+            ctl:SetPoint("TOPRIGHT", f, "TOPLEFT", VAL_W, y)
+            ctl.box:EnableMouse(true)
+            ctl.box:SetScript("OnEnter", function(self) UI.Tip(self, lab:GetText(), { L.SET_EDIT_TIP }) end)
+            ctl.box:SetScript("OnLeave", UI.HideTip)
+        elseif v[1] == "bool" then
+            ctl = UI.Check(f, function()
+                if not ns.IsGM() then return end
+                v[4](draft())
+                changed()
+            end)
+            ctl:SetPoint("TOPRIGHT", f, "TOPLEFT", VAL_W - (CTL_W - 14) / 2, y - 3)
+        else
+            ctl = UI.Select(f, CTL_W, function()
+                return { { "session", cap(L.DL_SESSION) }, { "week", cap(L.DL_WEEK) } }
+            end, function() return draft().dl end, function(val)
+                if not ns.IsGM() then return end
+                draft().dl = val
+                changed()
+            end)
+            ctl:SetPoint("TOPRIGHT", f, "TOPLEFT", VAL_W, y + 1)
+        end
+        f.values[i] = { label = lab, ctl = ctl, spec = v }
     end
 
-    header(f, L.SET_RAIDS, -176)
+    local raidsY = -24 - #VALUES * LINE - 6
+    header(f, L.SET_RAIDS, raidsY)
     f.raids = {}
-    for i = 1, 5 do
+    for i = 1, 3 do
         local fs = UI.Text(f, "GameFontHighlightSmall")
-        fs:SetPoint("TOPLEFT", 4, -178 - i * ROW)
-        fs:SetPoint("TOPRIGHT", f, "TOPLEFT", 230, -178 - i * ROW)
+        fs:SetPoint("TOPLEFT", 4, raidsY - 2 - i * 18)
+        fs:SetPoint("TOPRIGHT", f, "TOPLEFT", VAL_W, raidsY - 2 - i * 18)
         fs:SetHeight(16)
         f.raids[i] = fs
     end
@@ -147,8 +173,8 @@ local function build(parent)
     header(f, L.SET_RIGHTS, -2, RIGHT_X, 360)
     for c, name in ipairs(R.RIGHTS) do
         local fs = UI.Text(f, "GameFontNormalSmall", "CENTER")
-        fs:SetPoint("TOPLEFT", RIGHT_X + 96 + (c - 1) * CELL, -24)
-        fs:SetPoint("TOPRIGHT", f, "TOPLEFT", RIGHT_X + 96 + c * CELL, -24)
+        fs:SetPoint("TOPLEFT", RIGHT_X + NAME_W + (c - 1) * CELL, -24)
+        fs:SetPoint("TOPRIGHT", f, "TOPLEFT", RIGHT_X + NAME_W + c * CELL, -24)
         fs:SetHeight(28)
         fs:SetWordWrap(true)
         fs:SetText(L["RIGHT_" .. name])
@@ -158,11 +184,11 @@ local function build(parent)
         local y = -56 - row * 20
         local name = UI.Text(f, "GameFontHighlightSmall")
         name:SetPoint("TOPLEFT", RIGHT_X, y)
-        name:SetPoint("TOPRIGHT", f, "TOPLEFT", RIGHT_X + 94, y)
+        name:SetPoint("TOPRIGHT", f, "TOPLEFT", RIGHT_X + NAME_W - 4, y)
         name:SetHeight(16)
         local cells = { name = name }
         for c, right in ipairs(R.RIGHTS) do
-            cells[c] = cell(f, RIGHT_X + 96 + (c - 1) * CELL, y + 1, CELL - 2, "CENTER", function()
+            local b = UI.Check(f, function()
                 if not ns.IsGM() or row == 0 then return end
                 local d = draft()
                 local r = d.rights[row] or {}
@@ -170,6 +196,8 @@ local function build(parent)
                 r[right] = (not r[right]) or nil
                 changed()
             end)
+            b:SetPoint("TOPLEFT", RIGHT_X + NAME_W + (c - 1) * CELL + (CELL - 14) / 2, y - 1)
+            cells[c] = b
         end
         f.grid[row] = cells
     end
@@ -216,13 +244,22 @@ local function refresh(f)
     if not gm then S.dirty, S.draft = false, nil end
     local d = draft()
     local live = ns.State().cfg
-    for i, b in ipairs(f.values) do
-        local v = VALUES[i]
-        local text = v[1](d)
-        if gm and v[1](live) ~= text then text = UI.Hex("gold") .. text .. "|r" end
-        b.text:SetText(text)
-        b.hl:SetShown(gm)
-        b.tip = gm and { text, { v[3] and L.SET_TOGGLE_TIP or L.SET_EDIT_TIP } } or nil
+    for _, row in ipairs(f.values) do
+        local v, ctl = row.spec, row.ctl
+        row.label:SetText(v[2]())
+        local now, was = v[3](d), v[3](live)
+        local moved = gm and now ~= was
+        if v[1] == "num" then
+            ctl:SetValue(tostring(now), moved)
+            ctl:SetLocked(not gm)
+        elseif v[1] == "bool" then
+            ctl:SetValue(now, moved)
+            ctl.tip = gm and { row.label:GetText(), { L.SET_TOGGLE_TIP } } or nil
+        else
+            ctl:Update()
+            ctl:SetActive(gm)
+            UI.Paint(ctl.csrBorder, moved and "gold" or "line")
+        end
     end
 
     local raids = ns.Raids()
@@ -242,11 +279,8 @@ local function refresh(f)
             if name then
                 local on = row == 0 or R.Can(planned, row, right)
                 local was = row == 0 or R.Can(live, row, right)
-                local mark = on and (UI.Hex("good") .. "+|r") or (UI.Hex("dim") .. "-|r")
-                if on ~= was then mark = UI.Hex("gold") .. (on and "+" or "-") .. "|r" end
-                b.text:SetText(mark)
+                b:SetValue(on, on ~= was)
                 b:Show()
-                b.hl:SetShown(gm and row ~= 0)
                 b.tip = (gm and row ~= 0) and { name .. " : " .. L["RIGHT_" .. right], { L.SET_RIGHT_TIP } } or nil
             else
                 b:Hide()

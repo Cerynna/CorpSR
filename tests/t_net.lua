@@ -80,12 +80,20 @@ Test("reglages : le GM modifie, publie ; un novice ne peut rien changer", functi
     ns.StartDemo(0)
     P.tabs.settings:Click()
     local f = P.frames.settings
-    f.values[1]:Click("LeftButton")          -- points par SR : 11
+    local pts = f.values[1].ctl
+    pts.plus:Click()                         -- points par SR : 11
     FS.shift = true
-    f.values[1]:Click("LeftButton")          -- +10 : 21
+    pts.plus:Click()                         -- +10 : 21
     FS.shift = false
-    f.values[3]:Click("LeftButton")          -- double SR : non
+    Eq(pts.value:GetText(), "|cffffd14021|r", "compteur en or (pas publie)")
+    f.values[3].ctl:Click()                  -- double SR : decoche
+    Ok(not f.values[3].ctl.mark:IsShown(), "case decochee")
     f.grid[3][4]:Click("LeftButton")         -- Membre : droit d annuler
+    Ok(f.grid[3][4].mark:IsShown(), "case du droit cochee")
+    -- « deja loot » : la liste deroulante
+    f.values[4].ctl:Choose("session")
+    Eq(ns.SettingsView.draft.dl, "session", "portee choisie")
+    f.values[4].ctl:Choose("week")
     Ok(ns.SettingsView.dirty, "changements en cours")
     Ok(FS.Texts(f):find("Changements non publiés", 1, true), "signale")
     f.publish:Click()
@@ -97,22 +105,26 @@ Test("reglages : le GM modifie, publie ; un novice ne peut rien changer", functi
     Ok(not ns.SettingsView.dirty, "plus rien en cours")
     -- rien de change : pas de publication
     local count = ns.Store():Count()
-    f.values[1]:Click("LeftButton")
-    f.values[1]:Click("RightButton")
+    f.values[1].ctl.plus:Click()
+    f.values[1].ctl.minus:Click()
     Ok(not f.publish:IsEnabled(), "publier grise (identique)")
     f.publish:Click()
     Eq(ns.Store():Count(), count, "aucune ecriture inutile")
 
     -- fourchettes identiques : refuse
-    for _ = 1, 10 do f.values[6]:Click("LeftButton") end   -- +1 de 100 a 110 = SR
+    for _ = 1, 10 do f.values[6].ctl.plus:Click() end       -- +1 de 100 a 110 = SR
     f.publish:Click()
     Eq(ns.State().cfg.rolls.ms, 100, "pas publie")
     Ok(P.foot:GetText():find("même fourchette", 1, true), "message d erreur")
     f.reset:Click()
 
     ns.DemoRole(4)
-    f.values[1]:Click("LeftButton")
+    f.values[1].ctl.plus:Click()
+    f.values[3].ctl:Click()
+    f.values[4].ctl:Click()
+    Ok(not (ns.UI.Menu() and ns.UI.Menu():IsShown()), "novice : la liste ne s ouvre pas")
     Ok(not ns.SettingsView.dirty, "novice : rien ne bouge")
+    Ok(not f.values[1].ctl.plus:IsShown(), "novice : compteur sans boutons")
     Ok(not f.publish:IsShown(), "pas de bouton publier")
     Eq(#FS.errors, 0, "erreurs")
 end)

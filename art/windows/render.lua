@@ -278,6 +278,7 @@ local function dump(FS, name, title, rootList, box)
                     else
                         it.img = o._tex:lower():gsub("^interface\\icons\\", ""):gsub("^interface/icons/", "")
                         it.tc = o._tc
+                        if o._vc then it.vc = { round(o._vc[1]), round(o._vc[2]), round(o._vc[3]), round(o._vc[4] or 1) } end
                     end
                     items[#items + 1] = it
                 end
@@ -413,6 +414,14 @@ do
     FS.Layout()
     add(dump(FS, "Attribution", "Attribution en direct", { CorpSRWindow }))
     add(dump(FS, "Raideur", "Fenêtre du raideur", { CorpSRRaiderWindow }))
+end
+
+-- une liste deroulante ouverte (Historique, type d ecriture)
+do
+    local FS, ns, P = demo(0, "history")
+    P.frames.history.kind:Click()
+    FS.Layout()
+    add(dump(FS, "Liste", "Liste déroulante ouverte", { CorpSRWindow, ns.UI.Menu() }))
 end
 
 -- confirmation de la reinitialisation

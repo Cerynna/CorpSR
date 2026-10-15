@@ -73,15 +73,16 @@ local function build()
     UI.Skin(band, "accent", 0.25)
     local bandText = UI.Text(band, "GameFontNormalSmall")
     bandText:SetPoint("LEFT", 8, 0)
-    bandText:SetPoint("RIGHT", band, "RIGHT", -260, 0)
+    bandText:SetPoint("RIGHT", band, "RIGHT", -240, 0)
     bandText:SetHeight(16)
     bandText:SetText(L.DEMO_BANNER)
     local quit = UI.Button(band, L.DEMO_QUIT, 80, function() ns.StopDemo() end)
     quit:SetPoint("RIGHT", -2, 0)
     local roles = { 0, 1, 2, 3, 4 }
-    local role = UI.Cycle(band, 160, function()
+    -- liste deroulante des grades (« vu comme » : son infobulle)
+    local role = UI.Select(band, 150, function()
         local out = {}
-        for _, r in ipairs(roles) do out[#out + 1] = { r, L.DEMO_AS:format(ns.RankName(r)) } end
+        for _, r in ipairs(roles) do out[#out + 1] = { r, ns.RankName(r) } end
         return out
     end, function() return ns.demo and ns.demo.role end, function(v) ns.DemoRole(v) end)
     role:SetPoint("RIGHT", quit, "LEFT", -4, 0)

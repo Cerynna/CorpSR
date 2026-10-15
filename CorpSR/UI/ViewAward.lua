@@ -219,7 +219,7 @@ local function build(parent)
     f.lootLabel = lootLabel
 
     -- ligne 2 : objet choisi, glisser, numero, exemplaires, lancer
-    local pick = UI.Button(f, "", 220)
+    local pick = UI.Button(f, "", 190)
     pick:SetPoint("TOPLEFT", 0, -28)
     pick.icon = UI.Icon(pick, 18)
     pick.icon:SetPoint("LEFT", 3, 0)
@@ -241,35 +241,28 @@ local function build(parent)
     pick.tip = { L.AW_PICK, { L.AW_PICK_TIP } }
     f.pick = pick
 
-    local idBox = CreateFrame("EditBox", nil, f)
-    idBox:SetSize(64, 22)
+    local idBox = UI.Field(f, 92, {
+        placeholder = L.RAIDS_ID, numeric = true, max = 8,
+        onEnter = function(v)
+            local id = tonumber(v)
+            if id and id > 0 then
+                S.item = id
+                ns.Panel.Refresh()
+            end
+        end,
+    })
     idBox:SetPoint("LEFT", pick, "RIGHT", 4, 0)
-    idBox:SetAutoFocus(false)
-    idBox:SetNumeric(true)
-    idBox:SetMaxLetters(8)
-    idBox:SetFontObject("GameFontHighlightSmall")
-    idBox:SetTextInsets(6, 6, 0, 0)
-    UI.Skin(idBox, "panel", 0.9)
-    idBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    idBox:SetScript("OnEnterPressed", function(self)
-        local id = tonumber(self:GetText())
-        self:SetText("")
-        self:ClearFocus()
-        if id and id > 0 then
-            S.item = id
-            ns.Panel.Refresh()
-        end
-    end)
     f.idBox = idBox
 
-    local count = UI.Button(f, "", 44)
-    count:SetPoint("LEFT", idBox, "RIGHT", 4, 0)
-    count:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    count:SetScript("OnClick", function(_, button)
-        S.count = math.max(1, math.min(10, S.count + ((button == "RightButton") and -1 or 1)))
+    -- exemplaires : compteur - / +
+    local count = UI.Stepper(f, 66, function(step)
+        S.count = math.max(1, math.min(10, S.count + step))
         ns.Panel.Refresh()
     end)
-    count.tip = { L.AW_COUNT, { L.AW_COUNT_TIP } }
+    count:SetPoint("LEFT", idBox, "RIGHT", 4, 0)
+    count.box:EnableMouse(true)
+    count.box:SetScript("OnEnter", function(self) UI.Tip(self, L.AW_COUNT, { L.AW_COUNT_TIP }) end)
+    count.box:SetScript("OnLeave", UI.HideTip)
     f.count = count
 
     local start = UI.Button(f, L.AW_START, 80, function() notice(D.Start(S.item, S.count, false)) end)
@@ -312,27 +305,21 @@ local function build(parent)
     end, function() return S.manualCat end, function(v) S.manualCat = v end)
     cat:SetPoint("LEFT", who, "RIGHT", 4, 0)
     f.cat = cat
-    local rollBox = CreateFrame("EditBox", nil, f)
-    rollBox:SetSize(54, 22)
-    rollBox:SetPoint("LEFT", cat, "RIGHT", 4, 0)
-    rollBox:SetAutoFocus(false)
-    rollBox:SetNumeric(true)
-    rollBox:SetMaxLetters(6)
-    rollBox:SetFontObject("GameFontHighlightSmall")
-    rollBox:SetTextInsets(6, 6, 0, 0)
-    UI.Skin(rollBox, "panel", 0.9)
-    rollBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    f.rollBox = rollBox
-    local function manual()
-        local v = tonumber(rollBox:GetText())
-        rollBox:SetText("")
-        rollBox:ClearFocus()
+    local function manual(text)
+        local v = tonumber(text)
         if not (S.manualKey and v) then return end
         local c, why = D.Manual(S.manualKey, (D.cur and D.cur.free) and "free" or S.manualCat, v)
         if not c then ns.Panel.Notice(L["AWHY_" .. tostring(why)] or tostring(why), true) end
     end
-    rollBox:SetScript("OnEnterPressed", manual)
-    local enter = UI.Button(f, L.AW_MANUAL, 80, manual)
+    local rollBox = UI.Field(f, 64, { placeholder = L.ROLL_HINT, numeric = true, max = 6, onEnter = manual })
+    rollBox:SetPoint("LEFT", cat, "RIGHT", 4, 0)
+    f.rollBox = rollBox
+    local enter = UI.Button(f, L.AW_MANUAL, 80, function()
+        local v = rollBox:GetText()
+        rollBox:SetText("")
+        rollBox:ClearFocus()
+        manual(v)
+    end)
     enter:SetPoint("LEFT", rollBox, "RIGHT", 4, 0)
     enter.tip = { L.AW_MANUAL, { L.AW_MANUAL_TIP } }
     f.enter = enter
@@ -432,7 +419,8 @@ local function refresh(f)
         f.pick.icon:Hide()
         f.pick:SetLabel(UI.Hex("dim") .. L.AW_PICK .. "|r")
     end
-    f.count:SetLabel("×" .. ((cur and cur.count) or S.count))
+    f.count:SetValue("×" .. ((cur and cur.count) or S.count))
+    f.count:SetLocked(cur ~= nil)
     local idle = not cur and not D.leftover
     f.start:SetActive(idle and s ~= nil and S.item ~= nil)
     f.free:SetActive(idle and s ~= nil and S.item ~= nil)

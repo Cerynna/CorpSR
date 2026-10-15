@@ -155,22 +155,7 @@ local function updateRow(r, d, index)
 end
 
 local function idBox(parent, width, onEnter)
-    local e = CreateFrame("EditBox", nil, parent)
-    e:SetSize(width, 22)
-    e:SetAutoFocus(false)
-    e:SetNumeric(true)
-    e:SetMaxLetters(8)
-    e:SetFontObject("GameFontHighlightSmall")
-    e:SetTextInsets(6, 6, 0, 0)
-    UI.Skin(e, "panel", 0.9)
-    e:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    e:SetScript("OnEnterPressed", function(self)
-        local v = self:GetText()
-        self:SetText("")
-        self:ClearFocus()
-        onEnter(v)
-    end)
-    return e
+    return UI.Field(parent, width, { placeholder = L.RAIDS_ID, numeric = true, max = 8, onEnter = onEnter })
 end
 
 local function build(parent)
@@ -209,7 +194,7 @@ local function build(parent)
     add:SetScript("OnClick", dropped)
     add.tip = { L.MINE_ADD, { L.MINE_ADD_TIP } }
     f.add = add
-    local num = idBox(f, 60, V.AddItem)
+    local num = idBox(f, 104, V.AddItem)
     num:SetPoint("LEFT", add, "RIGHT", 4, 0)
     f.num = num
 

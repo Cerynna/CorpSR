@@ -52,7 +52,9 @@ local function build()
         e:SetFontObject("GameFontHighlightSmall")
         e:SetTextInsets(6, 6, 0, 0)
         e:SetMaxLetters(120)
-        UI.Skin(e, "bg", 1)
+        UI.FieldSkin(e)
+        e:SetScript("OnEditFocusGained", function(self) self:SetFocusLook(true) end)
+        e:SetScript("OnEditFocusLost", function(self) self:SetFocusLook(false) end)
         e:SetScript("OnEscapePressed", function() f:Hide() end)
         f.fields[i] = { label = label, edit = e }
     end
