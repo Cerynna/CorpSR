@@ -155,6 +155,7 @@ local function build(parent)
                 changed()
             end)
             ctl:SetPoint("TOPRIGHT", f, "TOPLEFT", VAL_W, y + 1)
+            ctl.tip = { label(L.SET_DL), { L.SET_DL_TIP } }
         end
         f.values[i] = { label = lab, ctl = ctl, spec = v }
     end

@@ -90,6 +90,7 @@ locales.enUS = {
 
     SET_VALUES = "Values", SET_PTS = "Points per SR: %d", SET_NSR = "SR per week: %d", SET_DBL = "Double SR: %s",
     SET_DL = "\"Already looted\" lasts: %s", DL_WEEK = "the week", DL_SESSION = "the evening", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "You become +1 DL as soon as you win an item in +1. Wins in SR, +2, Mog or free roll don't count. It lasts for the evening or the week.",
     SET_RAIDS = "Known items", SET_RAID = "%s: %d items", SET_NO_RAID = "No item known yet.", SET_RIGHTS = "Rights by rank",
     SET_ONLY_GM = "Only the GM changes the settings.",
 
@@ -267,6 +268,7 @@ locales.frFR = {
 
     SET_VALUES = "Valeurs", SET_PTS = "Points par SR : %d", SET_NSR = "SR par semaine : %d", SET_DBL = "Double SR : %s",
     SET_DL = "« Déjà loot » vaut pour : %s", DL_WEEK = "la semaine", DL_SESSION = "la soirée", SET_ROLL = "%s : /roll %d",
+    SET_DL_TIP = "On passe en +1 DL dès qu'on gagne un objet en +1. Les gains en SR, +2, transmo ou jet libre ne comptent pas. Ça vaut pour la soirée ou la semaine.",
     SET_RAIDS = "Objets connus", SET_RAID = "%s : %d objets", SET_NO_RAID = "Aucun objet connu pour l'instant.", SET_RIGHTS = "Droits par grade",
     SET_ONLY_GM = "Seul le GM change les réglages.",
 
@@ -448,6 +450,7 @@ locales.deDE = {
 
     SET_VALUES = "Werte", SET_PTS = "Punkte pro SR: %d", SET_NSR = "SR pro Woche: %d", SET_DBL = "Doppel-SR: %s",
     SET_DL = "„Hat schon Beute“ gilt für: %s", DL_WEEK = "die Woche", DL_SESSION = "den Abend", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "Man wird +1 DL, sobald man einen Gegenstand mit +1 gewinnt. Gewinne mit SR, +2, Transmog oder freiem Wurf zählen nicht. Es gilt für den Abend oder die Woche.",
     SET_RAIDS = "Bekannte Gegenstände", SET_RAID = "%s: %d Gegenstände", SET_NO_RAID = "Noch kein Gegenstand bekannt.", SET_RIGHTS = "Rechte je Rang",
     SET_ONLY_GM = "Nur der Gildenmeister ändert die Optionen.",
 
@@ -634,6 +637,7 @@ locales.esES = {
 
     SET_VALUES = "Valores", SET_PTS = "Puntos por SR: %d", SET_NSR = "SR por semana: %d", SET_DBL = "Doble SR: %s",
     SET_DL = "«Ya con botín» dura: %s", DL_WEEK = "la semana", DL_SESSION = "la noche", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "Pasas a +1 DL en cuanto ganas un objeto en +1. Lo ganado en SR, +2, transfiguración o tirada libre no cuenta. Vale para la noche o la semana.",
     SET_RAIDS = "Objetos conocidos", SET_RAID = "%s: %d objetos", SET_NO_RAID = "Aún no hay objetos conocidos.", SET_RIGHTS = "Derechos por rango",
     SET_ONLY_GM = "Solo el maestro cambia los ajustes.",
 
@@ -819,6 +823,7 @@ locales.ptBR = {
 
     SET_VALUES = "Valores", SET_PTS = "Pontos por SR: %d", SET_NSR = "SR por semana: %d", SET_DBL = "SR duplo: %s",
     SET_DL = "\"Já saqueou\" vale por: %s", DL_WEEK = "a semana", DL_SESSION = "a noite", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "Você passa a +1 DL assim que ganha um item em +1. Ganhos em SR, +2, transmog ou rolagem livre não contam. Vale pela noite ou pela semana.",
     SET_RAIDS = "Itens conhecidos", SET_RAID = "%s: %d itens", SET_NO_RAID = "Ainda nenhum item conhecido.", SET_RIGHTS = "Direitos por patente",
     SET_ONLY_GM = "Só o mestre muda os ajustes.",
 
@@ -1000,6 +1005,7 @@ locales.itIT = {
 
     SET_VALUES = "Valori", SET_PTS = "Punti per SR: %d", SET_NSR = "SR per settimana: %d", SET_DBL = "Doppio SR: %s",
     SET_DL = "«Già bottino» vale per: %s", DL_WEEK = "la settimana", DL_SESSION = "la serata", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "Si passa a +1 DL appena si vince un oggetto in +1. Le vincite in SR, +2, trasmogrificazione o tiro libero non contano. Vale per la serata o la settimana.",
     SET_RAIDS = "Oggetti conosciuti", SET_RAID = "%s: %d oggetti", SET_NO_RAID = "Ancora nessun oggetto conosciuto.", SET_RIGHTS = "Diritti per grado",
     SET_ONLY_GM = "Solo il capogilda cambia le opzioni.",
 
@@ -1184,6 +1190,7 @@ locales.ruRU = {
 
     SET_VALUES = "Значения", SET_PTS = "Очков за SR: %d", SET_NSR = "SR в неделю: %d", SET_DBL = "Двойной SR: %s",
     SET_DL = "«Уже с добычей» действует: %s", DL_WEEK = "неделю", DL_SESSION = "вечер", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "Игрок становится +1 DL, как только выигрывает предмет в +1. Выигрыши по SR, +2, трансмогу или свободному броску не считаются. Действует на вечер или на неделю.",
     SET_RAIDS = "Известные предметы", SET_RAID = "%s: предметов %d", SET_NO_RAID = "Пока нет известных предметов.", SET_RIGHTS = "Права по званиям",
     SET_ONLY_GM = "Настройки меняет только глава гильдии.",
 
@@ -1362,6 +1369,7 @@ locales.zhCN = {
 
     SET_VALUES = "数值", SET_PTS = "每个 SR 积分：%d", SET_NSR = "每周 SR：%d", SET_DBL = "双 SR：%s",
     SET_DL = "“已拾取”持续：%s", DL_WEEK = "一周", DL_SESSION = "一次活动", SET_ROLL = "%s：/roll %d",
+    SET_DL_TIP = "一旦以 +1 赢得物品即变为 +1 DL。以 SR、+2、幻化或自由掷骰赢得的不算。范围为当晚或本周。",
     SET_RAIDS = "已知物品", SET_RAID = "%s：%d 件物品", SET_NO_RAID = "还没有已知物品。", SET_RIGHTS = "各会阶权限",
     SET_ONLY_GM = "只有会长能修改设置。",
 
@@ -1520,6 +1528,7 @@ locales.zhTW = {
 
     SET_VALUES = "數值", SET_PTS = "每個 SR 積分：%d", SET_NSR = "每週 SR：%d", SET_DBL = "雙 SR：%s",
     SET_DL = "「已拾取」持續：%s", DL_WEEK = "一週", DL_SESSION = "一次活動", SET_ROLL = "%s：/roll %d",
+    SET_DL_TIP = "一旦以 +1 贏得物品即變為 +1 DL。以 SR、+2、塑形或自由擲骰贏得的不算。範圍為當晚或本週。",
     SET_RAIDS = "已知物品", SET_RAID = "%s：%d 件物品", SET_NO_RAID = "還沒有已知物品。", SET_RIGHTS = "各階級權限",
     SET_ONLY_GM = "只有會長能修改設定。",
 
@@ -1678,6 +1687,7 @@ locales.koKR = {
 
     SET_VALUES = "값", SET_PTS = "SR당 포인트: %d", SET_NSR = "주당 SR: %d", SET_DBL = "이중 SR: %s",
     SET_DL = "\"이미 획득\" 기간: %s", DL_WEEK = "한 주", DL_SESSION = "한 일정", SET_ROLL = "%s: /roll %d",
+    SET_DL_TIP = "+1로 아이템을 얻는 순간 +1 DL이 됩니다. SR, +2, 형상변환, 자유 주사위로 얻은 것은 제외됩니다. 그날 저녁 또는 그 주 동안 적용됩니다.",
     SET_RAIDS = "알려진 아이템", SET_RAID = "%s: 아이템 %d개", SET_NO_RAID = "아직 알려진 아이템이 없습니다.", SET_RIGHTS = "등급별 권한",
     SET_ONLY_GM = "길드장만 설정을 바꿀 수 있습니다.",
 

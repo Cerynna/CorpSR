@@ -8,7 +8,9 @@
     donne la categorie (reglage du GM, valeurs par defaut ci-dessous) :
       sr  : Soft Reserve           /roll 110   total = jet + points sur l objet
       ms  : +1, spe principale     /roll 100   total = jet
-      dl  : +1 DL, principale      /roll 100   le joueur a deja loot (l addon le sait)
+      dl  : +1 DL, principale      /roll 100   le joueur a deja gagne un objet en +1
+                                               (l addon le sait ; regle du 16/10 : les gains
+                                               en SR, +2, Mog et jet libre ne comptent pas)
       os  : +2, seconde spe        /roll 50
       mog : transmogrification     /roll 20
     La priorite est stricte : le total ne departage qu a l interieur d une
@@ -33,8 +35,9 @@ R.CATS = { "sr", "ms", "dl", "os", "mog" }
 R.PRIO = { sr = 1, ms = 2, dl = 3, os = 4, mog = 5, free = 6 }
 -- objet dont personne ne veut : choix du distributeur
 R.LEFTOVER = { free = true, bank = true, de = true }
--- gains qui font passer un joueur en « deja loot » (+1 DL)
-R.LOOTS = { sr = true, ms = true, dl = true }
+-- gains qui font passer un joueur en « deja loot » (+1 DL), des le premier :
+-- seulement en +1 (ou +1 DL) ; un gain en SR ne compte pas (16/10/2026)
+R.LOOTS = { ms = true, dl = true }
 
 -- droits que le GM accorde grade par grade (le GM, grade 0, a tout)
 -- (« presence » a disparu le 16/10 : les points ne dependent plus de la soiree)

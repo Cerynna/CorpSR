@@ -16,10 +16,11 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
   |---|---|---|
   | SR | `/roll 110` | jet + points sur l'objet |
   | +1 (spé principale) | `/roll 100` | jet |
-  | +1 DL (spé principale, a déjà loot cette semaine) | `/roll 100` | jet |
+  | +1 DL (spé principale, a déjà gagné un objet en +1 cette semaine) | `/roll 100` | jet |
   | +2 (seconde spé) | `/roll 50` | jet |
   | Mog | `/roll 20` | jet |
 
+- **+1 DL** : on y passe dès le premier objet gagné en +1. Les gains en SR, +2, Mog ou jet libre ne comptent pas. Les objets d'un boss sont donnés l'un après l'autre : celui qui gagne l'objet 1 en +1 est déjà +1 DL sur l'objet 2.
 - En cas d'égalité, on relance entre les ex æquo. S'il tombe N exemplaires, les N meilleurs gagnent. Seul le premier jet valable compte.
 - Si personne ne veut l'objet, le distributeur choisit : jet libre, banque de guilde ou désenchantement.
 - Le GM règle les valeurs (points, nombre de SR, double SR, portée de « déjà loot », fourchettes). Il choisit aussi les droits grade par grade.

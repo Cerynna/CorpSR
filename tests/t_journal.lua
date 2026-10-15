@@ -247,7 +247,7 @@ end)
 Test("deja loot a la semaine : un gain dans un autre raid compte aussi", function()
     local b = NewBook(ns, RANKS)
     b:Evening("GM", 1, { "A" }, { raid = "ONY", before_close = function(sid)
-        b:E("GM", 1, "award", { s = sid, i = X, p = "A", c = "sr" })
+        b:E("GM", 1, "award", { s = sid, i = X, p = "A", c = "ms", r = 70 })
     end })
     local sid = b:Evening("GM", 1, { "A" }, { open = true })
     Ok(J.Info(b:State(), sid, "A", Y).looted, "MC apres un gain a Onyxia")
@@ -365,4 +365,24 @@ Test("reinitialisation : sauvegarde relue, annulation impossible", function()
     local u = b:E("GM", 1, "undo", { ref = J.Id(reset), y = "oups" })
     store:Add(u)
     Eq(store:State().byId[J.Id(u)].why, "target", "on n annule pas une reinitialisation")
+end)
+
+Test("deja loot (16/10) : seul un gain en +1 compte, des le premier, objet par objet", function()
+    -- un boss, trois objets donnes l un apres l autre dans la meme soiree
+    local Z = 19019
+    local b = NewBook(ns, RANKS)
+    local sid = b:Evening("GM", 1, { "A", "B", "C", "D" }, { open = true })
+    b:E("GM", 1, "award", { s = sid, i = X, p = "A", c = "ms", r = 80 })     -- objet 1 : A en +1
+    b:E("GM", 1, "award", { s = sid, i = Y, p = "B", c = "sr", r = 60 })     -- objet 2 : B en SR
+    local st = b:State()
+    Ok(J.Info(st, sid, "A", Z).looted, "A : +1 gagne a l objet 1, deja loot a l objet 3")
+    Ok(not J.Info(st, sid, "B", Z).looted, "B : un gain en SR ne compte pas")
+    Ok(not J.Info(st, sid, "C", Z).looted, "C : rien gagne")
+    b:E("GM", 1, "award", { s = sid, i = Z, p = "C", c = "os", r = 30 })     -- objet 3 : C en +2
+    b:E("GM", 1, "award", { s = sid, i = 17076, p = "D", c = "mog", r = 12 }) -- D en transmo
+    st = b:State()
+    Ok(not J.Info(st, sid, "C", X).looted, "C : un gain en +2 ne compte pas")
+    Ok(not J.Info(st, sid, "D", X).looted, "D : un gain en transmo ne compte pas")
+    b:E("GM", 1, "award", { s = sid, i = 18814, p = "C", c = "dl", r = 55 })  -- C en +1 DL
+    Ok(J.Info(b:State(), sid, "C", X).looted, "C : un gain en +1 DL compte")
 end)
