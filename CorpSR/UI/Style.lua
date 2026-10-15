@@ -130,7 +130,7 @@ end
 
 --- Onglet du haut du panneau : texte, filet d accent quand il est choisi.
 function UI.Tab(parent, text, onClick)
-    local b = UI.Button(parent, text, 92, onClick)
+    local b = UI.Button(parent, text, 84, onClick)
     b:SetHeight(24)
     local mark = b:CreateTexture(nil, "OVERLAY")
     mark:SetPoint("BOTTOMLEFT", 1, 1)

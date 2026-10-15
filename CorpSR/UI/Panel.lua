@@ -189,8 +189,16 @@ end
 function P.FootText()
     local where = ns.demo and L.FOOT_DEMO or L.FOOT_GUILD
     local rank = ns.MyRank()
-    return L.FOOT:format(where, ns.Store():Count(), ns.WeekDate(ns.Week()))
+    local text = L.FOOT:format(where, ns.Store():Count(), ns.WeekDate(ns.Week()))
         .. ((rank ~= nil) and ("  ·  " .. ns.RankName(rank)) or "")
+    local queued = (not ns.demo and ns.Comm) and ns.Comm.Pending() or 0
+    if queued > 0 then text = text .. "  ·  " .. UI.Hex("gold") .. L.SYNC_BUSY:format(queued) .. "|r" end
+    return text
+end
+
+--- Ligne du bas a jour (file de synchro), sauf pendant un message.
+function P.UpdateFoot()
+    if P.frame and P.frame:IsShown() and not P.noticeOn then P.foot:SetText(P.FootText()) end
 end
 
 local function visibleViews()
@@ -236,7 +244,7 @@ function P.Refresh(soft)
             t:SetPoint("TOPLEFT", x, -(HEAD + 2))
             t:SetSelected(v.key == P.current)
             t:Show()
-            x = x + 96
+            x = x + 88
         end
         if not P.noticeOn then P.foot:SetText(P.FootText()) end
     end

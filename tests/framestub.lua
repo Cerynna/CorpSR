@@ -168,7 +168,22 @@ function FS.Install(opts)
     _G.CreateFrame = function(kind, name, parent, template)
         return newObj(kind, name, parent or UIParent, template)
     end
-    _G.C_Timer = { After = function(d, fn) FS.timers[#FS.timers + 1] = fn end }
+    FS.tickers, FS.sent, FS.lockdown, FS.shift, FS.cursor = {}, {}, false, false, nil
+    _G.C_Timer = {
+        After = function(d, fn) FS.timers[#FS.timers + 1] = fn end,
+        NewTicker = function(d, fn) FS.tickers[#FS.tickers + 1] = fn return {} end,
+    }
+    _G.C_ChatInfo = {
+        RegisterAddonMessagePrefix = function() return 0 end,
+        InChatMessagingLockdown = function() return FS.lockdown end,
+        SendAddonMessage = function(prefix, text, channel, target)
+            FS.sent[#FS.sent + 1] = { prefix = prefix, text = text, channel = channel, target = target }
+            return 0
+        end,
+    }
+    _G.IsShiftKeyDown = function() return FS.shift end
+    _G.GetCursorInfo = function() if FS.cursor then return FS.cursor[1], FS.cursor[2] end end
+    _G.ClearCursor = function() FS.cursor = nil end
     _G.GetTime = function() return FS.time end
     _G.GetServerTime = function() return FS.server end
     _G.C_DateAndTime = { GetSecondsUntilWeeklyReset = function() return FS.untilReset end }
@@ -239,6 +254,7 @@ end
 --- Un tour d OnUpdate sur les cadres visibles.
 function FS.Tick(elapsed)
     FS.time = FS.time + (elapsed or 0.25)
+    for _, fn in ipairs(FS.tickers) do fn() end
     for _, f in ipairs(FS.frames) do
         if f._scripts.OnUpdate and f:IsVisible() then f._scripts.OnUpdate(f, elapsed or 0.25) end
     end

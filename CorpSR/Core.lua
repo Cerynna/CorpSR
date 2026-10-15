@@ -90,12 +90,12 @@ local function myClass()
     return class
 end
 
-local roster = { byKey = {}, list = {}, ranks = {} }
+local roster = { byKey = {}, byName = {}, list = {}, ranks = {} }
 
 local function readRoster()
     local n = api(GetNumGuildMembers)
     if type(n) ~= "number" then return end
-    local byKey, list = {}, {}
+    local byKey, byName, list = {}, {}, {}
     for i = 1, math.min(n, 1000) do
         local r = { pcall(GetGuildRosterInfo, i) }
         local name, rankName, rank, online, class, key = r[2], r[3], r[4], r[10], r[12], ns.KeyOf(r[18])
@@ -108,6 +108,7 @@ local function readRoster()
                 online = (not issecret(online)) and online == true,
             }
             byKey[key] = m
+            byName[name] = m
             list[#list + 1] = m
             if ns.db then
                 ns.db.names[key] = name
@@ -119,7 +120,8 @@ local function readRoster()
     local ranks = {}
     local nr = api(GuildControlGetNumRanks) or 0
     for i = 1, math.min(nr, 10) do ranks[i - 1] = api(GuildControlGetRankName, i) end
-    roster = { byKey = byKey, list = list, ranks = ranks }
+    roster = { byKey = byKey, byName = byName, list = list, ranks = ranks }
+    ns.Fire("roster")
     ns.Fire("data")
 end
 
@@ -138,6 +140,8 @@ end
 function ns.Store() return ns.demo and ns.demo.store or ns.store end
 function ns.State() return ns.Store():State() end
 function ns.Roster() return ns.demo and ns.demo.roster or roster end
+--- La vraie liste de guilde (meme en mode demo) : pour la synchro.
+function ns.GuildRoster() return roster end
 function ns.Me() return ns.me end
 
 --- Grade du joueur (0 = GM), nil hors de la guilde.
@@ -269,6 +273,8 @@ function ns.Write(kind, fields)
     local res = store:Add(e)
     if res ~= "new" then return nil, res end
     ns.Fire("data")
+    -- la vraie guilde seulement : la demo n envoie jamais rien
+    if not ns.demo then ns.Fire("written", e) end
     return e
 end
 
@@ -369,6 +375,8 @@ SlashCmdList.CORPSR = function(input)
     local cmd = (input or ""):match("^%s*(%S*)"):lower()
     if cmd == "sonde" or cmd == "probe" then
         ns.SondeCommand()
+    elseif cmd == "sync" then
+        if ns.SyncNow then ns.SyncNow() end
     elseif cmd == "demo" then
         if ns.demo then ns.StopDemo() else ns.StartDemo(0) end
         if ns.ShowWindow then ns.ShowWindow(true) end
