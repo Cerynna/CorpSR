@@ -296,7 +296,7 @@ local function dump(FS, name, title, rootList, box)
                 local n = 0
                 for _ in plain(l[1]):gmatch("[%z\1-\127\194-\244][\128-\191]*") do n = n + 1 end
                 wmax = math.max(wmax, math.min(n * size * 0.52, 300))
-                hsum = hsum + size + 4 + (n * size * 0.52 > 300 and size + 4 or 0)
+                hsum = hsum + (size + 4) * math.max(1, math.ceil(n * size * 0.52 / 300))
             end
             local tw, th = wmax + 20, hsum
             local l0, t0 = or_.r, or_.t + th
@@ -414,6 +414,17 @@ do
     FS.Layout()
     add(dump(FS, "Attribution", "Attribution en direct", { CorpSRWindow }))
     add(dump(FS, "Raideur", "Fenêtre du raideur", { CorpSRRaiderWindow }))
+end
+
+-- infobulle d un droit (Reglages, en-tete « Attribuer » survole) : la
+-- planche monte au-dessus de la fenetre, ou l infobulle s affiche
+do
+    local FS, ns, P = demo(0, "settings")
+    local h = P.frames.settings.heads[2]
+    h:GetScript("OnEnter")(h)
+    local w = rect(CorpSRWindow)
+    add(dump(FS, "ReglagesInfobulle", "Réglages : infobulle d'un droit", { CorpSRWindow },
+        { l = w.l, r = w.r + 170, b = w.b, t = w.t + 110 }))
 end
 
 -- une liste deroulante ouverte (Historique, type d ecriture)

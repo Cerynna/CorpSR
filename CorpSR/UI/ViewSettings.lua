@@ -171,13 +171,23 @@ local function build(parent)
     end
 
     header(f, L.SET_RIGHTS, -2, RIGHT_X, 360)
+    -- en-tetes survolables : l infobulle dit ce que permet chaque droit
+    f.heads = {}
     for c, name in ipairs(R.RIGHTS) do
-        local fs = UI.Text(f, "GameFontNormalSmall", "CENTER")
-        fs:SetPoint("TOPLEFT", RIGHT_X + NAME_W + (c - 1) * CELL, -24)
-        fs:SetPoint("TOPRIGHT", f, "TOPLEFT", RIGHT_X + NAME_W + c * CELL, -24)
-        fs:SetHeight(28)
+        local h = CreateFrame("Button", nil, f)
+        h:SetPoint("TOPLEFT", RIGHT_X + NAME_W + (c - 1) * CELL, -24)
+        h:SetSize(CELL, 28)
+        local hl = h:CreateTexture(nil, "HIGHLIGHT")
+        hl:SetAllPoints()
+        UI.Paint(hl, "accent", 0.12)
+        local fs = UI.Text(h, "GameFontNormalSmall", "CENTER")
+        fs:SetPoint("TOPLEFT", 0, 0)
+        fs:SetPoint("BOTTOMRIGHT", 0, 0)
         fs:SetWordWrap(true)
         fs:SetText(L["RIGHT_" .. name])
+        h:SetScript("OnEnter", function(self) UI.Tip(self, L["RIGHT_" .. name], { L["RIGHT_TIP_" .. name] }) end)
+        h:SetScript("OnLeave", UI.HideTip)
+        f.heads[c] = h
     end
     f.grid = {}
     for row = 0, 9 do
@@ -281,7 +291,13 @@ local function refresh(f)
                 local was = row == 0 or R.Can(live, row, right)
                 b:SetValue(on, on ~= was)
                 b:Show()
-                b.tip = (gm and row ~= 0) and { name .. " : " .. L["RIGHT_" .. right], { L.SET_RIGHT_TIP } } or nil
+                local lines = { L["RIGHT_TIP_" .. right] }
+                if row == 0 then
+                    lines[2] = { L.SET_GM_ALL, 0.6, 0.6, 0.6 }
+                elseif gm then
+                    lines[2] = { L.SET_RIGHT_TIP, 0.6, 0.6, 0.6 }
+                end
+                b.tip = { name .. " : " .. L["RIGHT_" .. right], lines }
             else
                 b:Hide()
             end

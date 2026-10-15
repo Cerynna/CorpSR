@@ -82,7 +82,7 @@ function element(it, img) {
       const size = (l.title ? 14 : 12) * 1.5;
       return `<div style="font-size: ${px(size)}; line-height: 1.25; color: ${rgba([l[1], l[2], l[3], 1])}">${wowText(l[0])}</div>`;
     }).join('');
-    return `<div style="position: absolute; left: ${px(it.x)}; top: ${px(it.y)}; min-width: ${px(it.w)}; box-sizing: border-box; padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; background: rgba(6, 8, 18, 0.94); border: 2px solid #8d8d8d; border-radius: 6px; box-shadow: 0 0 0 1px #000">${lines}</div>`;
+    return `<div style="position: absolute; left: ${px(it.x)}; top: ${px(it.y)}; width: ${px(it.w)}; box-sizing: border-box; padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; background: rgba(6, 8, 18, 0.94); border: 2px solid #8d8d8d; border-radius: 6px; box-shadow: 0 0 0 1px #000">${lines}</div>`;
   }
   // texte
   const jh = { LEFT: 'flex-start', CENTER: 'center', RIGHT: 'flex-end' }[it.jh] || 'flex-start';

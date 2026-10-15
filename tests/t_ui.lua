@@ -314,3 +314,31 @@ Test("controles web : champ (texte indicatif, croix, Entree), liste fermee au cl
     Ok(not menu:IsShown(), "fermee quand la vue change")
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+Test("Reglages : une infobulle explique chaque droit (en-tete et case)", function()
+    local FS, ns, P = open()
+    P.CloseIntro()
+    ns.StartDemo(0)
+    tab(P, "settings"):Click()
+    local said = {}
+    GameTooltip.SetText = function(_, t) said[#said + 1] = t end
+    GameTooltip.AddLine = function(_, t) said[#said + 1] = t end
+    local f = P.frames.settings
+    Eq(#f.heads, 5, "cinq en-tetes")
+    for c, h in ipairs(f.heads) do
+        said = {}
+        h:GetScript("OnEnter")(h)
+        Ok(said[2] and #said[2] > 30, "explication du droit " .. c)
+    end
+    said = {}
+    local cell = f.grid[1][2]                 -- Officier : Attribuer
+    cell:GetScript("OnEnter")(cell)
+    local text = table.concat(said, "\n")
+    Ok(text:find("Distribuer le butin", 1, true), "case : ce que permet le droit")
+    Ok(text:find("Clique", 1, true), "case : comment le changer (GM)")
+    said = {}
+    cell = f.grid[0][1]                        -- GM
+    cell:GetScript("OnEnter")(cell)
+    Ok(table.concat(said, "\n"):find("toujours tous les droits", 1, true), "ligne du GM")
+    Eq(#FS.errors, 0, "erreurs")
+end)
