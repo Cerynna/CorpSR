@@ -262,6 +262,29 @@ function FS.Install(opts)
     _G.CorpSRDB = nil
     _G.CommunitiesFrame = nil
     _G.CorpUI = nil
+    -- faux CorpUI : son API publique telle quelle (RegisterModule, NewPanel,
+    -- ShowPanel), une fenetre principale, ses couleurs
+    if opts.corpui then
+        local main = newObj("Frame", "CorpUIMain", UIParent)
+        main._shown = false
+        main._strata = "DIALOG"
+        local cui = { modules = {}, panels = {}, main = main,
+            COLORS = { violet = { 0.28, 0.56, 1.00 }, gold = { 1, 0.82, 0.25 } } }
+        function cui.RegisterModule(m) table.insert(cui.modules, m) end
+        function cui.NewPanel(name, title, w, h)
+            local f = newObj("Frame", name, main)
+            f._w, f._h = w, h
+            f._shown = false
+            cui.panels[name] = f
+            return f
+        end
+        function cui.ShowPanel(p)
+            for _, x in pairs(cui.panels) do if x ~= p then x:Hide() end end
+            main:Show()
+            p:Show()
+        end
+        _G.CorpUI = cui
+    end
 end
 
 --- Previent les cadres inscrits a un evenement.

@@ -53,6 +53,7 @@ local function build()
     end)
 
     local title = UI.Title(f, "|cffd65cffCorp|r|cffffd100SR|r", 15)
+    P.title = title
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetPoint("TOPRIGHT", f, "TOPLEFT", 120, -8)
     title:SetHeight(18)
@@ -157,6 +158,8 @@ function P.Attach(host)
     f:SetFrameStrata(host:GetFrameStrata())
     f:SetFrameLevel(host:GetFrameLevel() + 2)
     P.intro:SetFrameLevel(f:GetFrameLevel() + 20)
+    -- un hote qui a deja son titre (page de /corp) : pas le notre
+    P.title:SetShown(not host.csrNoTitle)
     P.host = host
     f:Show()
     P.Refresh()

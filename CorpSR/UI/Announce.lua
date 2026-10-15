@@ -38,7 +38,8 @@ end
 
 local function build()
     btn = CreateFrame("Button", "CorpSRAnnounceButton", UIParent, "SecureActionButtonTemplate")
-    btn:SetFrameStrata("DIALOG")
+    -- au-dessus de notre fenetre et de celle de /corp (strate DIALOG)
+    btn:SetFrameStrata("FULLSCREEN_DIALOG")
     btn:RegisterForClicks("AnyUp", "AnyDown")
     btn:SetAttribute("type", "macro")
     UI.Skin(btn, "panel", 0.95)
