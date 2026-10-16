@@ -241,7 +241,7 @@ function FS.Install(opts)
     _G.GetNumGroupMembers = function() return FS.raid and #FS.raid or 0 end
     _G.GetInstanceInfo = function() return "Instance", "raid", 9, "", 40, 0, false, FS.instance end
     _G.RANDOM_ROLL_RESULT = "%s obtient un %d (%d-%d)."
-    FS.guild = "[EVER]"
+    FS.guild = "Corp"
     _G.IsInGuild = function() return FS.guild ~= nil end
     _G.GetGuildInfo = function() if FS.guild then return FS.guild, "Novice", 4, nil end end
     _G.GetNormalizedRealmName = function() return "ClassicBetaPvE2" end

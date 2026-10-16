@@ -2,7 +2,7 @@
 
 Pour la présentation de l'addon (joueurs, officiers), voir le [README](../README.md). Ce document garde les règles détaillées, l'organisation du code et les bancs.
 
-Soft Reserve avec points pour la guilde [EVER], sur WoW Classic « Forever » (1.60.1, `## Interface: 16001`).
+Soft Reserve de guilde avec points, sur WoW Classic « Forever » (1.60.1, `## Interface: 16001`).
 L'addon est autonome : CorpUI est facultatif. Tout se passe dans le jeu, et la synchro passe uniquement par le canal d'addon `GUILD`.
 
 ## Règles
