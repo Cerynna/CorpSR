@@ -61,7 +61,7 @@ Niente sito, niente esportazioni, niente fogli di calcolo. I dati passano solo d
 - **Conta solo il tuo primo tiro valido.** Se cadono N copie, vincono i N migliori.
 - Tutti i valori (punti, numero di SR, doppio SR, intervalli di tiro) sono impostazioni del GM.
 
-## Una serata di incursione
+## Una sessione di incursione
 
 **Ufficiali**
 

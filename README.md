@@ -61,7 +61,7 @@ There is no website, no export, no spreadsheet. The data travels only through th
 - **Only your first valid roll counts.** If N copies drop, the N best win.
 - All values (points, number of SRs, double SR, roll ranges) are GM settings.
 
-## A raid night
+## A raid session
 
 **Officers**
 

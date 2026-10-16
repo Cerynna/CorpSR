@@ -61,7 +61,7 @@ Sem site, sem exportação, sem planilha. Os dados passam só pelo canal de addo
 - **Só a sua primeira rolagem válida conta.** Se caírem N cópias, os N melhores vencem.
 - Todos os valores (pontos, número de SR, SR duplo, faixas de rolagem) são ajustes do GM.
 
-## Uma noite de raide
+## Uma sessão de raide
 
 **Oficiais**
 

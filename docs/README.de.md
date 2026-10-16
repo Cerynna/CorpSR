@@ -61,7 +61,7 @@ Keine Website, kein Export, keine Tabelle. Die Daten laufen nur über den Addon-
 - **Nur dein erster gültiger Wurf zählt.** Fallen N Exemplare, gewinnen die N Besten.
 - Alle Werte (Punkte, Anzahl SR, doppelter SR, Würfelbereiche) sind Einstellungen des GM.
 
-## Ein Schlachtzugsabend
+## Eine Schlachtzugssitzung
 
 **Offiziere**
 

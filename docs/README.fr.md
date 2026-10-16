@@ -61,7 +61,7 @@ Pas de site, pas d'export, pas de tableur. Les données passent uniquement par l
 - **Seul ton premier jet valable compte.** S'il tombe N exemplaires, les N meilleurs gagnent.
 - Toutes les valeurs (points, nombre de SR, double SR, fourchettes) sont des réglages du GM.
 
-## Une soirée de raid
+## Une session de raid
 
 **Officiers**
 

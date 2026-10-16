@@ -61,7 +61,7 @@ Sin web, sin exportar, sin hojas de cálculo. Los datos solo viajan por el canal
 - **Solo cuenta tu primera tirada válida.** Si caen N copias, ganan los N mejores.
 - Todos los valores (puntos, número de SR, doble SR, rangos de tirada) son ajustes del GM.
 
-## Una noche de banda
+## Una sesión de banda
 
 **Oficiales**
 
