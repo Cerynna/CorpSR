@@ -53,7 +53,7 @@ local function buildRow(list)
     local r = UI.Row(list)
     r.icon = UI.Icon(r, 18)
     r.icon:SetPoint("LEFT", 4, 0)
-    r.cols = UI.Columns(r, { { "pad", 24 }, { "item" }, { "to", 150 }, { "why", 80 }, { "st", 96, "RIGHT" } })
+    r.cols = UI.Columns(r, { { "pad", 24 }, { "item" }, { "to", 130 }, { "why", 70 }, { "st", 84, "RIGHT" } })
     r:SetScript("OnClick", function(self)
         V.sel = self.d.id
         redraw()
@@ -169,6 +169,12 @@ local function build(parent)
         mp.Place()
     end)
     f:SetScript("OnHide", function() mp.Hide() end)
+    -- la fenetre se redimensionne : la rangee du bas se resserre
+    f:SetScript("OnSizeChanged", function(self, w)
+        w = w or self:GetWidth()
+        if not w or w <= 0 then return end
+        UI.FitRow({ self.mpAnchor, self.trade, self.done, self.remove, self.clear }, { 176, 96, 80, 80, 140 }, w - 8)
+    end)
     return f
 end
 

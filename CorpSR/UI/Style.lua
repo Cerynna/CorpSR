@@ -440,6 +440,19 @@ function UI.Check(parent, onClick)
     return b
 end
 
+--- Une rangee de cadres enchaines (gauche -> droite) dans une largeur
+-- donnee : leurs largeurs voulues, reduites ensemble si elles ne tiennent
+-- pas (jamais agrandies). gap : l ecart entre deux cadres.
+function UI.FitRow(frames, widths, avail, gap)
+    gap = gap or 4
+    local need = 0
+    for _, w in ipairs(widths) do need = need + w end
+    local room = avail - gap * (#frames - 1)
+    local k = (need > 0 and room < need) and math.max(0.3, room / need) or 1
+    for i, f in ipairs(frames) do f:SetWidth(math.floor(widths[i] * k)) end
+    return k
+end
+
 --- Compteur : [-] valeur [+]. onStep(-1 ou +1) ; f:SetValue(texte, change) ;
 -- f:SetLocked(vrai) : la valeur seule, sans boutons.
 function UI.Stepper(parent, width, onStep)

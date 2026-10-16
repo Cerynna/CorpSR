@@ -55,6 +55,8 @@ const GLYPHS = {
     svg: '<path d="M4 9.5 L8 5.5 L12 9.5" fill="none" stroke="COLOR" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
   'interface\\common\\ui-searchbox-icon': { color: '#9e9eae',
     svg: '<circle cx="7" cy="7" r="4.2" fill="none" stroke="COLOR" stroke-width="1.8"/><path d="M10.2 10.2 L14 14" stroke="COLOR" stroke-width="2" stroke-linecap="round"/>' },
+  'interface\\chatframe\\ui-chatim-sizegrabber-up': { color: '#b4b4c0',
+    svg: '<path d="M14 3 L3 14 M14 7.5 L7.5 14 M14 12 L12 14" fill="none" stroke="COLOR" stroke-width="1.4" stroke-linecap="round"/>' },
   'interface\\buttons\\ui-checkbox-check': { color: '#ffd100',
     svg: '<path d="M4.5 8.3 L7 10.8 L11.8 5" fill="none" stroke="COLOR" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' },
 };

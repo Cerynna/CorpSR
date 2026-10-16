@@ -8,9 +8,10 @@
     panneau, le clic droit sur le bouton de la minicarte ou /csr attrib.
     Deux onglets : « Jets » (la vue d attribution, ViewAward.lua) et
     « A remettre » (ViewDeliver.lua : a qui on doit donner quoi, echange,
-    MP, desenchanteur). Deplacable par son
-    en-tete, position gardee (CorpSRDB.awardWin) ; on la ferme avec la
-    croix (pas d UISpecialFrames : code securise d Echap).
+    MP, desenchanteur). Deplacable par son en-tete, redimensionnable par
+    la poignee du coin bas droit (460 x 330 au plus petit : les rangees se
+    resserrent) ; position et taille gardees (CorpSRDB.awardWin). On la
+    ferme avec la croix (pas d UISpecialFrames : code securise d Echap).
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...
@@ -24,11 +25,19 @@ local HEAD, TABS, FOOT = 30, 28, 18
 local win
 W.mode = "rolls"
 
+local MIN_W, MIN_H, MAX_W, MAX_H = 460, 330, 1100, 800
+local GRAB = "Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up"
+
 local function save()
     if not (win and ns.db) then return end
     local point, _, rel, x, y = win:GetPoint(1)
-    if point then ns.db.awardWin = { point = point, rel = rel, x = x, y = y } end
+    if point then
+        ns.db.awardWin = { point = point, rel = rel, x = x, y = y,
+            w = math.floor(win:GetWidth() + 0.5), h = math.floor(win:GetHeight() + 0.5) }
+    end
 end
+
+local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
 local function build()
     win = CreateFrame("Frame", "CorpSRAwardWindow", UIParent)
@@ -44,6 +53,17 @@ local function build()
         win:SetPoint(pos.point, UIParent, pos.rel or pos.point, pos.x or 0, pos.y or 0)
     else
         win:SetPoint("CENTER", 0, 20)
+    end
+    if type(pos) == "table" and type(pos.w) == "number" and type(pos.h) == "number" then
+        win:SetSize(clamp(pos.w, MIN_W, MAX_W), clamp(pos.h, MIN_H, MAX_H))
+    end
+    -- redimensionnable (bornes : SetResizeBounds, ou l ancienne API)
+    win:SetResizable(true)
+    if win.SetResizeBounds then
+        pcall(win.SetResizeBounds, win, MIN_W, MIN_H, MAX_W, MAX_H)
+    else
+        if win.SetMinResize then pcall(win.SetMinResize, win, MIN_W, MIN_H) end
+        if win.SetMaxResize then pcall(win.SetMaxResize, win, MAX_W, MAX_H) end
     end
 
     -- en-tete : on deplace la fenetre en le tirant
@@ -89,9 +109,29 @@ local function build()
     win.body = body
     local foot = UI.Text(win, "GameFontDisableSmall")
     foot:SetPoint("BOTTOMLEFT", 10, 5)
-    foot:SetPoint("BOTTOMRIGHT", -10, 5)
+    foot:SetPoint("BOTTOMRIGHT", -24, 5)
     foot:SetHeight(14)
     win.foot = foot
+
+    -- poignee du coin bas droit : on tire pour changer la taille
+    local sizer = CreateFrame("Button", nil, win)
+    sizer:SetSize(16, 16)
+    sizer:SetPoint("BOTTOMRIGHT", -3, 3)
+    sizer:SetFrameLevel(win:GetFrameLevel() + 40)
+    local grab = sizer:CreateTexture(nil, "OVERLAY")
+    grab:SetAllPoints()
+    grab:SetTexture(GRAB)
+    local grabHl = sizer:CreateTexture(nil, "HIGHLIGHT")
+    grabHl:SetAllPoints()
+    UI.Paint(grabHl, "accent", 0.3)
+    sizer:SetScript("OnMouseDown", function() win:StartSizing("BOTTOMRIGHT") end)
+    sizer:SetScript("OnMouseUp", function()
+        win:StopMovingOrSizing()
+        save()
+    end)
+    sizer:SetScript("OnEnter", function(self) UI.Tip(self, L.AW_RESIZE, {}) end)
+    sizer:SetScript("OnLeave", UI.HideTip)
+    win.sizer = sizer
 
     win.view = ns.AwardView.build(body)
     win.view:SetAllPoints(body)

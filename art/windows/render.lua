@@ -413,6 +413,12 @@ do
     FS.RunTimers()
     FS.Layout()
     add(dump(FS, "Attribution", "Fenêtre d'attribution (en direct)", { CorpSRAwardWindow }))
+    -- la meme, retrecie a la poignee : les rangees se resserrent
+    CorpSRAwardWindow:SetSize(480, 400)
+    FS.Layout()
+    add(dump(FS, "AttributionEtroite", "Fenêtre d'attribution rétrécie", { CorpSRAwardWindow }))
+    CorpSRAwardWindow:SetSize(640, 400)
+    FS.Layout()
     add(dump(FS, "Raideur", "Fenêtre du raideur", { CorpSRRaiderWindow }))
 
     -- la remise : quelques objets attribues, un au desenchanteur

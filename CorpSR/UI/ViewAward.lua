@@ -73,7 +73,7 @@ end
 
 local COLS = {
     { "pad", 24 }, { "who" }, { "cat", 70, "CENTER" }, { "roll", 44, "RIGHT" }, { "pts", 44, "RIGHT" },
-    { "total", 50, "RIGHT" }, { "st", 110, "RIGHT" },
+    { "total", 50, "RIGHT" }, { "st", 96, "RIGHT" },
 }
 
 local function buildRow(list)
@@ -181,13 +181,15 @@ local function notice(ok, why)
     ns.AwardWindow.Notice(L["AWERR_" .. tostring(why)] or tostring(why), true)
 end
 
+
+local layout   -- plus bas : les rangees suivent la largeur de la fenetre
 local function build(parent)
     local f = CreateFrame("Frame", nil, parent)
 
     -- ligne 1 : soiree, butin
     local head = UI.Text(f, "GameFontNormalSmall")
     head:SetPoint("TOPLEFT", 2, -4)
-    head:SetPoint("TOPRIGHT", f, "TOPLEFT", 186, -4)
+    head:SetWidth(182)
     head:SetHeight(16)
     f.head = head
     -- soiree automatique (chef de raid) : delai avant validation, ou coupee
@@ -196,12 +198,12 @@ local function build(parent)
         for _, d in ipairs(ns.Auto.DELAYS) do out[#out + 1] = { d, d == 0 and L.AUTO_OFF or L.AUTO_DELAY:format(d) } end
         return out
     end, function() return ns.Auto.Delay() end, function(v) ns.Auto.SetDelay(v) end)
-    auto:SetPoint("TOPLEFT", 190, 0)
+    auto:SetPoint("TOPLEFT", head, "TOPRIGHT", 4, 4)
     auto.tip = { L.AUTO_TITLE, { L.AUTO_TIP, L.CYCLE_TIP } }
     f.auto = auto
     local timer = UI.Text(f, "GameFontNormalSmall")
     timer:SetPoint("TOPLEFT", auto, "TOPRIGHT", 6, -4)
-    timer:SetPoint("TOPRIGHT", auto, "TOPRIGHT", 150, -4)
+    timer:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(LOOT_ICONS * 26) - 4, -4)
     timer:SetHeight(16)
     f.timer = timer
     f.loot = {}
@@ -221,7 +223,7 @@ local function build(parent)
     end
     local lootLabel = UI.Text(f, "GameFontDisableSmall", "RIGHT")
     lootLabel:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(LOOT_ICONS * 26) - 4, -4)
-    lootLabel:SetPoint("TOPLEFT", timer, "TOPRIGHT", 4, 0)
+    lootLabel:SetPoint("TOPLEFT", f, "TOPRIGHT", -(LOOT_ICONS * 26) - 4, -4)
     lootLabel:SetHeight(16)
     f.lootLabel = lootLabel
 
@@ -343,7 +345,7 @@ local function build(parent)
     demoAnn:SetAllPoints(annAnchor)
     f.demoAnn = demoAnn
     local reroll = UI.Button(f, L.AW_REROLL, 120, function() D.Reroll() end)
-    reroll:SetPoint("BOTTOMLEFT", 104, 0)
+    reroll:SetPoint("LEFT", annAnchor, "RIGHT", 4, 0)
     f.reroll = reroll
     local validate = UI.Button(f, L.AW_VALIDATE, 90, function()
         local n, why = D.Validate()
@@ -366,7 +368,7 @@ local function build(parent)
             local ok, why = D.Leftover(choice)
             if not ok then return notice(nil, why) end
         end)
-        b:SetPoint("BOTTOMLEFT", 104 + (i - 1) * 124, 0)
+        b:SetPoint("LEFT", (i == 1) and annAnchor or f.left[i - 1], "RIGHT", 4, 0)
         f.left[i] = b
     end
 
@@ -379,7 +381,21 @@ local function build(parent)
         ns.Announce.Place()
     end)
     f:SetScript("OnHide", function() ns.Announce.Hide() end)
+    f:SetScript("OnSizeChanged", function(self, w) layout(self, w) end)
     return f
+end
+
+-- La fenetre se redimensionne : les rangees se resserrent. W : largeur de
+-- la vue (au plus etroit, 444 : la fenetre a 460).
+function layout(f, W)
+    W = W or f:GetWidth() or 624
+    if W <= 0 or f.laidW == W then return end
+    f.laidW = W
+    f.head:SetWidth(math.max(100, math.min(186, W - 104 - LOOT_ICONS * 26 - 70)))
+    f.pick:SetWidth(math.max(100, W - (92 + 66 + 80 + 90 + 16)))
+    UI.FitRow({ f.who, f.cat, f.rollBox, f.enter }, { 170, 90, 64, 80 }, W)
+    UI.FitRow({ f.annAnchor, f.reroll, f.validate, f.nobody, f.cancel }, { 100, 120, 90, 100, 80 }, W)
+    UI.FitRow(f.left, { 120, 120, 120 }, W - f.annAnchor:GetWidth() - 4)
 end
 
 -- compte a rebours de la validation automatique (et pourquoi elle est coupee)
@@ -396,6 +412,7 @@ end
 
 local function refresh(f)
     S.frame = f
+    layout(f)
     f.auto:Update()
     refreshTimer(f)
     local s = D.LiveSession()

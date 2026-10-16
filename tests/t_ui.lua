@@ -357,3 +357,35 @@ Test("bouton Demo et bandeau au-dessus de la zone de deplacement (sinon elle pre
     P.demoBtn:Click()
     Ok(ns.demo, "le clic lance la demo")
 end)
+
+Test("fenetre d attribution redimensionnable : taille gardee, bornes, rangees resserrees", function()
+    local FS, ns, P = open()
+    P.CloseIntro()
+    ns.StartDemo(0)
+    CorpSRDB.awardWin = { point = "CENTER", x = 0, y = 0, w = 300, h = 2000 }
+    ns.AwardWindow.Show()
+    local win = CorpSRAwardWindow
+    Eq(win:GetWidth(), 460, "largeur ramenee au minimum")
+    Eq(win:GetHeight(), 800, "hauteur ramenee au maximum")
+    Ok(win.sizer and win.sizer:IsShown(), "poignee du coin")
+    FS.Layout()
+    -- les rangees tiennent dans la largeur de la vue
+    local f = ns.AwardWindow.View()
+    local W = f:GetWidth()
+    local sum = 0
+    for _, b in ipairs({ f.annAnchor, f.reroll, f.validate, f.nobody, f.cancel }) do sum = sum + b:GetWidth() + 4 end
+    Ok(sum - 4 <= W, "actions : " .. sum .. " <= " .. W)
+    Ok(f.pick:GetWidth() >= 100 and f.pick:GetWidth() + 92 + 66 + 80 + 90 + 16 <= W + 1, "ligne de l objet")
+    local d = ns.AwardWindow.DeliverFrame()
+    ns.AwardWindow.Select("deliver")
+    FS.Layout()
+    sum = 0
+    for _, b in ipairs({ d.mpAnchor, d.trade, d.done, d.remove, d.clear }) do sum = sum + b:GetWidth() + 4 end
+    Ok(sum <= d:GetWidth() + 4, "a remettre : " .. sum)
+    -- la poignee lachee : taille gardee
+    win:SetSize(520, 420)
+    win.sizer:GetScript("OnMouseUp")(win.sizer)
+    Eq(CorpSRDB.awardWin.w, 520, "largeur gardee")
+    Eq(CorpSRDB.awardWin.h, 420, "hauteur gardee")
+    Eq(#FS.errors, 0, "erreurs")
+end)
