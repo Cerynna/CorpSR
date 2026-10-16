@@ -149,8 +149,8 @@ local function boot()
     M.GetRight = function(self) local r = rect(self) return r and r.r end
     M.GetBottom = function(self) local r = rect(self) return r and r.b end
 
-    FS.Install()
-    -- les vrais objets de la demo (Wowhead, frFR), les couleurs du jeu
+    FS.Install({ locale = RENDER_LOCALE or "frFR" })
+    -- les vrais objets de la demo (Wowhead, dans la langue du rendu), les couleurs du jeu
     C_Item.GetItemInfo = function(id)
         local it = ITEMS[id]
         if not it then return "Objet " .. id, "|Hitem:" .. id .. "|h", 4, 60, 60, "", "", 1, "", "Interface\\Icons\\inv_misc_questionmark" end

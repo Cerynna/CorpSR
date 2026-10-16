@@ -3,9 +3,13 @@
 //   node art/windows/build.js canvas <dossier>   -> <dossier>/project/*.dc.html + canvas.json
 //     (icones : blobs.json { nom: "/_blob/..." }, fichiers televerses avant)
 //   node art/windows/build.js icons <dossier>    -> les icones utilisees, en fichiers
+//   node art/windows/build.js png <langue> <dossier> -> une image PNG par fenetre
+//     (render.js <langue> avant ; Edge ou Chrome sans fenetre, variable BROWSER)
 const fs = require('fs'), path = require('path');
 const DIR = __dirname;
-const scenes = JSON.parse(fs.readFileSync(path.join(DIR, 'scenes.json'), 'utf8')).scenes;
+const LOCALE = process.argv[2] === 'png' ? (process.argv[3] || 'frFR') : 'frFR';
+const SCENES = LOCALE === 'frFR' ? 'scenes.json' : `scenes-${LOCALE}.json`;
+const scenes = JSON.parse(fs.readFileSync(path.join(DIR, SCENES), 'utf8')).scenes;
 const items = JSON.parse(fs.readFileSync(path.join(DIR, 'items.json'), 'utf8'));
 const COIN = 'interface\\addons\\corpsr\\media\\corpsr';
 
@@ -134,6 +138,43 @@ ${scenes.map(s => `<h2>${esc(s.title)}</h2><section>${sceneBody(s, img)}</sectio
   }
   fs.writeFileSync(path.join(out, 'icons.txt'), list.join('\n'));
   console.log(list.length, 'icones');
+} else if (mode === 'png') {
+  // une page par fenetre, photographiee par un navigateur sans fenetre
+  const { spawnSync } = require('child_process');
+  const os = require('os');
+  const out = path.resolve(process.argv[4] || path.join(DIR, 'png', LOCALE));
+  fs.mkdirSync(out, { recursive: true });
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'corpsr-png-'));
+  const browsers = [process.env.BROWSER,
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].filter(Boolean);
+  const browser = browsers.find(b => fs.existsSync(b));
+  if (!browser) throw new Error('ni Edge ni Chrome : variable BROWSER');
+  const img = name => byIcon[name];
+  for (const s of scenes) {
+    const w = Math.round(s.w), h = Math.round(s.h);
+    const page = path.join(tmp, `${s.name}.html`);
+    fs.writeFileSync(page, `<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap">
+<style>html,body{margin:0;background:#20232b;overflow:hidden}</style></head><body>${sceneBody(s, img)}</body></html>`);
+    const file = path.join(out, `${s.name}.png`);
+    // un profil a part par image : sinon le navigateur encore ouvert (deja
+    // lance, ou l image d avant) prend la commande et ne photographie rien
+    // l image arrive parfois apres la fin du processus, ou pas du tout : on
+    // l attend un peu, puis on relance (trois essais)
+    if (fs.existsSync(file)) fs.rmSync(file);
+    let r;
+    for (let k = 1; k <= 3 && !fs.existsSync(file); k++) {
+      r = spawnSync(browser, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
+        '--user-data-dir=' + path.join(tmp, `profil-${s.name}-${k}`), '--force-device-scale-factor=1',
+        '--virtual-time-budget=5000', `--window-size=${w},${h}`, `--screenshot=${file}`,
+        'file:///' + page.split(path.sep).join('/')], { encoding: 'utf8', timeout: 120000 });
+      for (let n = 0; n < 20 && !fs.existsSync(file); n++) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+    }
+    if (!fs.existsSync(file)) throw new Error(`${s.name} : pas d image (${r.status}) ${(r.stderr || '').slice(-600)}`);
+    console.log(path.relative(process.cwd(), file), `${w}x${h}`, fs.statSync(file).size);
+  }
+  fs.rmSync(tmp, { recursive: true, force: true });
 } else if (mode === 'canvas') {
   const root = process.argv[3];
   const blobs = JSON.parse(fs.readFileSync(path.join(root, 'blobs.json'), 'utf8'));
