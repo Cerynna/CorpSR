@@ -10,16 +10,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/README.md">🇬🇧 English</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.fr.md">🇫🇷 Français</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.de.md">🇩🇪 Deutsch</a> ·
-  <b>🇪🇸 Español</b> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.pt.md">🇧🇷 Português</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.it.md">🇮🇹 Italiano</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.ru.md">🇷🇺 Русский</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.zh-CN.md">🇨🇳 简体中文</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.zh-TW.md">🇹🇼 繁體中文</a> ·
-  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.ko.md">🇰🇷 한국어</a>
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/README.md">English</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.fr.md">Français</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.de.md">Deutsch</a> ·
+  <b>Español</b> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.pt.md">Português</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.it.md">Italiano</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.ru.md">Русский</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.zh-CN.md">简体中文</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.zh-TW.md">繁體中文</a> ·
+  <a href="https://github.com/Cerynna/CorpSR/blob/main/docs/README.ko.md">한국어</a>
 </p>
 
 ![Mis SR](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/en/MesSR.png)
