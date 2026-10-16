@@ -396,6 +396,25 @@ end
 
 local function wait(FS, s) for _ = 1, math.floor(s * 4 + 0.5) do FS.Tick(0.25) end end
 
+Test("points du drop apres le jet : ceux qui ne l ont pas eu, pas le gagnant, pas ceux qui passent", function()
+    local FS, ns = threePlayers()
+    local D, J = ns.Distrib, ns.Journal
+    local ME, GARMOR, SYLVA = "4620-00D54EFC", "4620-000000AA", "4620-000000BB"
+    for _, k in ipairs({ ME, GARMOR, SYLVA }) do ns.Write("sr", { i = { 17076 }, p = k }) end
+    D.Start(17076, 1, false)
+    Eq(table.concat(D.cur.cr, ","), table.concat({ GARMOR, SYLVA, ME }, ","), "les trois SR presents")
+    D.Pass(SYLVA, "Sylva Brumeval")
+    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 80 (1-110).")
+    local c = D.cur.attr.seen[GARMOR]
+    Eq(c and c.total, 80, "jet de Garmor : 80 + 0 point (rien avant le jet)")
+    D.Validate()
+    local st = ns.State()
+    Eq(J.Points(st, GARMOR, 17076), 0, "Garmor gagne : rien")
+    Eq(J.Points(st, ME, 17076), 10, "moi, pas eu l objet : +10")
+    Eq(J.Points(st, SYLVA, 17076), 0, "Sylva a passe : rien")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
 Test("fin du temps : un jet jusqu a 2 s apres compte, plus tard refuse ; le temps ne s allonge plus", function()
     local FS, ns = threePlayers()
     local D = ns.Distrib

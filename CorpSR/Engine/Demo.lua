@@ -204,13 +204,13 @@ function D.Build(o)
                 n = n + 1
                 t = t + 900
                 local st = J.Replay(list)
-                -- presents qui l ont SR : credites a ce drop, et leur jet compte deja ces points
+                -- presents qui l ont SR : credites apres le jet s ils ne l ont pas eu
                 local cr = {}
                 for _, m in ipairs(people) do
                     if present[m.key] and J.SRCount(st, w, m.key, item) > 0 then cr[#cr + 1] = m.key end
                 end
                 local function info(p)
-                    local inf = J.Info(st, sid, p, item, present[p] == true)
+                    local inf = J.Info(st, sid, p, item)
                     inf.guild, inf.present = true, present[p] == true
                     return inf
                 end

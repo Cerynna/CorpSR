@@ -90,8 +90,8 @@ function D.Start(item, count, free, drop)
     local cur = { id = newId(), sid = s.id, item = item, count = count or 1, free = free and true or false,
         group = ns.Raid.Members(), names = {} }
     -- le drop : les membres de la guilde presents qui l ont SR cette semaine
-    -- gagnent leurs points (regle du 16/10), une seule fois par drop ; leur
-    -- jet compte deja ces points
+    -- et ne l auront pas eu gagnent leurs points apres le jet (regle du
+    -- 16/10), une seule fois par drop ; le jet se fait avec les points d avant
     cur.dr = drop and drop.dr or cur.id
     if drop and drop.cr then
         cur.cr = drop.cr
@@ -103,13 +103,11 @@ function D.Start(item, count, free, drop)
         end
         table.sort(cur.cr)
     end
-    local credited = {}
-    for _, k in ipairs(cur.cr) do credited[k] = true end
     cur.attr = R.NewAttribution({
         item = item, count = cur.count, settings = ns.State().cfg, free = cur.free,
         info = function(p)
             local st = ns.State()
-            local inf = J.Info(st, s.id, p, item, credited[p] and not J.Dropped(st, cur.dr))
+            local inf = J.Info(st, s.id, p, item)
             inf.guild = roster.byKey[p] ~= nil
             inf.present = cur.group.byKey[p] ~= nil
             return inf
@@ -223,6 +221,16 @@ function D.Reroll()
     return true
 end
 
+-- ceux qui gagnent les points du drop : les SR presents, sauf ceux qui ont
+-- passe (ils ne veulent pas de l objet : pas de points pour autant)
+local function creditors(cur)
+    local out = {}
+    for _, k in ipairs(cur.cr) do
+        if not cur.passed[k] then out[#out + 1] = k end
+    end
+    return out
+end
+
 --- Un joueur passe (bouton « Passer » de sa fenetre de raideur).
 function D.Pass(key, name)
     local cur = D.cur
@@ -271,13 +279,13 @@ function D.Validate()
         -- m : choisi par le distributeur (a la place du classement)
         local ok, why = ns.Write("award", {
             s = cur.sid, i = cur.item, p = c.p, c = c.cat, r = c.roll,
-            pt = (c.cat == "sr") and c.pts or nil, q = q, dr = cur.dr, cr = cur.cr, m = win.forced or nil,
+            pt = (c.cat == "sr") and c.pts or nil, q = q, dr = cur.dr, cr = creditors(cur), m = win.forced or nil,
         })
         if not ok then return nil, why end
     end
     D.last = { item = cur.item, winners = win.list, names = cur.names }
     local left = cur.count - #win.list
-    local l = { item = cur.item, count = left, sid = cur.sid, dr = cur.dr, cr = cur.cr }
+    local l = { item = cur.item, count = left, sid = cur.sid, dr = cur.dr, cr = creditors(cur) }
     local w = {}
     for _, c in ipairs(win.list) do w[#w + 1] = { (cur.names and cur.names[c.p]) or ns.Name(c.p), c.cat } end
     D.Finish({ i = cur.item, w = w })
@@ -301,7 +309,7 @@ function D.NoTaker()
     local res = cur.attr:Result()
     local left = cur.count - #cur.attr.won
     if #res.winners > 0 and not res.tie then return end
-    local l = { item = cur.item, count = math.max(1, left), sid = cur.sid, dr = cur.dr, cr = cur.cr }
+    local l = { item = cur.item, count = math.max(1, left), sid = cur.sid, dr = cur.dr, cr = creditors(cur) }
     D.Finish()
     D.leftover = l
     ns.Fire("distrib", "leftover")

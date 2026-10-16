@@ -6,7 +6,8 @@
     droite, pour la soiree choisie : qui l a ouverte, son etat, les SR de
     la semaine (ceux des autres seulement apres le verrouillage), qui a
     CorpSR, et les points gagnes pendant la soiree (regle du 16/10 : un SR
-    rapporte ses points quand l objet tombe et qu on est dans le raid).
+    rapporte ses points une fois l objet joue, a qui etait dans le raid et
+    ne l a pas eu).
     Actions (droit « session ») : ouvrir la soiree, verrouiller les SR de
     la semaine (confirmation), fermer ; rouvrir une soiree fermee, la
     renommer, la supprimer (confirmation : ses attributions sont annulees,

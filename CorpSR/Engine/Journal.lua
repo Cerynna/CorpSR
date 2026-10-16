@@ -447,24 +447,42 @@ function APPLY.close(st, e)
     return true
 end
 
--- Attribution. Le drop d un objet (dr : identifiant de l attribution, sinon
--- l ecriture elle-meme) credite une seule fois, meme s il y a plusieurs
--- exemplaires ou un reste : chaque joueur de cr (ceux qui l ont SR et sont
--- dans le raid quand il tombe) gagne les points de ses SR dessus cette
--- semaine. Puis un gain par SR remet le gagnant a 0 sur l objet.
+-- Attribution. Regle du 16/10 (au soir) : on joue avec les points d avant ;
+-- une fois l objet joue, ceux qui l ont SR, etaient dans le raid et ne l ont
+-- pas eu gagnent les points de leurs SR dessus (cr : liste du distributeur,
+-- sans ceux qui ont passe). Un drop (dr : identifiant de l attribution,
+-- sinon l ecriture elle-meme) credite une seule fois, meme s il y a
+-- plusieurs exemplaires ou un reste : chaque gagnant du drop en est retire,
+-- y compris celui d une ecriture suivante (son credit est repris). Un gain
+-- par SR remet le gagnant a 0 sur l objet.
 function APPLY.award(st, e, cfg, rec, id)
     local s, why = liveSession(st, e.s)
     if not s then return false, why end
     rec.fx = {}
     local drop = e.dr or id
-    if not st.drops[drop] then
-        st.drops[drop] = true
+    local d = st.drops[drop]
+    if not d then
+        d = { won = {}, got = {} }
+        st.drops[drop] = d
+    end
+    if e.p and R.PRIO[e.c] then
+        d.won[e.p] = true
+        local back = d.got[e.p]
+        if back then
+            d.got[e.p] = nil
+            setPts(st, e.p, e.i, math.max(0, getPts(st, e.p, e.i) - back))
+            rec.fx[#rec.fx + 1] = { p = e.p, i = e.i, d = -back }
+        end
+    end
+    if not d.credited then
+        d.credited = true
         for _, p in ipairs(uniqueSorted(e.cr)) do
-            local n = srLive(st, s.w, p, e.i)
+            local n = (not d.won[p]) and srLive(st, s.w, p, e.i) or 0
             if n > 0 then
-                local d = n * cfg.pts
-                setPts(st, p, e.i, getPts(st, p, e.i) + d)
-                rec.fx[#rec.fx + 1] = { p = p, i = e.i, d = d }
+                local v = n * cfg.pts
+                setPts(st, p, e.i, getPts(st, p, e.i) + v)
+                d.got[p] = v
+                rec.fx[#rec.fx + 1] = { p = p, i = e.i, d = v }
             end
         end
     end
@@ -517,7 +535,7 @@ local function newState()
         sessions = {}, order = {},
         sr = {},        -- [semaine][joueur] = { itemID, itemID }
         locks = {},     -- [semaine] = heure du premier verrouillage
-        drops = {},     -- [identifiant du drop] = true : points deja credites
+        drops = {},     -- [identifiant du drop] = { won, got, credited } : gagnants, points donnes
         pts = {},       -- [joueur][itemID] = points (en cours et en reserve)
         looted = {},    -- [joueur] = { s = { [session] = true }, w = { [semaine] = true } }
         won = {},       -- [semaine][joueur][itemID] = true : objet gagne (SR consommes)
@@ -656,11 +674,10 @@ end
 
 --- Ce que l attribution d un objet doit savoir d un joueur, dans une session.
 -- Rend { sr = nombre de SR encore valables sur l objet, srwon (SR pose mais
--- objet deja gagne cette semaine), pts, looted }. pending : le drop
--- n est pas encore credite et le joueur est du raid : ses points comptent
--- deja le credit a venir (le jet se fait avec). guild et present viennent
--- du jeu.
-function J.Info(st, sid, p, item, pending)
+-- objet deja gagne cette semaine), pts, looted }. Le jet se fait avec les
+-- points d avant : ceux du drop ne viennent qu apres, a ceux qui ne l ont
+-- pas eu (16/10). guild et present viennent du jeu.
+function J.Info(st, sid, p, item)
     local s = st.sessions[sid]
     local info = { sr = 0, pts = getPts(st, p, item), looted = J.Looted(st, p, s) }
     if s then
@@ -668,12 +685,14 @@ function J.Info(st, sid, p, item, pending)
         -- SR pose mais objet deja gagne : le jet SR est refuse
         info.srwon = srCount(st, s.w, p, item) > 0 and srWon(st, s.w, p, item) or nil
     end
-    if pending and info.sr > 0 then info.pts = info.pts + info.sr * st.cfg.pts end
     return info
 end
 
 --- Le drop dr a-t-il deja credite ses points ?
-function J.Dropped(st, dr) return st.drops[dr] == true end
+function J.Dropped(st, dr)
+    local d = st.drops[dr]
+    return (d and d.credited) == true
+end
 
 ------------------------------------------------------------------------------
 -- Magasin : la liste sauvegardee, sans doublon, et son rejeu en cache

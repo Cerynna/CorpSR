@@ -1,6 +1,7 @@
 -- Points SR (regles du 16/10/2026) : 2 SR par semaine au total, sur
--- n importe quels objets ; on gagne les points d un SR quand l objet tombe
--- et qu on est dans le raid (cr) ; credit une seule fois par drop ; le
+-- n importe quels objets ; on joue avec les points d avant ; une fois
+-- l objet joue, ceux qui l ont SR, etaient dans le raid (cr) et ne l ont pas
+-- eu gagnent les points de leurs SR ; credit une seule fois par drop ; le
 -- gagnant par SR repasse a 0 ; reserve gardee quand on change d objet.
 
 local ns = Engine()
@@ -22,22 +23,22 @@ local function evening(b, w, drops, keepOpen)
     return sid
 end
 
-Test("exemple de la semaine 4 : 80 points + 40 au jet = 120, il gagne", function()
+Test("exemple : 4 drops perdus = 80 points, puis 40 au jet = 120, il gagne", function()
     local b = NewBook(ns, RANKS)
-    -- trois semaines : X tombe, A (double SR, present) gagne ses 20 points,
-    -- mais l objet part a un autre ; A garde ses points
-    for w = 1, 3 do
+    -- quatre semaines : X tombe, A (double SR, present) ne l a pas : +20
+    -- apres chaque jet ; l objet part a un autre
+    for w = 1, 4 do
         b:SR("A", w, { X, X })
         evening(b, w, { { item = X, cr = { "A" }, p = "C", c = "ms" } })
     end
-    Eq(J.Points(b:State(), "A", X), 60, "60 points apres trois drops")
-    b:SR("A", 4, { X, X })
-    b:SR("B", 4, { X })
-    local sid = evening(b, 4, {}, true)
+    Eq(J.Points(b:State(), "A", X), 80, "80 points apres quatre drops perdus")
+    b:SR("A", 5, { X, X })
+    b:SR("B", 5, { X })
+    local sid = evening(b, 5, {}, true)
     local st = b:State()
-    -- semaine 4 : X tombe, A et B presents ; le jet compte le credit a venir
+    -- semaine 5 : X tombe, A et B presents ; on joue avec les points d avant
     local a = R.NewAttribution({ item = X, count = 1, settings = st.cfg, info = function(p)
-        local info = J.Info(st, sid, p, X, true)
+        local info = J.Info(st, sid, p, X)
         info.guild, info.present = true, true
         return info
     end })
@@ -45,12 +46,41 @@ Test("exemple de la semaine 4 : 80 points + 40 au jet = 120, il gagne", function
     local cb = a:Roll("B", 105, 1, 110)
     Eq(ca.pts, 80, "80 points de A au moment du jet")
     Eq(ca.total, 120, "total de A")
-    Eq(cb.total, 115, "total de B (10 + 105)")
+    Eq(cb.pts, 0, "B : premier drop, pas encore de points")
+    Eq(cb.total, 105, "total de B")
     Eq(a:Result().winners[1].p, "A", "A gagne")
-    b:E("GM", 4, "award", { s = sid, i = X, p = "A", c = "sr", r = 40, pt = 80, cr = { "A", "B" }, dr = "d4" })
+    b:E("GM", 5, "award", { s = sid, i = X, p = "A", c = "sr", r = 40, pt = 80, cr = { "A", "B" }, dr = "d5" })
     st = b:State()
     Eq(J.Points(st, "A", X), 0, "A repart de 0")
-    Eq(J.Points(st, "B", X), 10, "B garde son credit du drop")
+    Eq(J.Points(st, "B", X), 10, "B ne l a pas eu : +10 apres le jet")
+end)
+
+Test("les points viennent apres le jet : pas au SR pose, pas au gagnant", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X })
+    b:SR("B", 1, { X, X })
+    local sid = evening(b, 1, {}, true)
+    local st = b:State()
+    Eq(J.Points(st, "A", X), 0, "SR pose, verrouille : 0 point")
+    Eq(J.Info(st, sid, "B", X).pts, 0, "le jet de B se fait avec 0")
+    -- B gagne en SR : A seul est credite
+    b:E("GM", 1, "award", { s = sid, i = X, p = "B", c = "sr", r = 99, pt = 0, cr = { "A", "B" }, dr = "d1" })
+    st = b:State()
+    Eq(J.Points(st, "A", X), 10, "A perd : +10")
+    Eq(J.Points(st, "B", X), 0, "B gagne : rien")
+    -- deux exemplaires : le second gagnant (ecriture suivante) rend son credit
+    b:SR("A", 2, { Y })
+    b:SR("B", 2, { Y })
+    b:SR("C", 2, { Y })
+    local s2 = evening(b, 2, {}, true)
+    b:E("GM", 2, "award", { s = s2, i = Y, p = "A", c = "sr", r = 90, pt = 0, cr = { "A", "B", "C" }, dr = "two" })
+    st = b:State()
+    Eq(J.Points(st, "B", Y), 10, "apres le 1er gagnant : B credite")
+    b:E("GM", 2, "award", { s = s2, i = Y, p = "B", c = "ms", r = 80, cr = { "A", "B", "C" }, dr = "two" })
+    st = b:State()
+    Eq(J.Points(st, "A", Y), 0, "A gagne le 1er")
+    Eq(J.Points(st, "B", Y), 0, "B gagne le 2e (en +1) : credit repris")
+    Eq(J.Points(st, "C", Y), 10, "C n en a pas : +10")
 end)
 
 Test("pas de drop, pas de points (meme present a la soiree)", function()
@@ -62,7 +92,7 @@ Test("pas de drop, pas de points (meme present a la soiree)", function()
     Eq(J.Points(st, "A", Y), 0, "Y non plus")
 end)
 
-Test("absent au drop : aucun point ; present : +10, double SR : +20", function()
+Test("absent au drop : aucun point ; present et pas gagne : +10, double SR : +20", function()
     local b = NewBook(ns, RANKS)
     b:SR("A", 1, { X, X })
     b:SR("B", 1, { X })
@@ -186,7 +216,7 @@ Test("objet de plusieurs boss : gagne une fois, plus de jet SR ni de points cett
     Eq(select(2, a:Manual("A", "sr", 100)), "srwon", "saisie a la main en SR refusee")
     local cb = a:Roll("B", 50, 1, 110)
     Eq(cb and cb.cat, "sr", "B joue en SR")
-    Eq(cb.total, 70, "B : 20 points (10 + 10 a venir) + 50")
+    Eq(cb.total, 60, "B : 10 points (1er boss perdu) + 50")
     b:E("GM", 1, "award", { s = sid, i = X, p = "B", c = "sr", r = 50, pt = 20, cr = { "A", "B" }, dr = "boss2" })
     st = b:State()
     Eq(J.Points(st, "A", X), 0, "A : rien credite au 2e drop")
@@ -209,7 +239,7 @@ Test("objet gagne en +1, en banque ou au desenchantement : le SR suit le gagnant
     st = b:State()
     Eq(J.SRCount(st, 1, "B", X), 1, "desenchante : B garde son SR")
     Eq(J.Points(st, "B", X), 20, "B credite aux deux drops")
-    Eq(J.Points(st, "A", X), 10, "A credite au premier seulement")
+    Eq(J.Points(st, "A", X), 0, "A l a gagne : pas de points")
     -- annuler le gain de A rend son SR
     local id
     for _, r in ipairs(st.log) do
