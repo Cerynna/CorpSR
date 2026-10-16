@@ -40,6 +40,7 @@ local function build()
     grip:SetHeight(HEAD)
     grip:EnableMouse(true)
     grip:RegisterForDrag("LeftButton")
+    P.grip = grip
     grip:SetScript("OnDragStart", function()
         local h = P.host
         if h and h:IsMovable() then h:StartMoving() end
@@ -63,6 +64,8 @@ local function build()
     end)
     demoBtn:SetPoint("TOPRIGHT", -36, -5)
     demoBtn.tip = { L.DEMO_BUTTON, { L.DEMO_TIP } }
+    -- au-dessus de la zone de deplacement (meme niveau : elle prenait le clic)
+    demoBtn:SetFrameLevel(grip:GetFrameLevel() + 3)
     P.demoBtn = demoBtn
 
     -- bandeau du mode demo
@@ -70,6 +73,7 @@ local function build()
     band:SetPoint("TOPLEFT", 130, -4)
     band:SetPoint("TOPRIGHT", -36, -4)
     band:SetHeight(24)
+    band:SetFrameLevel(grip:GetFrameLevel() + 3)
     UI.Skin(band, "accent", 0.25)
     local bandText = UI.Text(band, "GameFontNormalSmall")
     bandText:SetPoint("LEFT", 8, 0)

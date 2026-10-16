@@ -348,3 +348,12 @@ Test("Reglages : une infobulle explique chaque droit (en-tete et case)", functio
     Ok(table.concat(said, "\n"):find("toujours tous les droits", 1, true), "ligne du GM")
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+Test("bouton Demo et bandeau au-dessus de la zone de deplacement (sinon elle prend le clic)", function()
+    local FS, ns, P = open()
+    P.CloseIntro()
+    Ok(P.demoBtn:GetFrameLevel() > P.grip:GetFrameLevel(), "bouton Demo au-dessus")
+    Ok(P.band:GetFrameLevel() > P.grip:GetFrameLevel(), "bandeau au-dessus")
+    P.demoBtn:Click()
+    Ok(ns.demo, "le clic lance la demo")
+end)
