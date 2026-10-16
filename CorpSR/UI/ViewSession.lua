@@ -8,7 +8,9 @@
     CorpSR, et les points gagnes pendant la soiree (regle du 16/10 : un SR
     rapporte ses points quand l objet tombe et qu on est dans le raid).
     Actions (droit « session ») : ouvrir la soiree, verrouiller les SR de
-    la semaine (confirmation), fermer. Chez le chef de raid, la soiree
+    la semaine (confirmation), fermer ; rouvrir une soiree fermee, la
+    renommer, la supprimer (confirmation : ses attributions sont annulees,
+    points rendus ; il faut aussi le droit « undo » s il y en a). Chez le chef de raid, la soiree
     automatique (Auto.lua) fait tout cela toute seule.
     En mode demo : « Simuler un boss » (butin) et « Soiree automatique ».
 ----------------------------------------------------------------------------]]
@@ -70,6 +72,54 @@ function A.Lock(s, confirmed)
 end
 
 function A.Close(s) return write("close", { s = s.id }) end
+
+--- Rouvre une soiree fermee : elle redevient celle en cours (les autres
+-- soirees ouvertes se ferment).
+function A.Reopen(s)
+    local st = ns.State()
+    for _, sid in ipairs(st.order) do
+        local x = st.sessions[sid]
+        if sid ~= s.id and not x.closed then write("close", { s = sid }) end
+    end
+    local e = write("reopen", { s = s.id })
+    if e then ns.ui.session = s.id end
+    return e
+end
+
+function A.Rename(s, nm) return write("sname", { s = s.id, nm = nm }) end
+
+local function awardsOf(st, sid)
+    local n = 0
+    for _, a in ipairs(st.awards) do
+        if a.s == sid then n = n + 1 end
+    end
+    return n
+end
+
+--- Supprime une soiree (confirmation, sauf confirmed).
+function A.Delete(s, confirmed)
+    local n = awardsOf(ns.State(), s.id)
+    if n > 0 and not ns.Can("undo") then return ns.Panel.Notice(L.DELETE_NEED_UNDO, true) end
+    local function go()
+        if write("sdel", { s = s.id }) then ns.ui.session = nil end
+        return true
+    end
+    if confirmed then return go() end
+    ns.Prompt({ title = L.DELETE_TITLE, text = L.DELETE_TEXT:format(ns.SessionName(s), n), ok = L.DELETE, onOK = go })
+end
+
+local function askRename(s)
+    ns.Prompt({
+        title = L.RENAME_TITLE, text = L.RENAME_TEXT, ok = L.RENAME,
+        fields = { { L.RENAME_FIELD, ns.SessionName(s) } },
+        onOK = function(v)
+            local nm = (v[1] or ""):gsub("^%s+", ""):gsub("%s+$", "")
+            if nm == "" then return L.RENAME_EMPTY end
+            A.Rename(s, nm:sub(1, 40))
+            return true
+        end,
+    })
+end
 
 ------------------------------------------------------------------------------
 
@@ -200,6 +250,23 @@ local function build(parent)
     end)
     close:SetPoint("TOPLEFT", 344, -38)
     f.close = close
+    local reopen = UI.Button(f, L.REOPEN, 100, function()
+        local s = current()
+        if s then A.Reopen(s) end
+    end)
+    reopen.tip = { L.REOPEN, { L.REOPEN_TIP } }
+    f.reopen = reopen
+    local rename = UI.Button(f, L.RENAME, 90, function()
+        local s = current()
+        if s then askRename(s) end
+    end)
+    f.rename = rename
+    local del = UI.Button(f, L.DELETE, 90, function()
+        local s = current()
+        if s then A.Delete(s) end
+    end)
+    del.tip = { L.DELETE_TITLE, { L.DELETE_TIP } }
+    f.delete = del
 
     -- demo
     local boss = UI.Button(f, L.DEMO_BOSS, 114, function() ns.DemoLive.Boss() end)
@@ -228,8 +295,27 @@ local function refresh(f)
     local mine = s and not s.closed
     f.lock:SetShown(can and mine and not s.locked)
     f.close:SetShown(can and mine)
-    f.close:ClearAllPoints()
-    f.close:SetPoint("TOPLEFT", (f.lock:IsShown() and 344) or 240, -38)
+    f.reopen:SetShown(can and s ~= nil and s.closed ~= nil)
+    f.rename:SetShown(can and s ~= nil)
+    f.delete:SetShown(can and s ~= nil)
+    -- les boutons montres, a la suite (resserres s ils ne tiennent pas)
+    local BASE = { [f.open] = 130, [f.lock] = 100, [f.close] = 90, [f.reopen] = 100, [f.rename] = 90, [f.delete] = 90 }
+    local shown, need = {}, 0
+    for _, b in ipairs({ f.open, f.lock, f.close, f.reopen, f.rename, f.delete }) do
+        if b:IsShown() then
+            shown[#shown + 1] = b
+            need = need + BASE[b] + 4
+        end
+    end
+    local avail = (f:GetWidth() or 624) - 240
+    local k = (need > avail and need > 0) and (avail / need) or 1
+    local x = 240
+    for _, b in ipairs(shown) do
+        b:SetWidth(math.floor(BASE[b] * k))
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", x, -38)
+        x = x + math.floor(BASE[b] * k) + 4
+    end
     f.boss:SetShown(ns.demo ~= nil)
     f.auto:SetShown(ns.demo ~= nil)
 

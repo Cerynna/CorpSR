@@ -488,3 +488,37 @@ Test("annonces : Lancer annonce le debut, Valider annonce le gagnant (boutons se
     Ok(table.concat(FS.printed, "\n"):find("va à Garmor Hautcœur", 1, true), "raideur : gagnant dans le chat")
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+Test("vue Session : rouvrir, renommer, supprimer une soiree fermee", function()
+    local FS, ns, P, D = demoGame(0)
+    P.tabs.session:Click()
+    local f = P.frames.session
+    f.open:Click()
+    local s = D.LiveSession()
+    f.close:Click()
+    FS.Layout()
+    Ok(f.reopen:IsShown() and f.rename:IsShown() and f.delete:IsShown(), "boutons d une soiree fermee")
+    -- la rangee tient dans la largeur
+    local right = 0
+    for _, b in ipairs({ f.open, f.reopen, f.rename, f.delete }) do
+        if b:IsShown() then
+            local _, x = b:GetPoint(1)
+            right = math.max(right, x + b:GetWidth())
+        end
+    end
+    Ok(right <= f:GetWidth() + 1, "rangee : " .. right .. " <= " .. f:GetWidth())
+    f.reopen:Click()
+    Eq(D.LiveSession() and D.LiveSession().id, s.id, "rouverte, en cours")
+    -- renommer
+    f.rename:Click()
+    local box = ns.PromptBox()
+    box.fields[1].edit:SetText("  Onyxia du jeudi  ")
+    box.ok:Click()
+    Eq(ns.SessionName(ns.State().sessions[s.id]), "Onyxia du jeudi", "renommee")
+    Ok(FS.Texts(f):find("Onyxia du jeudi", 1, true), "affichee")
+    -- supprimer (confirmation)
+    f.delete:Click()
+    ns.PromptBox().ok:Click()
+    Eq(ns.State().sessions[s.id], nil, "supprimee")
+    Eq(#FS.errors, 0, "erreurs")
+end)

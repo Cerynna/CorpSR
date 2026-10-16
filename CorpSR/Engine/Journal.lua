@@ -29,6 +29,13 @@
         lock   s, pr                  verrouille les SR de la semaine
         pres   s, p, on               presence (information seulement)
         close  s                      ferme la soiree
+        reopen s                      rouvre une soiree fermee
+        sname  s, nm                  renomme la soiree (nm : 40 caracteres au plus)
+        sdel   s                      supprime la soiree : elle et tout ce qui s y
+                                      rattache (verrou, attributions et leurs
+                                      points) sont annules ; avec des attributions,
+                                      il faut aussi le droit « undo ». Annuler la
+                                      suppression retablit tout.
         award  s, i, p, c, r, pt, q, dr, cr
                                       objet i a p : categorie c, jet r, points pt,
                                       q = classement { {p, c, r}... } (transparence),
@@ -70,6 +77,7 @@ J.WEEK = 7 * 24 * 3600
 local RIGHT = {
     raid = "raids", open = "session", lock = "session", close = "session",
     pres = "session", award = "award", fix = "fix", undo = "undo",
+    reopen = "session", sname = "session", sdel = "session",
 }
 J.RIGHT = RIGHT
 
@@ -123,6 +131,9 @@ local FORM = {
     lock = function(e) return isKey(e.s) and isList(e.pr, 80, isKey) end,
     pres = function(e) return isKey(e.s) and isKey(e.p) and type(e.on) == "boolean" end,
     close = function(e) return isKey(e.s) end,
+    reopen = function(e) return isKey(e.s) end,
+    sname = function(e) return isKey(e.s) and isStr(e.nm, 40) end,
+    sdel = function(e) return isKey(e.s) end,
     award = function(e)
         if not (isKey(e.s) and isItem(e.i)) then return false end
         if not (R.PRIO[e.c] or R.LEFTOVER[e.c]) then return false end
@@ -398,6 +409,23 @@ function APPLY.pres(st, e)
     return true
 end
 
+function APPLY.reopen(st, e)
+    local s = st.sessions[e.s]
+    if not s then return false, "session" end
+    if not s.closed then return false, "notclosed" end
+    s.closed = nil
+    return true
+end
+
+function APPLY.sname(st, e)
+    local s = st.sessions[e.s]
+    if not s then return false, "session" end
+    s.nm = e.nm
+    return true
+end
+
+function APPLY.sdel() return true end   -- la soiree et ses ecritures sont annulees (passe 2)
+
 function APPLY.close(st, e)
     local s, why = liveSession(st, e.s)
     if not s then return false, why end
@@ -491,9 +519,10 @@ function J.Replay(list)
 
     -- 1. droits, avec les reglages en vigueur
     local cfg = R.Settings(nil)
-    local valid, why = {}, {}
+    local valid, why, cfgAt = {}, {}, {}
     for i, e in ipairs(sorted) do
         local right = rightOf(e)
+        if e.k == "sdel" then cfgAt[i] = cfg end
         if e.k == "cfg" then
             if e.rk == 0 then
                 cfg = R.Settings(e.c)
@@ -519,6 +548,25 @@ function J.Replay(list)
             else
                 valid[i] = nil
                 why[i] = "target"
+            end
+        elseif e.k == "sdel" and valid[i] and not undone[i] then
+            -- supprimer une soiree : elle et ce qui s y rattache sont annules
+            local j0 = index[e.s]
+            local awards = false
+            if j0 then
+                for j = j0 + 1, i - 1 do
+                    if sorted[j].s == e.s and sorted[j].k == "award" and not undone[j] then awards = true end
+                end
+            end
+            if not j0 or j0 >= i or sorted[j0].k ~= "open" then
+                valid[i], why[i] = nil, "target"
+            elseif awards and not R.Can(cfgAt[i], e.rk, "undo") then
+                valid[i], why[i] = nil, "right"
+            else
+                undone[j0] = undone[j0] or i
+                for j = j0 + 1, i - 1 do
+                    if sorted[j].s == e.s and not undone[j] then undone[j] = i end
+                end
             end
         end
     end

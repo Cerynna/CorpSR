@@ -19,7 +19,8 @@ local KINDS = {
     { "*", "KIND_ALL" }, { "sr", "KIND_SR" }, { "session", "KIND_SESSION" }, { "award", "KIND_AWARD" },
     { "fix", "KIND_FIX" }, { "undo", "KIND_UNDO" }, { "cfg", "KIND_CFG" },
 }
-local GROUP = { open = "session", lock = "session", pres = "session", close = "session", raid = "cfg", reset = "cfg" }
+local GROUP = { open = "session", lock = "session", pres = "session", close = "session", raid = "cfg", reset = "cfg",
+    reopen = "session", sname = "session", sdel = "session" }
 
 function ns.CatLabel(c) return L["CAT_" .. tostring(c)] end
 
@@ -29,7 +30,13 @@ local function itemList(items)
     return table.concat(out, ", ")
 end
 
-local function sessionRaid(st, sid) return ns.SessionName(st.sessions[sid]) end
+local function sessionRaid(st, sid)
+    local s = st.sessions[sid]
+    if s then return ns.SessionName(s) end
+    -- soiree supprimee : son ouverture donne encore sa date
+    local r = st.byId[sid]
+    return r and L.EVENING:format(ns.Date(r.e.t)) or "?"
+end
 
 --- Phrase lisible d une ligne du journal.
 function ns.Describe(rec, st)
@@ -54,6 +61,12 @@ function ns.Describe(rec, st)
         return (e.on and L.D_PRES_ON or L.D_PRES_OFF):format(ns.ColorName(e.p), sessionRaid(st, e.s))
     elseif k == "close" then
         return L.D_CLOSE:format(sessionRaid(st, e.s))
+    elseif k == "reopen" then
+        return L.D_REOPEN:format(sessionRaid(st, e.s))
+    elseif k == "sname" then
+        return L.D_RENAME:format(e.nm)
+    elseif k == "sdel" then
+        return L.D_SDEL:format(sessionRaid(st, e.s))
     elseif k == "award" then
         if not e.p then return L.D_AWARD_LEFT:format(ns.ItemText(e.i), ns.CatLabel(e.c)) end
         local text = L.D_AWARD:format(ns.ItemText(e.i), ns.ColorName(e.p), ns.CatLabel(e.c))

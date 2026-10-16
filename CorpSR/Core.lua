@@ -240,6 +240,7 @@ end
 --- Nom d une soiree : son raid (anciennes soirees) ou « soiree du jj/mm ».
 function ns.SessionName(s)
     if not s then return "?" end
+    if s.nm then return s.nm end
     if s.r then return ns.RaidName(s.r) end
     return L.EVENING:format(ns.Date(s.t))
 end

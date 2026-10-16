@@ -13,7 +13,7 @@
 ## Notes-koKR: 포인트 기반 길드 소프트 예약: 아무 아이템에나 주당 SR 2개, 아이템이 나오면 포인트 획득, 주사위 + 포인트. 길드를 통해서만 동기화. /csr 입력
 ## IconTexture: Interface\AddOns\CorpSR\Media\CorpSR
 ## Author: ceryn
-## Version: 0.4.21
+## Version: 0.4.22
 ## OptionalDeps: CorpUI
 ## SavedVariables: CorpSRDB
 
