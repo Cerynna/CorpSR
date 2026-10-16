@@ -5,7 +5,7 @@ L'addon est autonome : CorpUI est facultatif. Tout se passe dans le jeu, et la s
 
 ## Règles
 
-Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids changent, on enchaîne plusieurs raids dans une soirée).
+Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids changent, on enchaîne plusieurs raids dans une session).
 
 - **2 SR par semaine au total**, sur n'importe quels objets de n'importe quels raids. Double SR permis. On les repose chaque semaine. Ils restent modifiables jusqu'au verrouillage de la semaine.
 - **Sans CorpSR** : un membre de la guilde chuchote à un officier (droit Session) `!SR [objet1] [objet2]` (liens d'objets collés ou séparés, ou leurs numéros). Le CorpSR de l'officier inscrit ces SR pour lui, avec les mêmes règles ; `!SR` seul redonne ses SR de la semaine. Le jeu interdit à un addon d'envoyer un MP : une petite fenêtre montre le résultat et un bouton « Répondre » prépare la réponse, le clic de l'officier l'envoie. En instance, le texte des MP peut être caché à l'addon : à faire avant d'entrer.
@@ -28,13 +28,13 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 - **Annonces dans le chat de raid** : « Lancer » et « Jet libre » annoncent le début de l'objet (fourchettes et temps), « Valider », « Relancer » et les restes en annoncent la fin. Le jeu interdit à un addon d'écrire seul dans le chat : ce sont ces clics qui envoient l'annonce. « Annoncer » renvoie le texte du moment. Les raideurs qui ont CorpSR voient en plus le gagnant dans leur chat.
 - Si personne ne veut l'objet, le distributeur choisit : jet libre, banque de guilde ou désenchantement.
 - Le GM règle les valeurs (points, nombre de SR, double SR, portée de « déjà loot », fourchettes). Il choisit aussi les droits grade par grade.
-- Le GM peut **tout réinitialiser** (Réglages, mot RESET à taper) : points, SR, soirées, historique, objets, réglages et droits repartent de zéro pour toute la guilde. Les membres connectés effacent tout de suite, les absents à leur connexion (0.4.6 ou plus) ; une écriture d’avant la réinitialisation est ensuite refusée partout.
+- Le GM peut **tout réinitialiser** (Réglages, mot RESET à taper) : points, SR, sessions, historique, objets, réglages et droits repartent de zéro pour toute la guilde. Les membres connectés effacent tout de suite, les absents à leur connexion (0.4.6 ou plus) ; une écriture d’avant la réinitialisation est ensuite refusée partout.
 - **Fenêtre d'attribution à part** (comme celle du raideur) : elle s'ouvre toute seule chez le **maître du butin** quand il ouvre le butin d'un boss (chez le chef de raid en butin de groupe). Rien ne s'y lance tout seul. On l'ouvre aussi par l'onglet Attribution, le clic droit sur le bouton de la minicarte ou `/csr attrib`.
 - **Remise des objets** : le maître du butin ramasse tout le butin du boss dans ses sacs, puis l'attribution tourne. À chaque objet attribué, CorpSR garde en mémoire l'objet, à qui il revient et pourquoi (onglet « À remettre » de la fenêtre d'attribution, sauvegardé). Il tente aussitôt d'ouvrir un échange avec le gagnant ; quand l'échange s'ouvre, l'objet s'y pose tout seul, et il est marqué remis quand l'échange est conclu. Si l'échange est impossible (trop loin, en combat), un MP est prêt sur un bouton : le jeu interdit à un addon d'envoyer un MP, le clic du distributeur l'envoie. Un gagnant qui a CorpSR est en plus prévenu tout de suite par un message d'addon.
-- **Alt + clic gauche** sur un objet des sacs (ceux du jeu ou de CorpUI), quand la fenêtre d'attribution est ouverte ou qu'une soirée l'est : l'objet rejoint le butin de la fenêtre et devient l'objet choisi ; la fenêtre s'ouvre si elle était fermée.
-- **Désenchanteur** : une personne du raid, choisie pour la soirée dans l'onglet « À remettre ». Un objet envoyé au désenchantement lui est remis comme une attribution (échange tenté, MP prêt).
+- **Alt + clic gauche** sur un objet des sacs (ceux du jeu ou de CorpUI), quand la fenêtre d'attribution est ouverte ou qu'une session l'est : l'objet rejoint le butin de la fenêtre et devient l'objet choisi ; la fenêtre s'ouvre si elle était fermée.
+- **Désenchanteur** : une personne du raid, choisie pour la session dans l'onglet « À remettre ». Un objet envoyé au désenchantement lui est remis comme une attribution (échange tenté, MP prêt).
 - **Minuteur** : chaque objet lancé a un temps pour jouer (champ en secondes, 5 à 120, 15 par défaut). Les raideurs voient une barre qui se vide, verte puis or, rouge dans les 5 dernières secondes. Le temps ne s'allonge jamais : un jet arrivé jusqu'à 2 s après la fin compte encore, plus tard il est refusé « trop tard » (et les boutons du raideur se grisent). « Passer » est signalé au distributeur (ligne « passe »).
-- **Tout au clic** : le mode « Auto » est retiré le 16/10. Il ouvrait la soirée en entrant dans le raid, lançait l'objet au butin et validait à la fin du temps, sans les annonces du chat de raid (elles ne partent que sur un clic). Le distributeur fait donc « Nouvelle session », « Lancer », puis « Valider » ou « Relancer ». Les SR se verrouillent au premier objet lancé. À la fin du temps, la fenêtre affiche « temps écoulé : valide à la main ». Les objets d'un boss passent l'un après l'autre.
+- **Tout au clic** : le mode « Auto » est retiré le 16/10. Il ouvrait la session en entrant dans le raid, lançait l'objet au butin et validait à la fin du temps, sans les annonces du chat de raid (elles ne partent que sur un clic). Le distributeur fait donc « Nouvelle session », « Lancer », puis « Valider » ou « Relancer ». Les SR se verrouillent au premier objet lancé. À la fin du temps, la fenêtre affiche « temps écoulé : valide à la main ». Les objets d'un boss passent l'un après l'autre.
 
 ## Icône
 
@@ -67,7 +67,7 @@ CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   Raid.lua           groupe, butin ouvert, /roll lus dans le chat (modèle localisé)
   Distrib.lua        le distributeur : attribution en direct, relance, validation, reste
   Auto.lua           le distributeur (maître du butin ou chef de raid), temps des jets, fenêtre au butin
-  DemoLive.lua       démo d'une soirée : groupe simulé, boss, jets simulés, soirée guidée
+  DemoLive.lua       démo d'une session : groupe simulé, boss, jets simulés, session guidée
   UI/CorpUIPage.lua  page CorpSR dans /corp quand CorpUI est installé (API publique de CorpUI)
   UI/Minimap.lua     bouton de la minicarte (clic gauche : CorpSR, clic droit : fenêtre d'attribution)
   UI/AwardWindow.lua fenêtre d'attribution à part (ouverte chez le maître du butin), onglets Jets et À remettre
@@ -94,6 +94,6 @@ npm test
 1. Moteur de règles, journal et bancs : **fait** (0.1.0).
 2. Onglet dans la fenêtre Guilde & Communautés, fenêtre `/csr`, vues, mode démo : **fait** (0.2.0), à vérifier en jeu.
 3. Synchro de guilde, droits et réglages du GM, raids et objets : **fait** (0.3.0), à vérifier en jeu à deux.
-4. Sessions, attribution, lecture des jets, fenêtre côté raideur, corrections et annulations ; démo d'une soirée complète : **fait** (0.4.0), à vérifier en jeu.
+4. Sessions, attribution, lecture des jets, fenêtre côté raideur, corrections et annulations ; démo d'une session complète : **fait** (0.4.0), à vérifier en jeu.
    Ensuite (0.4.1 et 0.4.2) : journal rangé par guilde, résumés consolidés pour les vieilles semaines, objets vus en tombant ajoutés au raid, colonne « CorpSR » (qui a l'addon) et avertissement de version.
 5. Essais en jeu : démo et outils du GM vus sans erreur le 15/10 ; reste à voir en raid (verrou des messages, /roll en instance) et à deux membres (synchro, fenêtre côté raideur).

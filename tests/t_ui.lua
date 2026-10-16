@@ -173,7 +173,7 @@ Test("Points, Historique, Reglages, Session : contenu", function()
     local s = P.frames.session
     Ok(visibleRows({ list = s.left }) >= 5, "soirees")
     Ok(FS.Texts(s):find("attribué", 1, true), "detail : objets attribues")
-    Ok(FS.Texts(s):find("Soirée du", 1, true), "soirees sans raid")
+    Ok(FS.Texts(s):find("Session du", 1, true), "sessions sans raid")
     s.left.rows[2]:Click()
     Eq(ns.ui.session, s.left.rows[2].d.id, "autre soiree")
     tab(P, "award"):Click()
