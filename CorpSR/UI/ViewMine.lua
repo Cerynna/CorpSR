@@ -86,24 +86,13 @@ end
 
 --- Ajoute un objet a la liste de la guilde (ouvert a tous) : dans le groupe
 -- choisi, sinon dans l instance de raid ou l on est, sinon « a la main ».
-function V.AddItem(id)
-    id = tonumber(id)
-    if not id or id < 1 or id > 10000000 or id ~= math.floor(id) then
-        return ns.Panel.Notice(L.RAIDS_BAD_ID, true)
-    end
-    if not ns.InGuild() then return ns.Panel.Notice(L.MINE_NOT_GUILD, true) end
-    local st = ns.State()
-    if groupOf(st, id) then return ns.Panel.Notice(L.MINE_KNOWN) end
-    local key, name, inst
-    if V.group ~= "*" and st.raids[V.group] then
-        key = V.group
-    else
-        key, name, inst = ns.Raid.CurrentZone()
-        if not key then key, name = "MISC", L.GROUP_MISC end
-    end
-    if ns.Write("raid", { r = key, nm = name, inst = inst, add = { id } }) then
-        ns.Panel.Notice(L.MINE_ADDED)
-    end
+-- ajout d un objet (Raid.AddItem : sans raid a creer) et son message
+local ADD_WHY = { bad = "RAIDS_BAD_ID", guild = "MINE_NOT_GUILD", known = "MINE_KNOWN" }
+function V.AddItem(id, group)
+    local ok, why = ns.Raid.AddItem(id, group or ((V.group ~= "*") and V.group or nil))
+    if ok then return ns.Panel.Notice(L.MINE_ADDED), true end
+    if ADD_WHY[why] then return ns.Panel.Notice(L[ADD_WHY[why]], why ~= "known") end
+    return ns.Panel.Notice(L.WRITE_FAILED:format(tostring(why)), true)
 end
 
 local function buildRow(list)

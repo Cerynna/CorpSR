@@ -161,6 +161,42 @@ function G.Learn(ids)
     return #add
 end
 
+--- Ajoute un objet aux objets connus, sans raid a creer : dans le groupe
+-- demande s il existe, sinon celui de l instance de raid ou l on est,
+-- sinon « Ajout a la main » (MISC). Ouvert a tous les membres de la
+-- guilde. Rend true, ou nil et la raison (bad, guild, known).
+function G.AddItem(id, group)
+    id = tonumber(id)
+    if not id or id < 1 or id > 10000000 or id ~= math.floor(id) then return nil, "bad" end
+    if not ns.InGuild() then return nil, "guild" end
+    if known(id) then return nil, "known" end
+    local st = ns.State()
+    local key, name, inst
+    if group and st.raids[group] and not st.raids[group].gone then
+        key = group
+    else
+        key, name, inst = G.CurrentZone()
+        if not key then key, name = "MISC", ns.L.GROUP_MISC end
+    end
+    local ok, why = ns.Write("raid", { r = key, nm = name, inst = inst, add = { id } })
+    if not ok then return nil, why end
+    return true
+end
+
+--- Retire un objet des objets connus (droit « raids ») : de chaque groupe
+-- qui le contient.
+function G.RemoveItem(id)
+    local done = false
+    for _, r in ipairs(ns.Raids()) do
+        if r.items[id] then
+            local ok, why = ns.Write("raid", { r = r.key, del = { id } })
+            if not ok then return nil, why end
+            done = true
+        end
+    end
+    return done
+end
+
 function G.LearnLoot(n)
     if type(GetLootSlotInfo) ~= "function" then return end
     local ids = {}

@@ -9,7 +9,7 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 
 - **2 SR par semaine au total**, sur n'importe quels objets de n'importe quels raids. Double SR permis. On les repose chaque semaine. Ils restent modifiables jusqu'au verrouillage de la semaine.
 - **Points** : quand un objet tombe, chaque joueur qui l'a SR et qui est dans le raid à ce moment gagne +10 par SR dessus (+20 en double SR). Les présents font ensuite leur jet avec ces points. Le gagnant par SR repasse à 0 sur l'objet. Les absents ne gagnent rien. Les points de l'ancien objet restent en réserve quand on change d'objet.
-- **Objets** : pas de raids suivis. Les objets s'apprennent quand ils tombent : butin ouvert, jets de butin de groupe. N'importe qui peut en ajouter, en le glissant ou par son numéro.
+- **Objets** : pas de raids suivis. Les objets s'apprennent quand ils tombent : butin ouvert, jets de butin de groupe. N'importe qui peut en ajouter, en le glissant ou par son numéro. Il n’y a jamais de raid à créer : l’onglet « Objets » (droit Objets) montre tous les objets connus à plat, avec leur origine ; on y ajoute un objet en le glissant ou par son numéro (il va dans l’instance de raid où l’on est, sinon dans « Ajout à la main ») et on le retire au clic droit.
 - **Jets** : la fourchette du jet donne la catégorie, et la priorité est stricte : **SR > +1 > +1 DL > +2 > Mog**.
 
   | Catégorie | Jet | Total |
@@ -68,7 +68,7 @@ CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   Deliver.lua        remise des objets : à qui, pourquoi, échange, objets posés, remise détectée
   UI/ViewDeliver.lua onglet « À remettre » : désenchanteur, liste, MP (bouton sécurisé), échange
   UI/                style, panneau, vues (Mes SR, Points, Session, Attribution, Historique,
-                     Réglages, Raids), fenêtre /csr, onglet de la fenêtre Guilde & Communautés,
+                     Réglages, Objets), fenêtre /csr, onglet de la fenêtre Guilde & Communautés,
                      fenêtre côté raideur, bouton d'annonce sécurisé (/rw), boîte de saisie
 tests/               bancs hors jeu (fengari, Lua 5.3) + syntaxe Lua 5.1 (luaparse) ;
                      framestub.lua = faux jeu pour charger toute l'interface

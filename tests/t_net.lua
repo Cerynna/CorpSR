@@ -129,55 +129,64 @@ Test("reglages : le GM modifie, publie ; un novice ne peut rien changer", functi
     Eq(#FS.errors, 0, "erreurs")
 end)
 
-Test("vue Raids : le GM range les objets appris (ajout, retrait, raid retire)", function()
+Test("vue Objets : sans aucun raid, on ajoute (glisser, numero) et on retire", function()
     local FS, ns = Game({ roster = {
         { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" },
         { "Sylva Brumeval", "Officier", 1, "DRUID", "Player-4620-000000BB" },
     } })
     local P = ns.Panel
     P.CloseIntro()
-    -- des objets appris en raid (groupe de l instance) et un ajoute a la main
-    ns.Write("raid", { r = "I409", nm = "Coeur du Magma", inst = 409, add = { 17076, 18814 } })
-    ns.MineView.AddItem(19019)
-    Ok(P.tabs.raids and P.tabs.raids:IsShown(), "onglet Raids pour le GM")
+    Ok(P.tabs.raids and P.tabs.raids:IsShown(), "onglet Objets pour le GM")
     P.tabs.raids:Click()
     FS.Layout()
     local f = P.frames.raids
-    Eq(#f.raids.data, 2, "deux groupes (instance, a la main)")
-    ns.ui.editRaid = "I409"
-    ns.Panel.Refresh()
-    -- objet glisse sur la case
+    Eq(#ns.Raids(), 0, "aucun raid au depart")
+    Eq(#f.list.data, 0, "aucun objet")
+    Ok(FS.Texts(f):find("Aucun objet connu", 1, true), "texte de la liste vide")
+    -- objet glisse sur la case : ajoute, sans raid a creer (« Ajout a la main »)
     FS.cursor = { "item", 19020 }
     f.zone:Click()
-    Ok(ns.State().raids.I409.items[19020], "objet glisse ajoute")
+    Ok(ns.State().raids.MISC and ns.State().raids.MISC.items[19020], "objet glisse ajoute")
     Eq(FS.cursor, nil, "curseur vide")
     -- numero tape
     f.idBox:SetText("19021")
     f.idBox._scripts.OnEnterPressed(f.idBox)
-    Ok(ns.State().raids.I409.items[19021], "objet tape ajoute")
+    Ok(ns.State().raids.MISC.items[19021], "objet tape ajoute")
     f.idBox:SetText("abc")
     f.idBox._scripts.OnEnterPressed(f.idBox)
     Ok(P.foot:GetText():find("invalide", 1, true), "numero refuse")
-    -- clic droit sur un objet : retire
+    f.idBox:SetText("19021")
+    f.idBox._scripts.OnEnterPressed(f.idBox)
+    Ok(P.foot:GetText():find("déjà", 1, true), "deja connu")
+    -- un objet appris en raid s affiche avec son origine, dans la meme liste
+    ns.Write("raid", { r = "I409", nm = "Coeur du Magma", inst = 409, add = { 17076 } })
     FS.Layout()
-    local row = f.items.rows[1]
-    local id = row.d
+    Eq(#f.list.data, 3, "trois objets, a plat")
+    Ok(FS.Texts(f):find("Coeur du Magma", 1, true) and FS.Texts(f):find("Ajout", 1, true), "origine en colonne")
+    Ok(FS.Texts(f):find("3 objets connus", 1, true), "compte")
+    -- recherche
+    f.search:SetText("17076")
+    Eq(#f.list.data, 1, "recherche par numero")
+    f.search:SetText("")
+    -- clic droit : retire
+    local row
+    for _, r in ipairs(f.list.rows) do
+        if r:IsShown() and r.d.id == 17076 then row = r end
+    end
     row:Click("RightButton")
-    Ok(not ns.State().raids.I409.items[id], "objet retire")
-    -- retrait du groupe entier
-    f.drop:Click()
-    Ok(ns.State().raids.I409.gone, "groupe retire")
+    Ok(not ns.State().raids.I409.items[17076], "objet retire")
+    Eq(#f.list.data, 2, "deux objets")
     -- tout part a la guilde
     local n = 0
     for _ = 1, 20 do FS.Tick(0.5) end
     for _, m in ipairs(FS.sent) do
         if m.text:find("^E:") then n = n + 1 end
     end
-    Ok(n >= 5, "ecritures envoyees : " .. n)
+    Ok(n >= 4, "ecritures envoyees : " .. n)
     Eq(#FS.errors, 0, "erreurs")
 end)
 
-Test("un novice ne voit pas l onglet Raids", function()
+Test("un novice ne voit pas l onglet Objets", function()
     local FS, ns = Game()
     ns.Panel.CloseIntro()
     Ok(not (ns.Panel.tabs.raids and ns.Panel.tabs.raids:IsShown()), "cache")

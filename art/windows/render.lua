@@ -392,7 +392,7 @@ end
 for _, v in ipairs({
     { "points", "Points", "Points" }, { "session", "Session", "Session" },
     { "history", "Historique", "Historique" }, { "settings", "Reglages", "Réglages" },
-    { "raids", "Raids", "Raids (ménage des objets)" },
+    { "raids", "Raids", "Objets connus" },
 }) do
     local FS = demo(0, v[1])
     add(dump(FS, v[2], v[3], { CorpSRWindow }))
