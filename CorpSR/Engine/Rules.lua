@@ -107,7 +107,8 @@ function R.Can(s, rank, right)
 end
 
 --- Categorie d un jet d apres sa fourchette.
--- info : { guild, present, sr (nombre de SR sur l objet), pts, looted }
+-- info : { guild, present, sr (SR encore valables sur l objet), srwon (objet
+-- deja gagne cette semaine : SR consommes), pts, looted }
 -- Rend la categorie, ou nil et la raison du refus.
 function R.Category(s, min, max, info, free)
     if min ~= 1 then return nil, "range" end
@@ -119,7 +120,7 @@ function R.Category(s, min, max, info, free)
     if not info.present then return nil, "absent" end
     if max == s.rolls.sr then
         if (info.sr or 0) > 0 then return "sr" end
-        return nil, "nosr"
+        return nil, info.srwon and "srwon" or "nosr"
     elseif max == s.rolls.ms then
         return info.looted and "dl" or "ms"
     elseif max == s.rolls.os then
@@ -250,7 +251,10 @@ function A:Manual(p, cat, roll)
     local max = R.RangeOf(self.s, cat)
     if not (isInt(roll, 1, max)) then return nil, "value" end
     if self.pool and self.pool[p] ~= cat then return nil, "range" end
-    return self:keep(p, cat, roll, self.info and self.info(p) or nil, true)
+    local info = self.info and self.info(p) or nil
+    -- un SR se saisit seulement pour qui a encore un SR valable dessus
+    if cat == "sr" and info and (info.sr or 0) <= 0 then return nil, info.srwon and "srwon" or "nosr" end
+    return self:keep(p, cat, roll, info, true)
 end
 
 --- Retire le jet d un joueur (erreur de saisie).

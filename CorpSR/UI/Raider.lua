@@ -150,7 +150,9 @@ function render()
     win.icon:SetItem(c.item)
     win.item:SetText(ns.ItemText(c.item) .. ((c.count or 1) > 1 and ("  ×" .. c.count) or ""))
     local info = J.Info(ns.State(), c.sid, ns.Me(), c.item, true)
-    win.info:SetText(L.RAIDER_INFO:format(info.pts, info.sr) .. (c.tieCat and ("  " .. UI.Hex("gold") .. L.RAIDER_TIE .. "|r") or ""))
+    win.info:SetText(L.RAIDER_INFO:format(info.pts, info.sr)
+        .. (info.srwon and ("  " .. UI.Hex("dim") .. L.RAIDER_SRWON .. "|r") or "")
+        .. (c.tieCat and ("  " .. UI.Hex("gold") .. L.RAIDER_TIE .. "|r") or ""))
     local list = choices(c)
     for i, b in ipairs(win.buttons) do
         local x = list[i]

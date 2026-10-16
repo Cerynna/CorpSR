@@ -306,6 +306,20 @@ local function srCount(st, w, p, item)
     return n
 end
 
+-- l objet a-t-il deja ete gagne par ce joueur cette semaine ? (regle du
+-- 16/10 : un objet de plusieurs boss qui retombe ne se rejoue plus en SR)
+local function srWon(st, w, p, item)
+    local t = st.won[w]
+    t = t and t[p]
+    return (t and t[item]) == true
+end
+
+-- SR encore valables sur l objet : ceux de la semaine, sauf s il est gagne
+local function srLive(st, w, p, item)
+    if srWon(st, w, p, item) then return 0 end
+    return srCount(st, w, p, item)
+end
+
 local function uniqueSorted(list)
     local seen, out = {}, {}
     for _, x in ipairs(list or {}) do
@@ -446,7 +460,7 @@ function APPLY.award(st, e, cfg, rec, id)
     if not st.drops[drop] then
         st.drops[drop] = true
         for _, p in ipairs(uniqueSorted(e.cr)) do
-            local n = srCount(st, s.w, p, e.i)
+            local n = srLive(st, s.w, p, e.i)
             if n > 0 then
                 local d = n * cfg.pts
                 setPts(st, p, e.i, getPts(st, p, e.i) + d)
@@ -458,6 +472,21 @@ function APPLY.award(st, e, cfg, rec, id)
         local b = getPts(st, e.p, e.i)
         setPts(st, e.p, e.i, 0)
         rec.fx[#rec.fx + 1] = { p = e.p, i = e.i, d = -b }
+    end
+    -- gagne par un joueur (pas banque ni desenchantement) : ses SR dessus
+    -- sont consommes pour la semaine, double SR compris
+    if R.PRIO[e.c] then
+        local t = st.won[s.w]
+        if not t then
+            t = {}
+            st.won[s.w] = t
+        end
+        local m = t[e.p]
+        if not m then
+            m = {}
+            t[e.p] = m
+        end
+        m[e.i] = true
     end
     if R.LOOTS[e.c] then
         local l = st.looted[e.p]
@@ -491,6 +520,7 @@ local function newState()
         drops = {},     -- [identifiant du drop] = true : points deja credites
         pts = {},       -- [joueur][itemID] = points (en cours et en reserve)
         looted = {},    -- [joueur] = { s = { [session] = true }, w = { [semaine] = true } }
+        won = {},       -- [semaine][joueur][itemID] = true : objet gagne (SR consommes)
         awards = {},
         log = {},       -- une ligne par ecriture, dans l ordre : { id, e, st, why, by, fx }
         byId = {},
@@ -605,8 +635,12 @@ J.Points = getPts
 --- SR d un joueur pour une semaine (liste d itemIDs) ou nil.
 function J.SR(st, w, p) return srOf(st, w, p) end
 
---- Nombre de SR d un joueur sur un objet, une semaine donnee.
-function J.SRCount(st, w, p, item) return srCount(st, w, p, item) end
+--- Nombre de SR encore valables d un joueur sur un objet, une semaine
+-- donnee : 0 s il l a deja gagne cette semaine (ses SR sont consommes).
+function J.SRCount(st, w, p, item) return srLive(st, w, p, item) end
+
+--- Le joueur a-t-il deja gagne l objet cette semaine ?
+function J.SRWon(st, w, p, item) return srWon(st, w, p, item) end
 
 --- Heure du verrouillage des SR d une semaine, ou nil.
 function J.Locked(st, w) return st.locks[w] end
@@ -621,14 +655,19 @@ function J.Looted(st, p, s)
 end
 
 --- Ce que l attribution d un objet doit savoir d un joueur, dans une session.
--- Rend { sr = nombre de SR sur l objet, pts, looted }. pending : le drop
+-- Rend { sr = nombre de SR encore valables sur l objet, srwon (SR pose mais
+-- objet deja gagne cette semaine), pts, looted }. pending : le drop
 -- n est pas encore credite et le joueur est du raid : ses points comptent
 -- deja le credit a venir (le jet se fait avec). guild et present viennent
 -- du jeu.
 function J.Info(st, sid, p, item, pending)
     local s = st.sessions[sid]
     local info = { sr = 0, pts = getPts(st, p, item), looted = J.Looted(st, p, s) }
-    if s then info.sr = srCount(st, s.w, p, item) end
+    if s then
+        info.sr = srLive(st, s.w, p, item)
+        -- SR pose mais objet deja gagne : le jet SR est refuse
+        info.srwon = srCount(st, s.w, p, item) > 0 and srWon(st, s.w, p, item) or nil
+    end
     if pending and info.sr > 0 then info.pts = info.pts + info.sr * st.cfg.pts end
     return info
 end

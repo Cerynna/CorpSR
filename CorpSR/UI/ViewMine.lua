@@ -277,8 +277,14 @@ local function refresh(f)
         if item then
             b.icon:SetItem(item)
             b.icon:Show()
-            b:SetLabel(ns.ItemText(item))
-            b.tip = { L.SLOT_FULL, { locked and L.MINE_LOCKED or L.SLOT_CLICK } }
+            -- objet deja gagne cette semaine : le SR est consomme
+            if J.SRWon(st, w, ns.Me(), item) then
+                b:SetLabel(UI.Hex("good") .. (ns.Item(item) or ("#" .. item)) .. "|r")
+                b.tip = { L.SLOT_FULL, { L.SLOT_WON } }
+            else
+                b:SetLabel(ns.ItemText(item))
+                b.tip = { L.SLOT_FULL, { locked and L.MINE_LOCKED or L.SLOT_CLICK } }
+            end
         else
             b.icon:Hide()
             b:SetLabel(UI.Hex("dim") .. L.SLOT_EMPTY:format(s) .. "|r")

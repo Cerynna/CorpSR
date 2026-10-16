@@ -154,3 +154,67 @@ Test("points par SR regles par le GM", function()
     evening(b, 1, { { item = X, cr = { "A" } } })
     Eq(J.Points(b:State(), "A", X), 30, "2 x 15")
 end)
+
+Test("objet de plusieurs boss : gagne une fois, plus de jet SR ni de points cette semaine", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X, X })
+    b:SR("B", 1, { X })
+    local sid = evening(b, 1, {}, true)
+    -- 1er boss : X tombe, A le gagne en SR
+    b:E("GM", 1, "award", { s = sid, i = X, p = "A", c = "sr", r = 90, pt = 20, cr = { "A", "B" }, dr = "boss1" })
+    local st = b:State()
+    Eq(J.Points(st, "A", X), 0, "A repart de 0")
+    Eq(J.Points(st, "B", X), 10, "B credite")
+    Ok(J.SRWon(st, 1, "A", X), "A a gagne X cette semaine")
+    Eq(J.SRCount(st, 1, "A", X), 0, "ses deux SR sont consommes")
+    Eq(J.SRCount(st, 1, "B", X), 1, "B garde le sien")
+    -- 2e boss : X retombe ; A n a plus de jet SR, B si
+    local info = function(p)
+        local inf = J.Info(st, sid, p, X, true)
+        inf.guild, inf.present = true, true
+        return inf
+    end
+    local ia = info("A")
+    Eq(ia.sr, 0, "A : plus de SR valable")
+    Ok(ia.srwon, "A : SR deja gagne")
+    Eq(ia.pts, 0, "A : pas de credit a venir")
+    local a = R.NewAttribution({ item = X, count = 1, settings = st.cfg, info = info })
+    local c, why = a:Roll("A", 108, 1, 110)
+    Eq(c, nil, "jet SR de A refuse")
+    Eq(why, "srwon", "raison : deja gagne")
+    Ok(a:Roll("A", 70, 1, 100), "A peut encore jouer +1")
+    Eq(select(2, a:Manual("A", "sr", 100)), "srwon", "saisie a la main en SR refusee")
+    local cb = a:Roll("B", 50, 1, 110)
+    Eq(cb and cb.cat, "sr", "B joue en SR")
+    Eq(cb.total, 70, "B : 20 points (10 + 10 a venir) + 50")
+    b:E("GM", 1, "award", { s = sid, i = X, p = "B", c = "sr", r = 50, pt = 20, cr = { "A", "B" }, dr = "boss2" })
+    st = b:State()
+    Eq(J.Points(st, "A", X), 0, "A : rien credite au 2e drop")
+    Eq(J.Points(st, "B", X), 0, "B gagne et repart de 0")
+    -- la semaine suivante, A peut le reposer et le rejouer
+    b:SR("A", 2, { X })
+    evening(b, 2, { { item = X, cr = { "A" }, p = "C", c = "ms" } })
+    Eq(J.Points(b:State(), "A", X), 10, "semaine 2 : A credite de nouveau")
+end)
+
+Test("objet gagne en +1, en banque ou au desenchantement : le SR suit le gagnant seulement", function()
+    local b = NewBook(ns, RANKS)
+    b:SR("A", 1, { X })
+    b:SR("B", 1, { X })
+    local sid = evening(b, 1, { { item = X, cr = { "A", "B" }, p = "A", c = "ms" } }, true)
+    local st = b:State()
+    Eq(J.SRCount(st, 1, "A", X), 0, "gagne en +1 : SR de A consomme")
+    Eq(J.SRCount(st, 1, "B", X), 1, "B garde le sien")
+    b:E("GM", 1, "award", { s = sid, i = X, c = "de", cr = { "A", "B" }, dr = "boss2" })
+    st = b:State()
+    Eq(J.SRCount(st, 1, "B", X), 1, "desenchante : B garde son SR")
+    Eq(J.Points(st, "B", X), 20, "B credite aux deux drops")
+    Eq(J.Points(st, "A", X), 10, "A credite au premier seulement")
+    -- annuler le gain de A rend son SR
+    local id
+    for _, r in ipairs(st.log) do
+        if r.e.k == "award" and r.e.p == "A" then id = r.id end
+    end
+    b:E("GM", 1, "undo", { ref = id, y = "erreur" })
+    Eq(J.SRCount(b:State(), 1, "A", X), 1, "gain annule : SR de A rendu")
+end)
