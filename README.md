@@ -26,6 +26,8 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 - Le GM règle les valeurs (points, nombre de SR, double SR, portée de « déjà loot », fourchettes). Il choisit aussi les droits grade par grade.
 - Le GM peut **tout réinitialiser** (Réglages, mot RESET à taper) : points, SR, soirées, historique, objets, réglages et droits repartent de zéro pour toute la guilde. Les membres connectés effacent tout de suite, les absents à leur connexion (0.4.6 ou plus) ; une écriture d’avant la réinitialisation est ensuite refusée partout.
 - **Fenêtre d'attribution à part** (comme celle du raideur) : elle s'ouvre toute seule chez le **maître du butin** quand il ouvre le butin d'un boss (chez le chef de raid en butin de groupe), même si l'automatisme est coupé. On l'ouvre aussi par l'onglet Attribution, le clic droit sur le bouton de la minicarte ou `/csr attrib`.
+- **Remise des objets** : le maître du butin ramasse tout le butin du boss dans ses sacs, puis l'attribution tourne. À chaque objet attribué, CorpSR garde en mémoire l'objet, à qui il revient et pourquoi (onglet « À remettre » de la fenêtre d'attribution, sauvegardé). Il tente aussitôt d'ouvrir un échange avec le gagnant ; quand l'échange s'ouvre, l'objet s'y pose tout seul, et il est marqué remis quand l'échange est conclu. Si l'échange est impossible (trop loin, en combat), un MP est prêt sur un bouton : le jeu interdit à un addon d'envoyer un MP, le clic du distributeur l'envoie. Un gagnant qui a CorpSR est en plus prévenu tout de suite par un message d'addon.
+- **Désenchanteur** : une personne du raid, choisie pour la soirée dans l'onglet « À remettre ». Un objet envoyé au désenchantement lui est remis comme une attribution (échange tenté, MP prêt).
 - **Soirée automatique** chez ce même distributeur : elle s'ouvre en entrant dans un raid, une seule par soir même sur plusieurs raids. Les SR se verrouillent au premier objet, l'attribution part à l'ouverture du butin et se valide après le délai. Les objets d'un boss passent l'un après l'autre.
 
 ## Icône
@@ -62,7 +64,9 @@ CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   DemoLive.lua       démo d'une soirée : groupe simulé, boss, jets simulés, soirée automatique
   UI/CorpUIPage.lua  page CorpSR dans /corp quand CorpUI est installé (API publique de CorpUI)
   UI/Minimap.lua     bouton de la minicarte (clic gauche : CorpSR, clic droit : fenêtre d'attribution)
-  UI/AwardWindow.lua fenêtre d'attribution à part (ouverte chez le maître du butin)
+  UI/AwardWindow.lua fenêtre d'attribution à part (ouverte chez le maître du butin), onglets Jets et À remettre
+  Deliver.lua        remise des objets : à qui, pourquoi, échange, objets posés, remise détectée
+  UI/ViewDeliver.lua onglet « À remettre » : désenchanteur, liste, MP (bouton sécurisé), échange
   UI/                style, panneau, vues (Mes SR, Points, Session, Attribution, Historique,
                      Réglages, Raids), fenêtre /csr, onglet de la fenêtre Guilde & Communautés,
                      fenêtre côté raideur, bouton d'annonce sécurisé (/rw), boîte de saisie

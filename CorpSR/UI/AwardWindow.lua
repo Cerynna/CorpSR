@@ -6,7 +6,9 @@
     ouvre le butin d un boss (Auto.lua : le maitre du butin, ou le chef de
     raid en butin de groupe), et a la main par l onglet « Attribution » du
     panneau, le clic droit sur le bouton de la minicarte ou /csr attrib.
-    Contenu : la vue d attribution (ViewAward.lua). Deplacable par son
+    Deux onglets : « Jets » (la vue d attribution, ViewAward.lua) et
+    « A remettre » (ViewDeliver.lua : a qui on doit donner quoi, echange,
+    MP, desenchanteur). Deplacable par son
     en-tete, position gardee (CorpSRDB.awardWin) ; on la ferme avec la
     croix (pas d UISpecialFrames : code securise d Echap).
 ----------------------------------------------------------------------------]]
@@ -18,8 +20,9 @@ local UI = ns.UI
 local W = {}
 ns.AwardWindow = W
 
-local HEAD, FOOT = 30, 18
+local HEAD, TABS, FOOT = 30, 28, 18
 local win
+W.mode = "rolls"
 
 local function save()
     if not (win and ns.db) then return end
@@ -29,7 +32,7 @@ end
 
 local function build()
     win = CreateFrame("Frame", "CorpSRAwardWindow", UIParent)
-    win:SetSize(640, HEAD + 316 + FOOT + 8)
+    win:SetSize(640, HEAD + TABS + 316 + FOOT + 8)
     win:SetFrameStrata("HIGH")
     win:SetToplevel(true)
     win:SetClampedToScreen(true)
@@ -71,8 +74,17 @@ local function build()
     close:SetFrameLevel(win:GetFrameLevel() + 40)
     win.close = close
 
+    -- onglets : les jets, ce qu il reste a remettre
+    win.tabs = {}
+    for i, key in ipairs({ "rolls", "deliver" }) do
+        local t = UI.Tab(win, "", function() W.Select(key) end)
+        t:SetWidth(key == "deliver" and 130 or 84)
+        t:SetPoint("TOPLEFT", (i == 1) and 8 or 96, -(HEAD + 2))
+        win.tabs[key] = t
+    end
+
     local body = CreateFrame("Frame", nil, win)
-    body:SetPoint("TOPLEFT", 8, -(HEAD + 4))
+    body:SetPoint("TOPLEFT", 8, -(HEAD + TABS + 4))
     body:SetPoint("BOTTOMRIGHT", -8, FOOT + 4)
     win.body = body
     local foot = UI.Text(win, "GameFontDisableSmall")
@@ -83,6 +95,9 @@ local function build()
 
     win.view = ns.AwardView.build(body)
     win.view:SetAllPoints(body)
+    win.deliver = ns.DeliverView.build(body)
+    win.deliver:SetAllPoints(body)
+    win.deliver:Hide()
     win:Hide()
     return win
 end
@@ -101,6 +116,13 @@ function W.Hide() if win then win:Hide() end end
 function W.Toggle() if win and win:IsShown() then W.Hide() else W.Show() end end
 function W.IsShown() return win ~= nil and win:IsShown() end
 function W.View() return win and win.view end
+function W.DeliverFrame() return win and win.deliver end
+
+--- Onglet « rolls » (jets) ou « deliver » (a remettre).
+function W.Select(mode)
+    W.mode = mode
+    W.Refresh()
+end
 
 --- Redessine (rien si elle est fermee) ; se ferme si le droit a disparu.
 function W.Refresh()
@@ -108,7 +130,19 @@ function W.Refresh()
     if not ns.Can("award") then return W.Hide() end
     win.demo:SetText(ns.demo and (UI.Hex("gold") .. L.DEMO_BANNER .. "|r") or "")
     if not noticeOn then win.foot:SetText(ns.Panel.FootText()) end
-    ns.AwardView.refresh(win.view)
+    win.tabs.rolls:SetLabel(L.TAB_ROLLS)
+    local n = ns.Deliver.Pending()
+    win.tabs.deliver:SetLabel(n > 0 and L.TAB_DELIVER_N:format(n) or L.TAB_DELIVER)
+    for key, t in pairs(win.tabs) do t:SetSelected(key == W.mode) end
+    if W.mode == "deliver" then
+        win.view:Hide()
+        win.deliver:Show()
+        ns.DeliverView.refresh(win.deliver)
+    else
+        win.deliver:Hide()
+        win.view:Show()
+        ns.AwardView.refresh(win.view)
+    end
 end
 
 --- Message en bas de la fenetre (quelques secondes) ; aussi dans le
@@ -130,5 +164,6 @@ function W.Notice(text, bad)
 end
 
 ns.On("data", W.Refresh)
+ns.On("deliver", W.Refresh)
 ns.On("items", W.Refresh)
 ns.On("demo", W.Refresh)

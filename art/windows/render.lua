@@ -414,6 +414,26 @@ do
     FS.Layout()
     add(dump(FS, "Attribution", "Fenêtre d'attribution (en direct)", { CorpSRAwardWindow }))
     add(dump(FS, "Raideur", "Fenêtre du raideur", { CorpSRRaiderWindow }))
+
+    -- la remise : quelques objets attribues, un au desenchanteur
+    if D.cur then D.Finish() end
+    local g, items = ns.demo.group.list, ns.Catalog[1].items
+    local function give(item, who, cat, roll)
+        D.Start(item, 1, false)
+        D.Manual(who.key, cat, roll)
+        D.Validate()
+    end
+    give(items[3], g[4], "ms", 81)
+    give(items[5], g[6], "ms", 64)
+    FS.RunTimers()                          -- ces deux-la : echange conclu
+    give(items[8], g[9], "os", 37)
+    give(items[11], g[12], "ms", 90)
+    D.Start(items[14], 1, false)
+    D.NoTaker()
+    D.Leftover("de")
+    ns.AwardWindow.Select("deliver")
+    FS.Layout()
+    add(dump(FS, "Remise", "Fenêtre d'attribution : à remettre", { CorpSRAwardWindow }))
 end
 
 -- infobulle d un droit (Reglages, en-tete « Attribuer » survole) : la

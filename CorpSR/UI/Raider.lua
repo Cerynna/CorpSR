@@ -12,6 +12,8 @@
     Messages acceptes (GUILD) : d un membre de la guilde, dans notre
     groupe, dont le grade a le droit « award ». A : debut, T : relance
     entre ex aequo (seuls ceux-la revoient leurs boutons), Z : fin.
+    D (en prive, WHISPER) : le distributeur a un objet a nous remettre
+    (gagne, ou a desenchanter) : message dans le chat et alerte sonore.
     En mode demo, la fenetre s ouvre aussi et le jet est simule.
 ----------------------------------------------------------------------------]]
 
@@ -161,7 +163,23 @@ local function allowed(sender)
 end
 
 function W.OnMessage(kind, payload, channel, sender)
-    if ns.demo or channel ~= "GUILD" or not allowed(sender) then return end
+    if ns.demo or not allowed(sender) then return end
+    -- D (en prive) : le distributeur doit nous remettre un objet
+    if kind == "D" then
+        if channel ~= "WHISPER" then return end
+        local d = J.Decode(payload)
+        if type(d) ~= "table" or not R.IsInt(d.i, 1, 10000000) or type(d.c) ~= "string" then return end
+        local who = ns.Raid.Members().byName[sender] or {}
+        local by = who.name or sender
+        if d.c == "de" then
+            ns.Say(L.DV_YOU_DE:format(by, ns.ItemText(d.i)))
+        else
+            ns.Say(L.DV_YOU_WIN:format(by, ns.ItemText(d.i), ns.CatLabel(d.c)))
+        end
+        if PlaySound and SOUNDKIT and SOUNDKIT.RAID_WARNING then pcall(PlaySound, SOUNDKIT.RAID_WARNING) end
+        return
+    end
+    if channel ~= "GUILD" then return end
     local d = J.Decode(payload)
     if type(d) ~= "table" or type(d.id) ~= "string" then return end
     if kind == "A" then

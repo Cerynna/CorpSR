@@ -192,6 +192,14 @@ function D.Validate()
     local l = { item = cur.item, count = left, sid = cur.sid, dr = cur.dr, cr = cur.cr }
     D.Finish()
     if left > 0 then D.leftover = l end
+    -- remise : en memoire (a qui, pourquoi) et tentative d echange
+    if ns.Deliver then
+        local list = {}
+        for _, c in ipairs(res.winners) do
+            list[#list + 1] = { key = c.p, name = (cur.names and cur.names[c.p]) or ns.Name(c.p), cat = c.cat }
+        end
+        ns.Deliver.Awarded(cur.item, list)
+    end
     ns.Fire("distrib", "validated")
     return #res.winners, left
 end
@@ -217,12 +225,22 @@ function D.Leftover(choice)
         D.leftover = nil
         return D.Start(l.item, l.count, true, { dr = l.dr, cr = l.cr })
     end
+    -- desenchantement : a la personne choisie pour la soiree (remise comme
+    -- une attribution : echange tente, MP pret)
+    local de = choice == "de" and ns.Deliver and ns.Deliver.DE()
+    if choice == "de" and not de then return nil, "nodeuser" end
+    if de and ns.db and not ns.Roster().byKey[de.key] then ns.db.names[de.key] = de.name end
     for _ = 1, l.count do
-        local ok, why = ns.Write("award", { s = l.sid, i = l.item, c = choice, dr = l.dr, cr = l.cr })
+        local ok, why = ns.Write("award", { s = l.sid, i = l.item, c = choice, p = de and de.key or nil, dr = l.dr, cr = l.cr })
         if not ok then return nil, why end
     end
     D.leftover = nil
     D.last = { item = l.item, choice = choice }
+    if de then
+        local list = {}
+        for _ = 1, l.count do list[#list + 1] = { key = de.key, name = de.name, cat = "de" } end
+        ns.Deliver.Awarded(l.item, list)
+    end
     ns.Fire("distrib", "validated")
     return true
 end

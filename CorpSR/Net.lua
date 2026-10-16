@@ -14,8 +14,9 @@
 local _, ns = ...
 local L = ns.L
 
--- messages de l attribution en cours (fenetre de raideur), hors journal
-local RAIDER = { A = true, T = true, Z = true }
+-- messages de l attribution en cours (fenetre de raideur), hors journal ;
+-- D : « tel objet t attend chez le distributeur » (en prive)
+local RAIDER = { A = true, T = true, Z = true, D = true }
 
 local function member(sender)
     if type(sender) ~= "string" then return nil end

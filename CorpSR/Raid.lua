@@ -28,6 +28,26 @@ local function unitName(unit)
     return first
 end
 
+--- « Prenom Nom » d une unite (nil si inconnu ou secret).
+G.NameOfUnit = unitName
+
+--- Unite (« player », « raid3 », « party1 ») d un joueur du groupe, par sa cle.
+function G.UnitOf(key)
+    if not key then return nil end
+    if key == ns.me then return "player" end
+    local units = {}
+    if IsInRaid and IsInRaid() then
+        local n = ns.Api(GetNumGroupMembers) or 0
+        for i = 1, math.min(n, 40) do units[#units + 1] = "raid" .. i end
+    elseif IsInGroup and IsInGroup() then
+        for i = 1, 4 do units[#units + 1] = "party" .. i end
+    end
+    for _, u in ipairs(units) do
+        if ns.KeyOf(ns.Api(UnitGUID, u)) == key then return u end
+    end
+    return nil
+end
+
 --- Membres du groupe : { byKey = { [cle] = { key, name, guild } }, byName, list }.
 function G.Members()
     if ns.demo and ns.demo.group then return ns.demo.group end
