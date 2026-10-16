@@ -121,6 +121,16 @@ local function updateRow(r, d, index)
         return
     end
     r.icon:Hide()
+    if d.kind == "pass" then
+        r:Shade(index, false)
+        c.who:SetText(UI.Hex("dim") .. d.name .. "|r")
+        c.cat:SetText("")
+        c.roll:SetText("")
+        c.pts:SetText("")
+        c.total:SetText("")
+        c.st:SetText(UI.Hex("dim") .. L.AW_PASSED .. "|r")
+        return
+    end
     if d.kind == "ref" then
         r:Shade(index, false)
         c.who:SetText(UI.Hex("dim") .. D.NameOf(d.r.p) .. "|r")
@@ -162,6 +172,11 @@ local function rows()
         for _, x in ipairs(cur.attr.refused) do
             if x.round == cur.attr.round then out[#out + 1] = { kind = "ref", r = x } end
         end
+        -- ceux qui passent (bouton « Passer » de leur fenetre)
+        local passed = {}
+        for key, name in pairs(cur.passed or {}) do passed[#passed + 1] = { kind = "pass", p = key, name = name } end
+        table.sort(passed, function(x, y) return x.name < y.name end)
+        for _, x in ipairs(passed) do out[#out + 1] = x end
         return out
     end
     local s = D.LiveSession()
@@ -192,17 +207,32 @@ local function build(parent)
     head:SetWidth(182)
     head:SetHeight(16)
     f.head = head
-    -- soiree automatique (chef de raid) : delai avant validation, ou coupee
-    local auto = UI.Cycle(f, 104, function()
-        local out = {}
-        for _, d in ipairs(ns.Auto.DELAYS) do out[#out + 1] = { d, d == 0 and L.AUTO_OFF or L.AUTO_DELAY:format(d) } end
-        return out
-    end, function() return ns.Auto.Delay() end, function(v) ns.Auto.SetDelay(v) end)
-    auto:SetPoint("TOPLEFT", head, "TOPRIGHT", 4, 4)
-    auto.tip = { L.AUTO_TITLE, { L.AUTO_TIP, L.CYCLE_TIP } }
-    f.auto = auto
+    -- duree des jets (chaque attribution a un minuteur) et case « Auto »
+    local autoTime = UI.Field(f, 40, {
+        numeric = true, max = 3, keep = true, placeholder = tostring(ns.Auto.DEFAULT),
+        onEnter = function(v) ns.Auto.SetDelay(v) end,
+    })
+    autoTime:SetPoint("TOPLEFT", head, "TOPRIGHT", 4, 4)
+    autoTime:SetScript("OnEnter", function(self) UI.Tip(self, L.AUTO_TIME, { L.AUTO_TIME_TIP }) end)
+    autoTime:SetScript("OnLeave", UI.HideTip)
+    f.autoTime = autoTime
+    local secs = UI.Text(f, "GameFontHighlightSmall")
+    secs:SetPoint("LEFT", autoTime, "RIGHT", 3, 0)
+    secs:SetWidth(10)
+    secs:SetHeight(16)
+    secs:SetText("s")
+    local autoOn = UI.Check(f, function() ns.Auto.SetAuto(not ns.Auto.On()) end)
+    autoOn:SetPoint("LEFT", secs, "RIGHT", 6, 0)
+    autoOn.tip = { L.AUTO_CHECK, { L.AUTO_CHECK_TIP } }
+    f.autoOn = autoOn
+    local autoLabel = UI.Text(f, "GameFontHighlightSmall")
+    autoLabel:SetPoint("LEFT", autoOn, "RIGHT", 4, 0)
+    autoLabel:SetWidth(34)
+    autoLabel:SetHeight(16)
+    autoLabel:SetText(L.AUTO_CHECK)
+    f.autoLabel = autoLabel
     local timer = UI.Text(f, "GameFontNormalSmall")
-    timer:SetPoint("TOPLEFT", auto, "TOPRIGHT", 6, -4)
+    timer:SetPoint("TOPLEFT", autoLabel, "TOPRIGHT", 4, 0)
     timer:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(LOOT_ICONS * 26) - 4, -4)
     timer:SetHeight(16)
     f.timer = timer
@@ -289,6 +319,12 @@ local function build(parent)
     f.addList = addList
 
     -- liste
+    -- le temps qui reste (comme la barre des raideurs)
+    local bar = UI.TimerBar(f, 4)
+    bar:SetPoint("TOPLEFT", 0, -51)
+    bar:SetPoint("TOPRIGHT", 0, -51)
+    f.bar = bar
+
     local list = UI.List(f, 20, buildRow, updateRow)
     list:SetPoint("TOPLEFT", 0, -56)
     list:SetPoint("BOTTOMRIGHT", 0, 54)
@@ -391,7 +427,7 @@ function layout(f, W)
     W = W or f:GetWidth() or 624
     if W <= 0 or f.laidW == W then return end
     f.laidW = W
-    f.head:SetWidth(math.max(100, math.min(186, W - 104 - LOOT_ICONS * 26 - 70)))
+    f.head:SetWidth(math.max(100, math.min(186, W - 115 - LOOT_ICONS * 26 - 70)))
     f.pick:SetWidth(math.max(100, W - (92 + 66 + 80 + 90 + 16)))
     UI.FitRow({ f.who, f.cat, f.rollBox, f.enter }, { 170, 90, 64, 80 }, W)
     UI.FitRow({ f.annAnchor, f.reroll, f.validate, f.nobody, f.cancel }, { 100, 120, 90, 100, 80 }, W)
@@ -400,10 +436,14 @@ end
 
 -- compte a rebours de la validation automatique (et pourquoi elle est coupee)
 local function refreshTimer(f)
+    local cur = D.cur
     local left = ns.Auto.Remaining()
-    if left then
-        f.timer:SetText(UI.Hex("gold") .. L.AUTO_COUNTDOWN:format(left) .. "|r")
-    elseif ns.Auto.Delay() > 0 and not ns.Auto.Leader() then
+    f.bar:SetTime(cur and cur.deadline and (cur.deadline - (GetTime and GetTime() or 0)) or nil, cur and cur.dur)
+    if cur and cur.expired then
+        f.timer:SetText(UI.Hex("bad") .. L.TIMER_UP .. "|r")
+    elseif left then
+        f.timer:SetText(UI.Hex("gold") .. (ns.Auto.On() and L.AUTO_COUNTDOWN or L.ROLLS_LEFT):format(left) .. "|r")
+    elseif ns.Auto.On() and not ns.Auto.Leader() then
         f.timer:SetText(UI.Hex("dim") .. L.AUTO_NOT_LEADER .. "|r")
     else
         f.timer:SetText("")
@@ -413,7 +453,8 @@ end
 local function refresh(f)
     S.frame = f
     layout(f)
-    f.auto:Update()
+    if not f.autoTime:HasFocus() then f.autoTime:SetText(tostring(ns.Auto.Delay())) end
+    f.autoOn:SetValue(ns.Auto.On())
     refreshTimer(f)
     local s = D.LiveSession()
     local cur = D.cur

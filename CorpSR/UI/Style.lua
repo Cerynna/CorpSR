@@ -440,6 +440,32 @@ function UI.Check(parent, onClick)
     return b
 end
 
+--- Barre du temps qui reste : elle se vide, verte, puis or sous la moitie,
+-- rouge dans les 5 dernieres secondes. b:SetTime(reste, total) ; nil : vide.
+function UI.TimerBar(parent, height)
+    local b = CreateFrame("Frame", nil, parent)
+    b:SetHeight(height or 6)
+    local bg = b:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    UI.Paint(bg, "field")
+    local fill = b:CreateTexture(nil, "ARTWORK")
+    fill:SetPoint("TOPLEFT", 0, 0)
+    fill:SetPoint("BOTTOMLEFT", 0, 0)
+    fill:SetWidth(1)
+    b.fill = fill
+    function b:SetTime(left, total)
+        if not (left and total and total > 0) or left <= 0 then
+            fill:Hide()
+            return
+        end
+        local w = self:GetWidth() or 0
+        fill:SetWidth(math.max(1, w * math.min(1, left / total)))
+        UI.Paint(fill, (left <= 5) and "bad" or ((left / total < 0.5) and "gold" or "good"))
+        fill:Show()
+    end
+    return b
+end
+
 --- Une rangee de cadres enchaines (gauche -> droite) dans une largeur
 -- donnee : leurs largeurs voulues, reduites ensemble si elles ne tiennent
 -- pas (jamais agrandies). gap : l ecart entre deux cadres.

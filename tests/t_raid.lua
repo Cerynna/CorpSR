@@ -307,3 +307,76 @@ Test("objets vus en tombant : epiques inconnus ajoutes au groupe de l instance, 
     FS.Fire("LOOT_OPENED")
     Ok(ns.State().raids.I409.items[19021], "un novice apprend aussi")
 end)
+
+local function twoPlayers()
+    local FS, ns = Game({ roster = {
+        { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" },
+        { "Garmor Hautcœur", "Officier", 1, "WARRIOR", "Player-4620-000000AA" },
+    } })
+    ns.Panel.CloseIntro()
+    FS.raid = { { "Ilona Ställer", "Player-4620-00D54EFC" }, { "Garmor Hautcœur", "Player-4620-000000AA" } }
+    ns.Write("cfg", { c = { rights = { [1] = { award = true } } } })
+    return FS, ns
+end
+
+Test("minuteur : la barre du raideur suit la duree recue, U la prolonge, Passer remonte", function()
+    local FS, ns = twoPlayers()
+    local J = ns.Journal
+    -- Garmor distribue : son attribution annonce 20 s
+    ns.Raider.OnMessage("A", J.Encode({ id = "g.1", i = 17076, n = 1, s = "s1", d = 20 }), "GUILD", "Garmor Hautcœur")
+    local w = ns.Raider.Current()
+    Ok(w and w.dur == 20 and w.from == "Garmor Hautcœur", "duree et distributeur retenus")
+    local win = CorpSRRaiderWindow
+    ns.Raider.Tick()
+    Ok(win.bar.fill:IsShown(), "barre pleine")
+    Ok(win.status:GetText():find("20 s", 1, true), "temps restant : " .. win.status:GetText())
+    FS.time = FS.time + 16
+    ns.Raider.Tick()
+    Ok(win.status:GetText():find("4 s", 1, true), "4 s")
+    -- un jet tardif chez le distributeur : U, la barre repart de 5 s
+    ns.Raider.OnMessage("U", J.Encode({ id = "g.1", d = 5, t = 20 }), "GUILD", "Garmor Hautcœur")
+    FS.time = FS.time + 3
+    ns.Raider.Tick()
+    Ok(win.status:GetText():find("2 s", 1, true), "prolonge : " .. win.status:GetText())
+    FS.time = FS.time + 4
+    ns.Raider.Tick()
+    Ok(not win.bar.fill:IsShown() and win.status:GetText():find("Temps écoulé", 1, true), "temps ecoule")
+    -- Passer : un message prive au distributeur
+    local pass
+    for _, b in ipairs(win.buttons) do
+        if b:IsShown() and b.cat == "pass" then pass = b end
+    end
+    pass:Click()
+    for _ = 1, 8 do FS.Tick(0.25) end
+    local sent
+    for _, m in ipairs(FS.sent) do
+        if m.channel == "WHISPER" and m.target == "Garmor Hautcœur" and m.text:find("^P") then sent = m end
+    end
+    Ok(sent, "P envoye au distributeur")
+    Ok(not ns.Raider.Current(), "fenetre fermee")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
+Test("distributeur : minuteur sur chaque objet, le joueur qui passe s affiche", function()
+    local FS, ns = twoPlayers()
+    local D, J = ns.Distrib, ns.Journal
+    ns.SessionActions.Open()
+    ns.Auto.SetAuto(false)
+    ns.Auto.SetDelay(25)
+    D.Start(17076, 1, false)
+    Eq(D.cur.dur, 25, "duree du reglage")
+    Ok(D.cur.deadline and math.abs(D.cur.deadline - GetTime() - 25) < 0.01, "echeance meme sans Auto")
+    -- Garmor passe
+    ns.Raider.OnMessage("P", J.Encode({ id = D.cur.id }), "WHISPER", "Garmor Hautcœur")
+    Ok(D.cur.passed["4620-000000AA"], "passe note")
+    ns.Raider.OnMessage("P", J.Encode({ id = "autre" }), "WHISPER", "Garmor Hautcœur")
+    ns.AwardWindow.Show()
+    FS.Layout()
+    Ok(FS.Texts(ns.AwardWindow.View()):find("passe", 1, true), "ligne « passe »")
+    -- la barre et le temps de l attribution
+    local f = ns.AwardWindow.View()
+    ns.AwardView.Tick()
+    Ok(f.bar.fill:IsShown(), "barre de l attribution")
+    Ok(f.timer:GetText():find("fin des jets", 1, true), "compte a rebours : " .. f.timer:GetText())
+    Eq(#FS.errors, 0, "erreurs")
+end)

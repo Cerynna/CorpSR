@@ -51,6 +51,21 @@ local function send(kind, data)
     ns.Comm.Send(kind, J.Encode(data), "GUILD")
 end
 
+local function now() return GetTime and GetTime() or 0 end
+
+-- duree des jets de chaque objet (reglage de la fenetre d attribution)
+local function duration() return (ns.Auto and ns.Auto.Delay()) or 15 end
+
+--- Le temps de l attribution en cours repart de d secondes (les raideurs
+-- sont prevenus : leur barre suit).
+function D.SetTime(d)
+    local cur = D.cur
+    if not cur then return end
+    cur.dur, cur.deadline, cur.expired = d, now() + d, nil
+    send("U", { id = cur.id, d = d, t = d })
+    ns.Fire("distrib", "time")
+end
+
 --- Lance une attribution. Rend l attribution, ou nil et la raison.
 -- drop : { dr, cr } d un drop deja commence (jet libre d un reste), pour
 -- qu il ne credite pas deux fois.
@@ -96,8 +111,12 @@ function D.Start(item, count, free, drop)
             return inf
         end,
     })
+    -- chaque attribution a un minuteur ; « Auto » dit si l on valide seul
+    cur.dur = duration()
+    cur.deadline = now() + cur.dur
+    cur.passed = {}
     D.cur = cur
-    send("A", { id = cur.id, i = item, n = cur.count, f = cur.free or nil, s = s.id })
+    send("A", { id = cur.id, i = item, n = cur.count, f = cur.free or nil, s = s.id, d = cur.dur })
     ns.Fire("distrib", "start")
     return cur
 end
@@ -121,8 +140,11 @@ function D.OnRoll(name, roll, min, max)
     cur.names[m.key] = name
     local c, why = cur.attr:Roll(m.key, roll, min, max)
     if not c and why == "notie" then return end
-    -- validation automatique : un jet qui arrive repousse un peu l echeance
-    if c and cur.deadline then cur.deadline = math.max(cur.deadline, (GetTime and GetTime() or 0) + 5) end
+    -- un jet qui arrive repousse un peu l echeance (les raideurs suivent)
+    if c and cur.deadline and now() + 5 > cur.deadline + 0.5 then
+        cur.deadline, cur.expired = now() + 5, nil
+        send("U", { id = cur.id, d = 5, t = cur.dur })
+    end
     ns.Fire("distrib", "roll", m.key, c, why)
 end
 
@@ -146,8 +168,19 @@ function D.Reroll()
     local tied = {}
     for p in pairs(cur.attr.pool) do tied[#tied + 1] = p end
     table.sort(tied)
-    send("T", { id = cur.id, i = cur.item, p = tied })
+    cur.deadline, cur.expired = now() + cur.dur, nil
+    send("T", { id = cur.id, i = cur.item, p = tied, d = cur.dur })
     ns.Fire("distrib", "reroll")
+    return true
+end
+
+--- Un joueur passe (bouton « Passer » de sa fenetre de raideur).
+function D.Pass(key, name)
+    local cur = D.cur
+    if not (cur and key) or cur.passed[key] then return false end
+    cur.passed[key] = name or D.NameOf(key)
+    if name then cur.names[key] = cur.names[key] or name end
+    ns.Fire("distrib", "pass", key)
     return true
 end
 

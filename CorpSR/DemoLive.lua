@@ -137,6 +137,10 @@ local function scheduleRolls(cur)
                     fakeRoll(cur, m, delay, r.mog)
                 elseif x <= 51 then
                     fakeRoll(cur, m, delay, r.sr)                           -- refuse : pas de SR
+                elseif x <= 70 then
+                    after(delay, function()                                 -- « Passer »
+                        if D.cur == cur then D.Pass(m.key, m.name) end
+                    end)
                 end
             end
         end

@@ -412,6 +412,9 @@ do
     FS.RunTimers()
     FS.RunTimers()
     FS.Layout()
+    -- le temps a tourne : 6 s restantes (barre or)
+    FS.time = FS.time + 9
+    ns.AwardView.Tick()
     add(dump(FS, "Attribution", "Fenêtre d'attribution (en direct)", { CorpSRAwardWindow }))
     -- la meme, retrecie a la poignee : les rangees se resserrent
     CorpSRAwardWindow:SetSize(480, 400)
@@ -419,6 +422,9 @@ do
     add(dump(FS, "AttributionEtroite", "Fenêtre d'attribution rétrécie", { CorpSRAwardWindow }))
     CorpSRAwardWindow:SetSize(640, 400)
     FS.Layout()
+    -- 3 s restantes : la barre du raideur est rouge
+    FS.time = FS.time + 3
+    ns.Raider.Tick()
     add(dump(FS, "Raideur", "Fenêtre du raideur", { CorpSRRaiderWindow }))
 
     -- la remise : quelques objets attribues, un au desenchanteur

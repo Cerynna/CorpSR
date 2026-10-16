@@ -32,26 +32,44 @@ local D = ns.Distrib
 
 local A = {}
 ns.Auto = A
-A.DELAYS = { 0, 10, 15, 20, 30 }
-A.DEFAULT = 15
+A.DEFAULT, A.MIN, A.MAX = 15, 5, 120
 
+-- Reglages (demande du 16/10) : chaque attribution a un minuteur, de la
+-- duree choisie ; la case « Auto » dit si l on valide tout seul a la fin
+-- (et si la soiree et le butin se lancent seuls chez le maitre du butin).
+-- Avant : un seul delai, 0 = coupe (CorpSRDB.autoDelay) : repris tel quel.
+local function clampDelay(d) return math.max(A.MIN, math.min(A.MAX, math.floor(d + 0.5))) end
+
+--- Duree des jets de chaque objet (secondes).
 function A.Delay()
     local d = ns.db and ns.db.autoDelay
-    if type(d) ~= "number" then return A.DEFAULT end
-    return d
+    if type(d) ~= "number" or d <= 0 then return A.DEFAULT end
+    return clampDelay(d)
+end
+
+--- La case « Auto » est-elle cochee ?
+function A.On()
+    local db = ns.db
+    if not db then return true end
+    if type(db.autoOn) == "boolean" then return db.autoOn end
+    return db.autoDelay ~= 0          -- ancien reglage « coupe »
 end
 
 function A.SetDelay(d)
-    if ns.db then ns.db.autoDelay = d end
-    -- en cours d attribution : le nouveau reglage s applique tout de suite
-    local cur = D.cur
-    if cur then
-        if d <= 0 then
-            cur.deadline = nil
-        elseif A.Leader() then
-            cur.deadline = (GetTime and GetTime() or 0) + d
-        end
+    d = tonumber(d)
+    if not d then return end
+    d = clampDelay(d)
+    if ns.db then
+        if ns.db.autoDelay == 0 and type(ns.db.autoOn) ~= "boolean" then ns.db.autoOn = false end
+        ns.db.autoDelay = d
     end
+    -- en cours d attribution : le temps repart de la nouvelle duree
+    if D.cur then D.SetTime(d) end
+    ns.Fire("data")
+end
+
+function A.SetAuto(on)
+    if ns.db then ns.db.autoOn = on and true or false end
     ns.Fire("data")
 end
 
@@ -86,7 +104,7 @@ end
 
 --- Est-ce a moi de mener la soiree automatique ?
 function A.Leader()
-    if A.Delay() <= 0 then return false end
+    if not A.On() then return false end
     if ns.DemoLive and ns.DemoLive.running then return false end   -- soiree de demo scriptee
     if not ns.Can("session") then return false end
     return A.Distributor()
@@ -174,7 +192,6 @@ function A.Next()
     end
     local cur = D.Start(item, count, false)
     if not cur then return false end
-    cur.deadline = now() + A.Delay()
     showAward()
     return true
 end
@@ -188,14 +205,19 @@ function A.OnLoot()
     A.Next()
 end
 
---- Echeance : valider, relancer ou attendre le choix du distributeur.
+--- Echeance : « Auto » coche, valider, relancer ou attendre le choix du
+-- distributeur ; sinon, le temps est ecoule et le distributeur decide.
 function A.Check()
     local cur = D.cur
-    if not (cur and cur.deadline) or now() < cur.deadline then return end
+    if not (cur and cur.deadline) or now() < cur.deadline or cur.expired then return end
+    if not A.On() then
+        cur.expired = true
+        ns.Fire("distrib", "expired")
+        return
+    end
     local res = cur.attr:Result()
     if res.tie then
         D.Reroll()
-        if D.cur then D.cur.deadline = now() + A.Delay() end
     elseif #res.winners > 0 then
         D.Validate()
     else
@@ -212,11 +234,6 @@ end
 
 ns.On("loot", function() A.OnLoot() end)
 ns.On("distrib", function(what)
-    -- toute attribution du distributeur suit le delai, meme lancee (ou
-    -- relancee entre ex aequo) a la main
-    if (what == "start" or what == "reroll") and D.cur and A.Leader() then
-        D.cur.deadline = now() + A.Delay()
-    end
     -- apres une validation (ou le choix d un reste) : l objet suivant
     if what == "validated" and A.Leader() then
         ns.Later("autoNext", 2, function() A.Next() end)

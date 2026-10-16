@@ -12,6 +12,9 @@
     Messages acceptes (GUILD) : d un membre de la guilde, dans notre
     groupe, dont le grade a le droit « award ». A : debut, T : relance
     entre ex aequo (seuls ceux-la revoient leurs boutons), Z : fin.
+    Chaque attribution a un minuteur (d, en secondes, dans A et T ; U quand
+    il change) : une barre se vide, verte puis or, rouge a la fin.
+    P (en prive, vers le distributeur) : « Passer », pour qu il le sache.
     D (en prive, WHISPER) : le distributeur a un objet a nous remettre
     (gagne, ou a desenchanter) : message dans le chat et alerte sonore.
     En mode demo, la fenetre s ouvre aussi et le jet est simule.
@@ -29,7 +32,7 @@ local win, cur
 
 local function build()
     win = CreateFrame("Frame", "CorpSRRaiderWindow", UIParent)
-    win:SetSize(300, 132)
+    win:SetSize(300, 146)
     win:SetPoint("TOP", 0, -140)
     win:SetFrameStrata("FULLSCREEN_DIALOG")
     win:SetClampedToScreen(true)
@@ -56,10 +59,14 @@ local function build()
     win.info:SetPoint("TOPLEFT", 44, -42)
     win.info:SetPoint("TOPRIGHT", -8, -42)
     win.info:SetHeight(14)
+    -- le temps qui reste pour jouer : la barre se vide et rougit a la fin
+    win.bar = UI.TimerBar(win, 8)
+    win.bar:SetPoint("TOPLEFT", 8, -60)
+    win.bar:SetPoint("TOPRIGHT", -8, -60)
     win.buttons = {}
     for i = 1, 5 do
         local b = UI.Button(win, "", 92)
-        b:SetPoint("TOPLEFT", 8 + ((i - 1) % 3) * 96, -64 - math.floor((i - 1) / 3) * 26)
+        b:SetPoint("TOPLEFT", 8 + ((i - 1) % 3) * 96, -74 - math.floor((i - 1) / 3) * 26)
         b:SetScript("OnClick", function(self) W.Click(self.cat, self.max) end)
         win.buttons[i] = b
     end
@@ -67,7 +74,39 @@ local function build()
     win.status:SetPoint("BOTTOMLEFT", 8, 6)
     win.status:SetPoint("BOTTOMRIGHT", -8, 6)
     win.status:SetHeight(14)
+    local acc = 0
+    win:SetScript("OnUpdate", function(_, e)
+        acc = acc + e
+        if acc < 0.05 then return end
+        acc = 0
+        W.Tick()
+    end)
     win:Hide()
+end
+
+-- fin des jets : celle annoncee par le distributeur (en demo : la sienne, ici)
+local function endsOf(c)
+    local D = ns.Distrib
+    if ns.demo and D.cur and D.cur.id == c.id then return D.cur.deadline, D.cur.dur end
+    return c.ends, c.dur
+end
+
+--- Barre et ligne du bas a jour (quelques fois par seconde).
+function W.Tick()
+    local c = cur
+    if not (win and c) then return end
+    local ends, dur = endsOf(c)
+    local left = ends and (ends - (GetTime and GetTime() or 0)) or nil
+    win.bar:SetTime(left, dur)
+    if c.done then
+        win.status:SetText(L.RAIDER_DONE)
+    elseif left and left > 0 then
+        win.status:SetText(L.RAIDER_LEFT:format(math.ceil(left)) .. "  " .. L.RAIDER_HINT)
+    elseif left then
+        win.status:SetText(UI.Hex("bad") .. L.RAIDER_TIME_UP .. "|r")
+    else
+        win.status:SetText(L.RAIDER_HINT)
+    end
 end
 
 -- ce que le joueur peut jouer pour cet objet
@@ -115,7 +154,7 @@ local function render()
             b:Hide()
         end
     end
-    win.status:SetText(c.done and L.RAIDER_DONE or L.RAIDER_HINT)
+    W.Tick()
 end
 
 --- Montre la fenetre pour une attribution { id, sid, item, count, free }.
@@ -135,7 +174,14 @@ end
 function W.Click(cat, max)
     if not cur or cur.done then return end
     if cat == "pass" then
+        -- on le dit au distributeur (en demo, il est ici)
+        local c = cur
         W.Hide()
+        if ns.demo then
+            ns.Distrib.Pass(ns.Me(), ns.Name(ns.Me()))
+        elseif c and c.from and ns.Comm then
+            ns.Comm.Send("P", J.Encode({ id = c.id }), "WHISPER", c.from)
+        end
         return
     end
     cur.done = true
@@ -162,8 +208,22 @@ local function allowed(sender)
     return ns.Raid.Members().byKey[m.key] ~= nil
 end
 
+local function secs(v) return R.IsInt(v, 1, 600) and v or nil end
+local function now() return GetTime and GetTime() or 0 end
+
 function W.OnMessage(kind, payload, channel, sender)
-    if ns.demo or not allowed(sender) then return end
+    if ns.demo then return end
+    -- P (chez le distributeur, en prive) : un joueur du groupe passe
+    if kind == "P" then
+        local D = ns.Distrib
+        local d = channel == "WHISPER" and J.Decode(payload)
+        if type(d) ~= "table" or not (D.cur and d.id == D.cur.id) or type(sender) ~= "string" then return end
+        local g = ns.Raid.Members()
+        local m = g.byName[sender] or g.byName[(sender:gsub("%-.*$", ""))]
+        if m then D.Pass(m.key, m.name) end
+        return
+    end
+    if not allowed(sender) then return end
     -- D (en prive) : le distributeur doit nous remettre un objet
     if kind == "D" then
         if channel ~= "WHISPER" then return end
@@ -184,7 +244,9 @@ function W.OnMessage(kind, payload, channel, sender)
     if type(d) ~= "table" or type(d.id) ~= "string" then return end
     if kind == "A" then
         if not R.IsInt(d.i, 1, 10000000) or type(d.s) ~= "string" then return end
-        W.Open({ id = d.id, sid = d.s, item = d.i, count = R.IsInt(d.n, 1, 40) and d.n or 1, free = d.f == true })
+        local dur = secs(d.d)
+        W.Open({ id = d.id, sid = d.s, item = d.i, count = R.IsInt(d.n, 1, 40) and d.n or 1, free = d.f == true,
+            from = sender, dur = dur, ends = dur and now() + dur or nil })
     elseif kind == "T" then
         if not cur or cur.id ~= d.id or type(d.p) ~= "table" then return end
         for _, k in ipairs(d.p) do
@@ -192,11 +254,20 @@ function W.OnMessage(kind, payload, channel, sender)
                 -- on relance dans la categorie de son premier jet
                 cur.tieCat = cur.myCat or choices({ sid = cur.sid, item = cur.item, free = cur.free })[1][1]
                 cur.done = false
+                local dur = secs(d.d)
+                if dur then cur.dur, cur.ends = dur, now() + dur end
                 W.Open(cur)
                 return
             end
         end
         W.Hide(d.id)
+    elseif kind == "U" then
+        -- le temps change (jet tardif, duree changee) : la barre suit
+        local dur = secs(d.d)
+        if cur and cur.id == d.id and dur then
+            cur.ends = now() + dur
+            cur.dur = secs(d.t) or cur.dur or dur
+        end
     elseif kind == "Z" then
         W.Hide(d.id)
     end

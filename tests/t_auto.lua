@@ -85,10 +85,10 @@ Test("pas chef de raid, ou auto coupe : rien de tout seul", function()
     loot(FS, { 17076 })
     Eq(D.cur, nil, "pas d attribution lancee")
     FS.leader = true
-    ns.Auto.SetDelay(0)
+    ns.Auto.SetAuto(false)
     loot(FS, { 17076 })
     Eq(D.cur, nil, "auto coupe")
-    ns.Auto.SetDelay(15)
+    ns.Auto.SetAuto(true)
     loot(FS, { 17076 })
     Ok(D.cur, "auto remis : lancee")
 end)
@@ -120,7 +120,7 @@ Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du 
     local method, mlRaid = 2, 1
     _G.C_PartyInfo = { GetLootMethod = function() return method, nil, mlRaid end }
     _G.UnitIsUnit = function(a, b) return a == "raid1" and b == "player" end
-    ns.Auto.SetDelay(0)
+    ns.Auto.SetAuto(false)
     Eq(ns.Auto.MasterLooter(), true, "je suis maitre du butin")
     loot(FS, { 17080 })                       -- objet sans interet (pas epique, inconnu)
     Ok(not ns.AwardWindow.IsShown(), "pas pour un butin sans interet")
@@ -141,7 +141,7 @@ Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du 
     -- automatisme en marche et maitre du butin : l attribution se lance
     ns.AwardWindow.Hide()
     method, mlRaid, FS.leader = 2, 1, false
-    ns.Auto.SetDelay(15)
+    ns.Auto.SetAuto(true)
     loot(FS, { 18814 })
     Ok(ns.AwardWindow.IsShown(), "ouverte")
     Ok(ns.Distrib.cur and ns.Distrib.cur.item == 18814, "le maitre du butin mene l attribution")
@@ -176,15 +176,38 @@ Test("demo : une attribution lancee a la main suit aussi le delai Auto", functio
     Ok(not D.cur, "validee toute seule")
     local last = ns.State().awards[#ns.State().awards]
     Eq(last.i, items[2], "attribuee")
-    -- Coupe en cours de route : plus d echeance ; remis : elle revient
+    -- Auto decoche : le minuteur tourne quand meme, rien ne se valide seul
     FS.RunTimers()
     if D.cur then D.Finish() end
+    A.SetAuto(false)
     D.Start(items[4], 1, false)
-    A.SetDelay(0)
-    Eq(D.cur.deadline, nil, "coupe : pas d echeance")
+    Ok(D.cur.deadline and D.cur.dur == 15, "minuteur meme sans Auto")
     advance(FS, 30)
-    Ok(D.cur, "coupe : rien ne se valide")
-    A.SetDelay(15)
-    Ok(D.cur.deadline, "remis : echeance")
+    Ok(D.cur and D.cur.expired, "temps ecoule, rien ne se valide")
+    Ok(FS.Texts(ns.AwardWindow.View()):find("temps écoulé", 1, true), "affiche : temps ecoule")
+    -- la duree se regle au champ ; bornes 5 a 120
+    local field = ns.AwardWindow.View().autoTime
+    field:SetText("30")
+    field:GetScript("OnEnterPressed")(field)
+    Eq(A.Delay(), 30, "duree tapee")
+    Ok(not D.cur.expired and math.abs(D.cur.deadline - GetTime() - 30) < 0.01, "le temps repart")
+    field:SetText("2")
+    field:GetScript("OnEnterPressed")(field)
+    Eq(A.Delay(), 5, "au moins 5 s")
+    -- la case Auto
+    ns.AwardWindow.View().autoOn:Click()
+    Ok(A.On(), "case cochee")
     Eq(#FS.errors, 0, "erreurs")
+end)
+
+Test("ancien reglage « coupe » (0) : Auto decoche, duree par defaut", function()
+    local FS, ns = Game({ noLogin = true })
+    CorpSRDB = { intro = true, autoDelay = 0 }
+    FS.Fire("ADDON_LOADED", "CorpSR")
+    FS.Fire("PLAYER_LOGIN")
+    Ok(not ns.Auto.On(), "Auto decoche")
+    Eq(ns.Auto.Delay(), 15, "15 s")
+    ns.Auto.SetDelay(20)
+    Ok(not ns.Auto.On(), "toujours decoche")
+    Eq(CorpSRDB.autoDelay, 20, "duree gardee")
 end)
