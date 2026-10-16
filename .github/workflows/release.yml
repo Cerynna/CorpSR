@@ -1,0 +1,109 @@
+# Publication d'une version : pousser un tag vX.Y.Z (la version du .toc).
+#   - zip de l'addon (dossier CorpSR seulement, comme dist/)
+#   - release GitHub avec le zip et les nouveautés (CHANGELOG.md)
+#   - envoi sur Wago (projet ## X-Wago-ID du .toc, secret WAGO_API_TOKEN)
+# Un tag -beta ou -alpha (v0.5.0-beta1) part en beta ou alpha sur Wago.
+# Relancer le workflow sur un tag déjà publié remplace le zip de la release
+# GitHub ; Wago refuse un numéro de version déjà envoyé.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag déjà poussé à republier (ex. v0.4.29)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Version, projet Wago, version du jeu
+        run: |
+          field() { sed -n "s/^## $1: *//p" CorpSR/CorpSR.toc | tr -d '\r' | head -n 1; }
+          version="${TAG#v}"
+          toc="$(field Version)"
+          base="${version%%-*}"
+          if [ "$base" != "$toc" ]; then
+            echo "::error::le tag $TAG ne correspond pas a la version du .toc ($toc)"
+            exit 1
+          fi
+          iface="$(field Interface)"
+          patch="$((iface / 10000)).$((iface / 100 % 100)).$((iface % 100))"
+          case "$version" in
+            *-alpha*) stability=alpha ;;
+            *-beta*) stability=beta ;;
+            *) stability=stable ;;
+          esac
+          {
+            echo "VERSION=$version"
+            echo "WAGO_ID=$(field X-Wago-ID)"
+            echo "GAME_PATCH=$patch"
+            echo "STABILITY=$stability"
+            echo "ZIP=CorpSR-$version.zip"
+          } >> "$GITHUB_ENV"
+          echo "CorpSR $version ($stability), jeu $patch (Interface $iface)"
+
+      - name: Zip de l'addon
+        run: git archive --format=zip -o "$ZIP" HEAD CorpSR
+
+      - name: Nouveautés de la version
+        run: |
+          awk -v v="$VERSION" '
+            /^## / { if (on) exit; on = ($2 == v) ; next }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::pas de section « ## $VERSION » dans CHANGELOG.md"
+            exit 1
+          fi
+          cat notes.md
+
+      - name: Release GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pre=""
+          [ "$STABILITY" = stable ] || pre="--prerelease"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" "$ZIP" --title "CorpSR $VERSION" --notes-file notes.md $pre
+          fi
+
+      - name: Envoi sur Wago
+        env:
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+        run: |
+          if [ -z "$WAGO_API_TOKEN" ]; then
+            echo "::warning::secret WAGO_API_TOKEN absent : rien n'est envoye sur Wago"
+            exit 0
+          fi
+          if [ -z "$WAGO_ID" ]; then
+            echo "::error::pas de « ## X-Wago-ID » dans CorpSR.toc"
+            exit 1
+          fi
+          jq -n --arg label "$VERSION" --arg stability "$STABILITY" --arg patch "$GAME_PATCH" \
+            --rawfile changelog notes.md \
+            '{label: $label, stability: $stability, changelog: $changelog, supported_forever_patches: [$patch]}' > metadata.json
+          code=$(curl -sS --retry 3 --retry-delay 10 -o wago.json -w '%{http_code}' \
+            -H "authorization: Bearer $WAGO_API_TOKEN" -H "accept: application/json" \
+            -F "metadata=<metadata.json" -F "file=@$ZIP" \
+            "https://addons.wago.io/api/projects/$WAGO_ID/version")
+          cat wago.json; echo
+          if [ "$code" != 200 ] && [ "$code" != 201 ]; then
+            echo "::error::Wago a repondu $code"
+            exit 1
+          fi
