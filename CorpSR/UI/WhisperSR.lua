@@ -96,13 +96,7 @@ local function build()
     count:SetPoint("LEFT", anchor, "RIGHT", 6, 0)
     count:SetHeight(14)
     win.count = count
-    local acc = 0
-    win:SetScript("OnUpdate", function(_, e)
-        acc = acc + e
-        if acc < 0.3 then return end
-        acc = 0
-        reply.Place()
-    end)
+    -- le bouton « Repondre » suit son repere tout seul (Announce.lua)
     win:SetScript("OnHide", function() reply.Hide() end)
     win:Hide()
 end

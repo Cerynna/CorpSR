@@ -474,6 +474,14 @@ Test("annonces : Lancer annonce le debut, Valider annonce le gagnant (boutons se
     FS.Layout()
     local start = CorpSRAnn_start
     Ok(start and start:IsShown(), "bouton securise sur Lancer")
+    -- la fenetre bouge : le bouton suit des l image suivante (avant : 0,3 s)
+    local view = ns.AwardWindow.View()
+    view.start.GetLeft = function() return 340 end
+    view.start.GetTop = function() return 260 end
+    FS.Tick(0.016)
+    local _, rel, _, x, y = start:GetPoint(1)
+    Eq(rel, UIParent, "place par rapport a l ecran (pas accroche a notre fenetre)")
+    Ok(x == 340 and y == 260, "suit la fenetre a l image suivante : " .. tostring(x) .. "," .. tostring(y))
     local macro = start:GetAttribute("macrotext")
     Ok(macro and macro:find("^/rw ") and macro:find("/roll 110", 1, true) and macro:find("(15 s)", 1, true), "debut : " .. tostring(macro))
     start:GetScript("PostClick")(start)

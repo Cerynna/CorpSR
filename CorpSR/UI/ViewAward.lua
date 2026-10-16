@@ -476,15 +476,7 @@ local function build(parent)
         f.left[i] = b
     end
 
-    -- le bouton securise suit son repere (fenetre deplacee)
-    local acc = 0
-    f:SetScript("OnUpdate", function(_, e)
-        acc = acc + e
-        if acc < 0.3 then return end
-        acc = 0
-        ns.Announce.Place()
-        S.PlaceSecure()
-    end)
+    -- les boutons securises suivent leur repere tout seuls (Announce.lua)
     f:SetScript("OnHide", function()
         ns.Announce.Hide()
         S.HideSecure()
