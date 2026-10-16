@@ -30,7 +30,9 @@
                                       objet i a p : categorie c, jet r, points pt,
                                       q = classement { {p, c, r}... } (transparence),
                                       dr = drop (attribution), cr = presents qui l ont
-                                      SR : credites au drop (une fois par drop)
+                                      SR : credites au drop (une fois par drop) ;
+                                      m = true : gagnant choisi par le
+                                      distributeur (a la place du classement)
         fix    p, i, d, y             correction de d points, raison y obligatoire
         undo   ref, y                 annule l ecriture ref, raison y obligatoire
         reset                         reinitialisation complete (GM seulement) :
@@ -127,6 +129,7 @@ local FORM = {
         if e.pt ~= nil and not isInt(e.pt, 0, 1000000) then return false end
         if e.dr ~= nil and not isStr(e.dr, 80) then return false end
         if e.cr ~= nil and not isList(e.cr, 40, isKey) then return false end
+        if e.m ~= nil and e.m ~= true then return false end
         return e.q == nil or isList(e.q, 80, function(x)
             return type(x) == "table" and isKey(x[1]) and type(x[2]) == "string" and isInt(x[3], 0, 100000)
         end)

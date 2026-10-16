@@ -13,7 +13,8 @@
     groupe, dont le grade a le droit « award ». A : debut, T : relance
     entre ex aequo (seuls ceux-la revoient leurs boutons), Z : fin.
     Chaque attribution a un minuteur (d, en secondes, dans A et T ; U quand
-    il change) : une barre se vide, verte puis or, rouge a la fin.
+    sa duree change) : une barre se vide, verte puis or, rouge a la fin ;
+    2 s apres la fin, les boutons de jet se grisent (trop tard).
     P (en prive, vers le distributeur) : « Passer », pour qu il le sache.
     D (en prive, WHISPER) : le distributeur a un objet a nous remettre
     (gagne, ou a desenchanter) : message dans le chat et alerte sonore.
@@ -84,6 +85,8 @@ local function build()
     win:Hide()
 end
 
+local render   -- plus bas (W.Tick la rappelle quand il devient trop tard)
+
 -- fin des jets : celle annoncee par le distributeur (en demo : la sienne, ici)
 local function endsOf(c)
     local D = ns.Distrib
@@ -98,6 +101,13 @@ function W.Tick()
     local ends, dur = endsOf(c)
     local left = ends and (ends - (GetTime and GetTime() or 0)) or nil
     win.bar:SetTime(left, dur)
+    -- 2 s apres la fin : trop tard pour jouer, les boutons se grisent
+    local late = left ~= nil and left < -ns.Distrib.GRACE
+    if late ~= (c.late or false) then
+        c.late = late
+        render()
+        return
+    end
     if c.done then
         win.status:SetText(L.RAIDER_DONE)
     elseif left and left > 0 then
@@ -135,7 +145,7 @@ local function choices(c)
     return out
 end
 
-local function render()
+function render()
     local c = cur
     win.icon:SetItem(c.item)
     win.item:SetText(ns.ItemText(c.item) .. ((c.count or 1) > 1 and ("  ×" .. c.count) or ""))
@@ -147,7 +157,7 @@ local function render()
         if x then
             b.cat, b.max = x[1], x[2]
             b:SetLabel(x[1] == "pass" and L.RAIDER_PASS or (ns.CatLabel(x[1]) .. "  " .. UI.Hex("dim") .. x[2] .. "|r"))
-            b:SetActive(not c.done)
+            b:SetActive(not c.done and (x[1] == "pass" or not c.late))
             b.tip = (x[1] ~= "pass") and { ns.CatLabel(x[1]), { L.RAIDER_ROLL_TIP:format(x[2]) } } or nil
             b:Show()
         else
@@ -262,7 +272,7 @@ function W.OnMessage(kind, payload, channel, sender)
         end
         W.Hide(d.id)
     elseif kind == "U" then
-        -- le temps change (jet tardif, duree changee) : la barre suit
+        -- la duree a change chez le distributeur : la barre suit
         local dur = secs(d.d)
         if cur and cur.id == d.id and dur then
             cur.ends = now() + dur
@@ -270,6 +280,21 @@ function W.OnMessage(kind, payload, channel, sender)
         end
     elseif kind == "Z" then
         W.Hide(d.id)
+        -- la fin de l objet, dans le chat (sans clic) : gagnants ou reste
+        if R.IsInt(d.i, 1, 10000000) then
+            if type(d.w) == "table" and #d.w > 0 then
+                local parts = {}
+                for _, x in ipairs(d.w) do
+                    if type(x) == "table" and type(x[1]) == "string" and type(x[2]) == "string" then
+                        parts[#parts + 1] = x[1] .. " (" .. ns.CatLabel(x[2]) .. ")"
+                    end
+                end
+                if #parts > 0 then ns.Say(L.ANN_WIN:format(ns.ItemText(d.i), table.concat(parts, ", "))) end
+            elseif type(d.c) == "string" and R.LEFTOVER[d.c] then
+                local what = ns.CatLabel(d.c) .. ((type(d.p) == "string") and (" (" .. d.p .. ")") or "")
+                ns.Say(L.ANN_LEFT:format(ns.ItemText(d.i), what))
+            end
+        end
     end
 end
 

@@ -16,8 +16,8 @@
       - les SR se verrouillent au premier objet attribue (Distrib.Start) ;
       - a l ouverture du butin : la fenetre d attribution s ouvre et lance
         le premier objet du raid (ou epique) pas encore attribue ;
-      - apres le delai (15 s par defaut, repousse quand un jet arrive ; aussi
-        pour une attribution lancee ou relancee a la main) :
+      - a la fin du temps (15 s par defaut ; plus 2 s de marge pour les
+        jets en retard ; aussi pour une attribution lancee a la main) :
         validation, ou relance si egalite, puis l objet suivant ; si
         personne n en veut, on attend le choix du distributeur.
     L annonce dans le chat reste un clic (bouton securise) : le jeu
@@ -209,16 +209,21 @@ end
 -- distributeur ; sinon, le temps est ecoule et le distributeur decide.
 function A.Check()
     local cur = D.cur
-    if not (cur and cur.deadline) or now() < cur.deadline or cur.expired then return end
+    if not (cur and cur.deadline) or now() < cur.deadline then return end
     if not A.On() then
-        cur.expired = true
-        ns.Fire("distrib", "expired")
+        if not cur.expired then
+            cur.expired = true
+            ns.Fire("distrib", "expired")
+        end
         return
     end
-    local res = cur.attr:Result()
-    if res.tie then
+    -- les jets arrives juste apres la fin comptent : on valide apres la marge
+    if now() < cur.deadline + D.GRACE then return end
+    -- le gagnant choisi par le distributeur, sinon le classement
+    local win = D.Winners()
+    if win.tie then
         D.Reroll()
-    elseif #res.winners > 0 then
+    elseif #win.list > 0 then
         D.Validate()
     else
         D.NoTaker()

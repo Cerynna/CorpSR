@@ -39,30 +39,52 @@ local function link(id)
 end
 
 -- texte a annoncer selon le moment
+-- textes d annonce : debut d un objet, gagnants, egalite, reste
+local function startText(item, count, free)
+    local r = ns.State().cfg.rolls
+    local secs = " (" .. ns.Auto.Delay() .. " s)"
+    if free then return L.ANN_FREE:format(link(item), r.free) .. secs end
+    return L.ANN_START:format(link(item), count or 1, r.sr, r.ms, r.os, r.mog) .. secs
+end
+
+local function winText(item, winners, names)
+    local parts = {}
+    for _, c in ipairs(winners) do
+        local who = (names and names[c.p]) or ns.Name(c.p)
+        local how = (c.cat == "sr") and L.ANN_SR_TOTAL:format(c.roll, c.pts, c.total) or tostring(c.roll)
+        parts[#parts + 1] = who .. " (" .. ns.CatLabel(c.cat) .. " " .. how .. ")"
+    end
+    return L.ANN_WIN:format(link(item), table.concat(parts, ", "))
+end
+
+local function tieText(item, list)
+    local names = {}
+    for _, c in ipairs(list) do names[#names + 1] = D.NameOf(c.p or c) end
+    table.sort(names)
+    return L.ANN_TIE:format(link(item), table.concat(names, ", "))
+end
+
+local function leftText(item, choice)
+    local what = ns.CatLabel(choice)
+    local de = choice == "de" and ns.Deliver and ns.Deliver.DE()
+    if de then what = what .. " (" .. de.name .. ")" end
+    return L.ANN_LEFT:format(link(item), what)
+end
+
 local function announceText()
-    local st = ns.State()
-    local r = st.cfg.rolls
     local cur = D.cur
     if cur then
         if cur.attr.pool then
-            local names = {}
-            for p in pairs(cur.attr.pool) do names[#names + 1] = D.NameOf(p) end
-            table.sort(names)
-            return L.ANN_TIE:format(link(cur.item), table.concat(names, ", "))
+            local list = {}
+            for p in pairs(cur.attr.pool) do list[#list + 1] = p end
+            return tieText(cur.item, list)
         end
-        if cur.free then return L.ANN_FREE:format(link(cur.item), r.free) end
-        return L.ANN_START:format(link(cur.item), cur.count, r.sr, r.ms, r.os, r.mog)
+        return startText(cur.item, cur.count, cur.free)
     end
     local last = D.last
     if last then
-        if last.choice then return L.ANN_LEFT:format(link(last.item), ns.CatLabel(last.choice)) end
-        local parts = {}
-        for _, c in ipairs(last.winners) do
-            local who = last.names[c.p] or ns.Name(c.p)
-            local how = (c.cat == "sr") and L.ANN_SR_TOTAL:format(c.roll, c.pts, c.total) or tostring(c.roll)
-            parts[#parts + 1] = who .. " (" .. ns.CatLabel(c.cat) .. " " .. how .. ")"
-        end
-        return L.ANN_WIN:format(link(last.item), table.concat(parts, ", "))
+        if last.choice then return leftText(last.item, last.choice) end
+        return winText(last.item, last.winners, last.names)
     end
     return nil
 end
@@ -83,7 +105,13 @@ local function buildRow(list)
     r.cols = UI.Columns(r, COLS)
     r:SetScript("OnClick", function(self, button)
         local d = self.d
-        if button == "RightButton" and d.kind == "cand" then D.Remove(d.c.p) end
+        if d.kind ~= "cand" or d.prev then return end
+        if button == "RightButton" then
+            D.Remove(d.c.p)
+        else
+            -- choisir ce gagnant a la place du classement (re-clic : annuler)
+            D.Force(d.c.p)
+        end
     end)
     r:SetScript("OnEnter", function(self)
         local d = self.d
@@ -96,7 +124,8 @@ local function buildRow(list)
             end
             UI.Tip(self, nil, lines, d.rec.e.i)
         elseif d.kind == "cand" then
-            UI.Tip(self, D.NameOf(d.c.p), { d.c.manual and L.AW_MANUAL or L.AW_FROM_CHAT, { L.AW_REMOVE_TIP, 0.6, 0.6, 0.6 } })
+            UI.Tip(self, D.NameOf(d.c.p), { d.c.manual and L.AW_MANUAL or L.AW_FROM_CHAT,
+                { L.AW_FORCE_TIP, 0.6, 0.6, 0.6 }, { L.AW_REMOVE_TIP, 0.6, 0.6, 0.6 } })
         end
     end)
     r:SetScript("OnLeave", UI.HideTip)
@@ -150,7 +179,9 @@ local function updateRow(r, d, index)
     c.roll:SetText(tostring(cand.roll))
     c.pts:SetText(cand.cat == "sr" and tostring(cand.pts) or "")
     c.total:SetText(UI.Hex("gold") .. cand.total .. "|r")
-    if d.win then
+    if d.chosen then
+        c.st:SetText(UI.Hex("gold") .. L.AW_CHOSEN .. "|r")
+    elseif d.win then
         c.st:SetText(UI.Hex("good") .. (d.prev and L.AW_WON_BEFORE or L.AW_WINS) .. "|r")
     elseif d.tie then
         c.st:SetText(UI.Hex("gold") .. L.AW_TIE .. "|r")
@@ -163,12 +194,15 @@ local function rows()
     local cur = D.cur
     local out = {}
     if cur then
-        local res = cur.attr:Result()
+        local win = D.Winners()
+        local res = win.res
         local wins, ties = {}, {}
-        for _, c in ipairs(res.winners) do wins[c] = true end
-        for _, c in ipairs(res.tie and res.tie.list or {}) do ties[c] = true end
+        for _, c in ipairs(win.list) do wins[c] = true end
+        for _, c in ipairs(win.tie and win.tie.list or {}) do ties[c] = true end
         for _, c in ipairs(cur.attr.won) do out[#out + 1] = { kind = "cand", c = c, win = true, prev = true } end
-        for i, c in ipairs(res.list) do out[#out + 1] = { kind = "cand", c = c, pos = i, win = wins[c], tie = ties[c] } end
+        for i, c in ipairs(res.list) do
+            out[#out + 1] = { kind = "cand", c = c, pos = i, win = wins[c], tie = ties[c], chosen = win.forced and wins[c] }
+        end
         for _, x in ipairs(cur.attr.refused) do
             if x.round == cur.attr.round then out[#out + 1] = { kind = "ref", r = x } end
         end
@@ -197,6 +231,57 @@ local function notice(ok, why)
 end
 
 
+
+-- actions de la vue (boutons normaux, et boutons securises par-dessus)
+function S.DoStart(free) notice(D.Start(S.item, S.count, free)) end
+function S.DoReroll() D.Reroll() end
+function S.DoValidate()
+    local n, why = D.Validate()
+    if not n then return notice(nil, why) end
+    ns.AwardWindow.Notice(L.AW_DONE)
+end
+function S.DoLeftover(choice)
+    local ok, why = D.Leftover(choice)
+    if not ok then return notice(nil, why) end
+end
+
+-- Annonces dans le chat de raid (demande du 16/10) : le jeu interdit a un
+-- addon d y ecrire seul. « Lancer », « Jet libre », « Valider »,
+-- « Relancer » et les restes ont donc un bouton securise par-dessus
+-- (Announce.lua) : le clic annonce le debut ou la fin de l objet, puis
+-- agit. En combat ou en demo, le bouton normal dessous (sans annonce).
+local SEC = {}
+local function secure(key, btn, text, after)
+    local o = SEC[key]
+    if not o then
+        o = ns.NewSecureMacro("CorpSRAnn_" .. key)
+        SEC[key] = o
+    end
+    local cmd = ns.Announce.Command()
+    if ns.demo or not (text and cmd) or not btn:IsVisible() or not btn:IsEnabled() then return o.Hide() end
+    local macro = cmd .. text
+    -- 255 caracteres au plus : sans liens si c est trop long (un lien coupe casse le message)
+    if #macro > 255 then macro = (cmd .. text:gsub("|c%x+|H.-|h(.-)|h|r", "%1")):sub(1, 255) end
+    local label = btn.label:GetText()
+    o.Show(btn, macro, label, { label, { text, { L.ANN_ON_CLICK, 0.6, 0.6, 0.6 } } }, after)
+end
+function S.PlaceSecure() for _, o in pairs(SEC) do o.Place() end end
+function S.HideSecure() for _, o in pairs(SEC) do o.Hide() end end
+
+local function updateSecure(f)
+    local cur = D.cur
+    local win = cur and D.Winners()
+    secure("start", f.start, S.item and startText(S.item, S.count, false), function() S.DoStart(false) end)
+    secure("free", f.free, S.item and startText(S.item, S.count, true), function() S.DoStart(true) end)
+    secure("validate", f.validate, win and not win.tie and #win.list > 0 and winText(cur.item, win.list, cur.names) or nil,
+        function() S.DoValidate() end)
+    secure("reroll", f.reroll, win and win.tie and tieText(cur.item, win.tie.list) or nil, function() S.DoReroll() end)
+    local l = D.leftover
+    for i, choice in ipairs({ "free", "bank", "de" }) do
+        local text = l and ((choice == "free") and startText(l.item, l.count, true) or leftText(l.item, choice)) or nil
+        secure("left" .. i, f.left[i], text, function() S.DoLeftover(choice) end)
+    end
+end
 local layout   -- plus bas : les rangees suivent la largeur de la fenetre
 local function build(parent)
     local f = CreateFrame("Frame", nil, parent)
@@ -304,10 +389,10 @@ local function build(parent)
     count.box:SetScript("OnLeave", UI.HideTip)
     f.count = count
 
-    local start = UI.Button(f, L.AW_START, 80, function() notice(D.Start(S.item, S.count, false)) end)
+    local start = UI.Button(f, L.AW_START, 80, function() S.DoStart(false) end)
     start:SetPoint("LEFT", count, "RIGHT", 4, 0)
     f.start = start
-    local free = UI.Button(f, ns.CatLabel("free"), 90, function() notice(D.Start(S.item, S.count, true)) end)
+    local free = UI.Button(f, ns.CatLabel("free"), 90, function() S.DoStart(true) end)
     free:SetPoint("LEFT", start, "RIGHT", 4, 0)
     f.free = free
     local addList = UI.Button(f, L.AW_ADD_LIST, 80, function()
@@ -380,14 +465,10 @@ local function build(parent)
     end)
     demoAnn:SetAllPoints(annAnchor)
     f.demoAnn = demoAnn
-    local reroll = UI.Button(f, L.AW_REROLL, 120, function() D.Reroll() end)
+    local reroll = UI.Button(f, L.AW_REROLL, 120, function() S.DoReroll() end)
     reroll:SetPoint("LEFT", annAnchor, "RIGHT", 4, 0)
     f.reroll = reroll
-    local validate = UI.Button(f, L.AW_VALIDATE, 90, function()
-        local n, why = D.Validate()
-        if not n then return notice(nil, why) end
-        ns.AwardWindow.Notice(L.AW_DONE)
-    end)
+    local validate = UI.Button(f, L.AW_VALIDATE, 90, function() S.DoValidate() end)
     validate:SetPoint("LEFT", reroll, "RIGHT", 4, 0)
     f.validate = validate
     local nobody = UI.Button(f, L.AW_NOBODY, 100, function() D.NoTaker() end)
@@ -400,10 +481,7 @@ local function build(parent)
     -- reste (personne ne veut l objet)
     f.left = {}
     for i, choice in ipairs({ "free", "bank", "de" }) do
-        local b = UI.Button(f, ns.CatLabel(choice), 120, function()
-            local ok, why = D.Leftover(choice)
-            if not ok then return notice(nil, why) end
-        end)
+        local b = UI.Button(f, ns.CatLabel(choice), 120, function() S.DoLeftover(choice) end)
         b:SetPoint("LEFT", (i == 1) and annAnchor or f.left[i - 1], "RIGHT", 4, 0)
         f.left[i] = b
     end
@@ -415,8 +493,12 @@ local function build(parent)
         if acc < 0.3 then return end
         acc = 0
         ns.Announce.Place()
+        S.PlaceSecure()
     end)
-    f:SetScript("OnHide", function() ns.Announce.Hide() end)
+    f:SetScript("OnHide", function()
+        ns.Announce.Hide()
+        S.HideSecure()
+    end)
     f:SetScript("OnSizeChanged", function(self, w) layout(self, w) end)
     return f
 end
@@ -498,11 +580,12 @@ local function refresh(f)
         f.who:Update()
         f.cat:Update()
     end
-    local res = cur and cur.attr:Result()
+    -- le gagnant choisi par le distributeur l emporte sur le classement
+    local win = cur and D.Winners()
     f.reroll:SetShown(cur ~= nil)
-    f.reroll:SetActive(res ~= nil and res.tie ~= nil)
+    f.reroll:SetActive(win ~= nil and win.tie ~= nil)
     f.validate:SetShown(cur ~= nil)
-    f.validate:SetActive(res ~= nil and res.tie == nil and #res.winners > 0)
+    f.validate:SetActive(win ~= nil and win.tie == nil and #win.list > 0)
     f.nobody:SetShown(cur ~= nil)
     f.cancel:SetShown(cur ~= nil)
     for _, b in ipairs(f.left) do b:SetShown(D.leftover ~= nil) end
@@ -515,6 +598,7 @@ local function refresh(f)
         f.demoAnn:Hide()
         if text and f:IsVisible() then ns.Announce.Show(f.annAnchor, text) else ns.Announce.Hide() end
     end
+    updateSecure(f)
 
     f.list.emptyText:SetText(cur and L.AW_WAITING or L.AWARD_EMPTY)
     f.list:SetData(rows(), true)

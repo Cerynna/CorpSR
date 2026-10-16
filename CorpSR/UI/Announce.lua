@@ -119,6 +119,7 @@ function A.Show(f, msg)
 end
 
 function A.Place() ann.Place() end
+function A.Command() return chatCommand() end
 function A.Hide() ann.Hide() end
 function A.Text() return text end
 

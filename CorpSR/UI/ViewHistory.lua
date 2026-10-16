@@ -58,6 +58,7 @@ function ns.Describe(rec, st)
         elseif e.r then
             text = text .. " · " .. L.D_ROLL:format(e.r)
         end
+        if e.m then text = text .. " · " .. L.D_CHOSEN end
         return text
     elseif k == "fix" then
         return L.D_FIX:format(ns.ColorName(e.p), (e.d > 0 and "+" or "") .. e.d, ns.ItemText(e.i), e.y)

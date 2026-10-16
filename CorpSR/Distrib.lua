@@ -53,6 +53,10 @@ end
 
 local function now() return GetTime and GetTime() or 0 end
 
+-- un jet arrive jusqu a 2 s apres la fin du temps : il compte encore (le
+-- chat a pu tarder) ; plus tard, il est refuse « trop tard » (16/10)
+D.GRACE = 2
+
 -- duree des jets de chaque objet (reglage de la fenetre d attribution)
 local function duration() return (ns.Auto and ns.Auto.Delay()) or 15 end
 
@@ -138,13 +142,15 @@ function D.OnRoll(name, roll, min, max)
     local m = groupMember(cur, name)
     if not m then return end
     cur.names[m.key] = name
+    -- trop tard : plus de 2 s apres la fin du temps (le temps ne s allonge plus)
+    if cur.deadline and now() > cur.deadline + D.GRACE then
+        local a = cur.attr
+        a.refused[#a.refused + 1] = { p = m.key, roll = roll, max = max, why = "late", round = a.round }
+        ns.Fire("distrib", "roll", m.key, nil, "late")
+        return
+    end
     local c, why = cur.attr:Roll(m.key, roll, min, max)
     if not c and why == "notie" then return end
-    -- un jet qui arrive repousse un peu l echeance (les raideurs suivent)
-    if c and cur.deadline and now() + 5 > cur.deadline + 0.5 then
-        cur.deadline, cur.expired = now() + 5, nil
-        send("U", { id = cur.id, d = 5, t = cur.dur })
-    end
     ns.Fire("distrib", "roll", m.key, c, why)
 end
 
@@ -158,7 +164,50 @@ function D.Manual(key, cat, roll)
 end
 
 function D.Remove(key)
-    if D.cur and D.cur.attr:Remove(key) then ns.Fire("distrib", "remove") end
+    local cur = D.cur
+    if not cur then return end
+    for i = #(cur.forced or {}), 1, -1 do
+        if cur.forced[i] == key then table.remove(cur.forced, i) end
+    end
+    if cur.attr:Remove(key) then ns.Fire("distrib", "remove") end
+end
+
+--- Le distributeur choisit lui-meme le gagnant (clic sur une ligne de jet) :
+-- son choix remplace le classement ; re-clic : annule. Avec un seul
+-- exemplaire, un nouveau choix remplace l ancien. Rend true si choisi.
+function D.Force(key)
+    local cur = D.cur
+    if not (cur and key) then return nil end
+    cur.forced = cur.forced or {}
+    for i, k in ipairs(cur.forced) do
+        if k == key then
+            table.remove(cur.forced, i)
+            ns.Fire("distrib", "force")
+            return false
+        end
+    end
+    if #cur.forced >= (cur.count or 1) then table.remove(cur.forced, 1) end
+    cur.forced[#cur.forced + 1] = key
+    ns.Fire("distrib", "force")
+    return true
+end
+
+--- Les gagnants a donner : le choix du distributeur s il y en a un (parmi
+-- ceux qui ont joue), sinon le classement. Rend { list, tie, forced, res }.
+function D.Winners()
+    local cur = D.cur
+    if not cur then return { list = {} } end
+    local res = cur.attr:Result()
+    if cur.forced and #cur.forced > 0 then
+        local byKey = {}
+        for _, c in ipairs(res.list) do byKey[c.p] = byKey[c.p] or c end
+        local out = {}
+        for _, k in ipairs(cur.forced) do
+            if byKey[k] then out[#out + 1] = byKey[k] end
+        end
+        if #out > 0 then return { list = out, forced = true, res = res } end
+    end
+    return { list = res.winners, tie = res.tie, res = res }
 end
 
 --- Relance entre les ex aequo.
@@ -184,10 +233,14 @@ function D.Pass(key, name)
     return true
 end
 
-function D.Finish()
+--- Fin de l attribution en cours. extra : ce que les raideurs affichent
+-- (i = objet, w = { { nom, categorie } } gagnants, c = choix d un reste).
+function D.Finish(extra)
     local cur = D.cur
     if not cur then return end
-    send("Z", { id = cur.id })
+    local z = { id = cur.id }
+    for k, v in pairs(extra or {}) do z[k] = v end
+    send("Z", z)
     D.cur = nil
     ns.Fire("distrib", "finish")
 end
@@ -203,38 +256,42 @@ end
 function D.Validate()
     local cur = D.cur
     if not cur then return nil, "none" end
-    local res = cur.attr:Result()
-    if res.tie then return nil, "tie" end
-    if #res.winners == 0 then return nil, "nobody" end
+    local win = D.Winners()
+    local res = win.res
+    if win.tie then return nil, "tie" end
+    if #win.list == 0 then return nil, "nobody" end
     -- classement complet, manches precedentes comprises (transparence)
     local q = {}
     for _, c in ipairs(cur.attr.won) do q[#q + 1] = { c.p, c.cat, c.roll } end
     for _, c in ipairs(res.list) do
         if #q < 80 then q[#q + 1] = { c.p, c.cat, c.roll } end
     end
-    for _, c in ipairs(res.winners) do
+    for _, c in ipairs(win.list) do
         if ns.db and not ns.Roster().byKey[c.p] and cur.names[c.p] then ns.db.names[c.p] = cur.names[c.p] end
+        -- m : choisi par le distributeur (a la place du classement)
         local ok, why = ns.Write("award", {
             s = cur.sid, i = cur.item, p = c.p, c = c.cat, r = c.roll,
-            pt = (c.cat == "sr") and c.pts or nil, q = q, dr = cur.dr, cr = cur.cr,
+            pt = (c.cat == "sr") and c.pts or nil, q = q, dr = cur.dr, cr = cur.cr, m = win.forced or nil,
         })
         if not ok then return nil, why end
     end
-    D.last = { item = cur.item, winners = res.winners, names = cur.names }
-    local left = cur.count - #res.winners
+    D.last = { item = cur.item, winners = win.list, names = cur.names }
+    local left = cur.count - #win.list
     local l = { item = cur.item, count = left, sid = cur.sid, dr = cur.dr, cr = cur.cr }
-    D.Finish()
+    local w = {}
+    for _, c in ipairs(win.list) do w[#w + 1] = { (cur.names and cur.names[c.p]) or ns.Name(c.p), c.cat } end
+    D.Finish({ i = cur.item, w = w })
     if left > 0 then D.leftover = l end
     -- remise : en memoire (a qui, pourquoi) et tentative d echange
     if ns.Deliver then
         local list = {}
-        for _, c in ipairs(res.winners) do
+        for _, c in ipairs(win.list) do
             list[#list + 1] = { key = c.p, name = (cur.names and cur.names[c.p]) or ns.Name(c.p), cat = c.cat }
         end
         ns.Deliver.Awarded(cur.item, list)
     end
     ns.Fire("distrib", "validated")
-    return #res.winners, left
+    return #win.list, left
 end
 
 --- Personne ne veut l objet : il passe en « reste » (choix du distributeur).
@@ -269,6 +326,7 @@ function D.Leftover(choice)
     end
     D.leftover = nil
     D.last = { item = l.item, choice = choice }
+    send("Z", { id = "left", i = l.item, c = choice, p = de and de.name or nil })
     if de then
         local list = {}
         for _ = 1, l.count do list[#list + 1] = { key = de.key, name = de.name, cat = "de" } end

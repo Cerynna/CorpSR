@@ -380,3 +380,111 @@ Test("distributeur : minuteur sur chaque objet, le joueur qui passe s affiche", 
     Ok(f.timer:GetText():find("fin des jets", 1, true), "compte a rebours : " .. f.timer:GetText())
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+local function threePlayers()
+    local FS, ns = Game({ roster = {
+        { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" },
+        { "Garmor Hautcœur", "Officier", 1, "WARRIOR", "Player-4620-000000AA" },
+        { "Sylva Brumeval", "Novice", 4, "DRUID", "Player-4620-000000BB" },
+    } })
+    ns.Panel.CloseIntro()
+    FS.raid = { { "Ilona Ställer", "Player-4620-00D54EFC" }, { "Garmor Hautcœur", "Player-4620-000000AA" },
+        { "Sylva Brumeval", "Player-4620-000000BB" } }
+    FS.leader = true
+    ns.SessionActions.Open()
+    return FS, ns
+end
+
+local function wait(FS, s) for _ = 1, math.floor(s * 4 + 0.5) do FS.Tick(0.25) end end
+
+Test("fin du temps : un jet jusqu a 2 s apres compte, plus tard refuse ; le temps ne s allonge plus", function()
+    local FS, ns = threePlayers()
+    local D = ns.Distrib
+    ns.Auto.SetAuto(false)
+    ns.Auto.SetDelay(10)
+    D.Start(17076, 1, false)
+    local deadline = D.cur.deadline
+    wait(FS, 11)
+    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 64 (1-100).")
+    Eq(D.cur.deadline, deadline, "pas de prolongation")
+    Ok(D.cur.attr:Result().list[1], "jet 1 s apres la fin : compte")
+    wait(FS, 2)
+    FS.Fire("CHAT_MSG_SYSTEM", "Sylva Brumeval obtient un 90 (1-100).")
+    local r = D.cur.attr.refused[#D.cur.attr.refused]
+    Ok(r and r.why == "late", "jet 3 s apres la fin : trop tard")
+    Eq(#D.cur.attr:Result().list, 1, "toujours un seul jet")
+    -- Auto : la validation attend la marge de 2 s
+    D.Finish()
+    ns.Auto.SetAuto(true)
+    D.Start(18814, 1, false)
+    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 50 (1-100).")
+    wait(FS, 11)
+    Ok(D.cur, "1 s apres la fin : pas encore valide")
+    wait(FS, 2)
+    Ok(not D.cur, "valide apres la marge")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
+Test("le distributeur choisit un autre gagnant que le classement", function()
+    local FS, ns = threePlayers()
+    local D = ns.Distrib
+    ns.Auto.SetAuto(false)
+    D.Start(17076, 1, false)
+    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 90 (1-100).")
+    FS.Fire("CHAT_MSG_SYSTEM", "Sylva Brumeval obtient un 40 (1-100).")
+    Eq(D.Winners().list[1].p, "4620-000000AA", "le classement : Garmor")
+    -- clic gauche sur la ligne de Sylva dans la fenetre
+    ns.AwardWindow.Show()
+    FS.Layout()
+    local f = ns.AwardWindow.View()
+    local row
+    for _, r in ipairs(f.list.rows) do
+        if r:IsShown() and r.d and r.d.kind == "cand" and r.d.c.p == "4620-000000BB" then row = r end
+    end
+    row:Click("LeftButton")
+    Eq(D.Winners().list[1].p, "4620-000000BB", "choisie : Sylva")
+    Ok(FS.Texts(f):find("choisi", 1, true), "ligne « choisi »")
+    -- re-clic : annule ; re-re-clic : choisie
+    row:Click("LeftButton")
+    Eq(D.Winners().list[1].p, "4620-000000AA", "annule")
+    row:Click("LeftButton")
+    f.validate:Click()
+    local a = ns.State().awards[#ns.State().awards]
+    Eq(a.p, "4620-000000BB", "donne a Sylva")
+    local rec = ns.State().log[#ns.State().log]
+    Ok(rec.e.m == true and ns.Describe(rec):find("choix du distributeur", 1, true), "historique : choix du distributeur")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
+Test("annonces : Lancer annonce le debut, Valider annonce le gagnant (boutons securises)", function()
+    local FS, ns = threePlayers()
+    local D = ns.Distrib
+    ns.Auto.SetAuto(false)
+    ns.AwardWindow.Show()
+    ns.AwardView.Pick(17076)
+    FS.Layout()
+    local start = CorpSRAnn_start
+    Ok(start and start:IsShown(), "bouton securise sur Lancer")
+    local macro = start:GetAttribute("macrotext")
+    Ok(macro and macro:find("^/rw ") and macro:find("/roll 110", 1, true) and macro:find("(15 s)", 1, true), "debut : " .. tostring(macro))
+    start:GetScript("PostClick")(start)
+    Ok(D.cur and D.cur.item == 17076, "le clic lance l objet")
+    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 70 (1-100).")
+    FS.Layout()
+    local val = CorpSRAnn_validate
+    Ok(val and val:IsShown(), "bouton securise sur Valider")
+    local m2 = val:GetAttribute("macrotext")
+    Ok(m2 and m2:find("Garmor Hautcœur", 1, true), "fin : " .. tostring(m2))
+    val:GetScript("PostClick")(val)
+    Ok(not D.cur, "le clic valide")
+    -- les raideurs avec CorpSR recoivent la fin, avec le gagnant
+    for _ = 1, 8 do FS.Tick(0.25) end
+    local z
+    for _, m in ipairs(FS.sent) do
+        if m.channel == "GUILD" and m.text:find("^Z") then z = m end
+    end
+    Ok(z, "fin envoyee a la guilde")
+    ns.Raider.OnMessage("Z", ns.Journal.Encode({ id = "x", i = 17076, w = { { "Garmor Hautcœur", "ms" } } }), "GUILD", "Ilona Ställer")
+    Ok(table.concat(FS.printed, "\n"):find("va à Garmor Hautcœur", 1, true), "raideur : gagnant dans le chat")
+    Eq(#FS.errors, 0, "erreurs")
+end)
