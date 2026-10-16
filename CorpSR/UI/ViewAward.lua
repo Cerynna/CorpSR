@@ -1,5 +1,9 @@
 --[[--------------------------------------------------------------------------
-    CorpSR - vue « Attribution » (droit « award »)
+    CorpSR - attribution (droit « award »), dans sa propre fenetre
+    (AwardWindow.lua), a part de l interface des SR comme la fenetre du
+    raideur : elle s ouvre toute seule quand le maitre du butin (ou le
+    chef de raid en butin de groupe) ouvre le butin d un boss. L onglet
+    « Attribution » du panneau ne fait plus que l ouvrir.
 
     Pendant une soiree ouverte :
       1. choisir l objet : une icone du dernier butin, un objet glisse sur
@@ -24,6 +28,9 @@ local D = ns.Distrib
 
 ns.ui = ns.ui or {}
 local S = { item = nil, count = 1, manualCat = "ms", manualKey = nil }
+
+-- redessine la fenetre d attribution (si elle est ouverte)
+local function redraw() if ns.AwardWindow then ns.AwardWindow.Refresh() end end
 local LOOT_ICONS = 6
 
 local function link(id)
@@ -171,7 +178,7 @@ end
 
 local function notice(ok, why)
     if ok then return end
-    ns.Panel.Notice(L["AWERR_" .. tostring(why)] or tostring(why), true)
+    ns.AwardWindow.Notice(L["AWERR_" .. tostring(why)] or tostring(why), true)
 end
 
 local function build(parent)
@@ -206,7 +213,7 @@ local function build(parent)
         b.icon:SetAllPoints()
         b:SetScript("OnClick", function(self)
             S.item = self.item
-            ns.Panel.Refresh()
+            redraw()
         end)
         b:SetScript("OnEnter", function(self) UI.Tip(self, nil, { { L.AW_LOOT_TIP, 0.6, 0.6, 0.6 } }, self.item) end)
         b:SetScript("OnLeave", UI.HideTip)
@@ -233,7 +240,7 @@ local function build(parent)
         if kind == "item" and type(id) == "number" and not ns.issecret(id) then
             if ClearCursor then ClearCursor() end
             S.item = id
-            ns.Panel.Refresh()
+            redraw()
         end
     end
     pick:SetScript("OnReceiveDrag", dropped)
@@ -247,7 +254,7 @@ local function build(parent)
             local id = tonumber(v)
             if id and id > 0 then
                 S.item = id
-                ns.Panel.Refresh()
+                redraw()
             end
         end,
     })
@@ -257,7 +264,7 @@ local function build(parent)
     -- exemplaires : compteur - / +
     local count = UI.Stepper(f, 66, function(step)
         S.count = math.max(1, math.min(10, S.count + step))
-        ns.Panel.Refresh()
+        redraw()
     end)
     count:SetPoint("LEFT", idBox, "RIGHT", 4, 0)
     count.box:EnableMouse(true)
@@ -309,7 +316,7 @@ local function build(parent)
         local v = tonumber(text)
         if not (S.manualKey and v) then return end
         local c, why = D.Manual(S.manualKey, (D.cur and D.cur.free) and "free" or S.manualCat, v)
-        if not c then ns.Panel.Notice(L["AWHY_" .. tostring(why)] or tostring(why), true) end
+        if not c then ns.AwardWindow.Notice(L["AWHY_" .. tostring(why)] or tostring(why), true) end
     end
     local rollBox = UI.Field(f, 64, { placeholder = L.ROLL_HINT, numeric = true, max = 6, onEnter = manual })
     rollBox:SetPoint("LEFT", cat, "RIGHT", 4, 0)
@@ -331,7 +338,7 @@ local function build(parent)
     f.annAnchor = annAnchor
     local demoAnn = UI.Button(f, L.ANNOUNCE, 100, function()
         local t = announceText()
-        if t then ns.Panel.Notice(L.ANN_DEMO:format(t)) end
+        if t then ns.AwardWindow.Notice(L.ANN_DEMO:format(t)) end
     end)
     demoAnn:SetAllPoints(annAnchor)
     f.demoAnn = demoAnn
@@ -341,7 +348,7 @@ local function build(parent)
     local validate = UI.Button(f, L.AW_VALIDATE, 90, function()
         local n, why = D.Validate()
         if not n then return notice(nil, why) end
-        ns.Panel.Notice(L.AW_DONE)
+        ns.AwardWindow.Notice(L.AW_DONE)
     end)
     validate:SetPoint("LEFT", reroll, "RIGHT", 4, 0)
     f.validate = validate
@@ -455,17 +462,19 @@ local function refresh(f)
     f.list:SetData(rows(), true)
 end
 
+-- l onglet du panneau ouvre la fenetre d attribution
 ns.RegisterView({
     key = "award", order = 4,
     label = function() return L.TAB_AWARD end,
     visible = function() return ns.Can("award") end,
-    build = build, refresh = refresh,
+    launch = function() ns.AwardWindow.Show() end,
 })
-ns.On("distrib", function() if ns.Panel.frame then ns.Panel.Refresh() end end)
+ns.On("distrib", redraw)
 ns.On("loot", function()
     local loot = ns.Raid.Loot()
     if not D.cur and loot[1] then S.item = loot[1] end
-    if ns.Panel.frame then ns.Panel.Refresh() end
+    redraw()
 end)
 function S.Tick() if S.frame then refreshTimer(S.frame) end end
+S.build, S.refresh = build, refresh
 ns.AwardView = S

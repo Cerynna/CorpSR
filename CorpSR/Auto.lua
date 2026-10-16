@@ -1,16 +1,21 @@
 --[[--------------------------------------------------------------------------
-    CorpSR - soiree automatique (chez le chef de raid)
+    CorpSR - soiree automatique (chez le distributeur)
 
     Demande du 15/10 : lancer la soiree et attribuer etaient laborieux.
-    Chez UN seul joueur, le chef de raid qui a les droits « session » et
+    Le distributeur : en butin « maitre du butin », le maitre du butin ;
+    sinon le chef de raid. Il lui faut le droit « award » (et « session »
+    pour l automatisme). Quand il ouvre le butin d un boss, la fenetre
+    d attribution s ouvre (AwardWindow.lua), meme si l automatisme est
+    coupe (demande du 16/10).
+    Chez UN seul joueur, le distributeur qui a les droits « session » et
     « award » (pour qu il n y ait jamais deux soirees ou deux attributions
     en double), et si le reglage « Auto » n est pas coupe :
       - en entrant dans une instance de raid, en raid : la soiree s ouvre
         (une seule par soir, meme si l on enchaine plusieurs raids ; celles
         restees ouvertes d avant se ferment) ;
       - les SR se verrouillent au premier objet attribue (Distrib.Start) ;
-      - a l ouverture du butin : CorpSR s ouvre sur Attribution et lance le
-        premier objet du raid (ou epique) pas encore attribue ;
+      - a l ouverture du butin : la fenetre d attribution s ouvre et lance
+        le premier objet du raid (ou epique) pas encore attribue ;
       - apres le delai (15 s par defaut, repousse quand un jet arrive) :
         validation, ou relance si egalite, puis l objet suivant ; si
         personne n en veut, on attend le choix du distributeur.
@@ -40,14 +45,41 @@ function A.SetDelay(d)
     ns.Fire("data")
 end
 
---- Est-ce a moi de mener la soiree ?
+--- Mode « maitre du butin » : true si c est moi, false si c est un autre,
+-- nil si le groupe n est pas en maitre du butin (C_PartyInfo.GetLootMethod,
+-- Enum.LootMethod.Masterlooter = 2 sur ce client).
+function A.MasterLooter()
+    local get = C_PartyInfo and C_PartyInfo.GetLootMethod
+    if type(get) ~= "function" then return nil end
+    local ok, method, partyID, raidID = pcall(get)
+    if not ok or method == nil or ns.issecret(method) then return nil end
+    local ml = (Enum and Enum.LootMethod and Enum.LootMethod.Masterlooter) or 2
+    if method ~= ml then return nil end
+    if type(raidID) == "number" and not ns.issecret(raidID) and raidID > 0 then
+        local ok2, me = pcall(UnitIsUnit, "raid" .. raidID, "player")
+        return ok2 and not ns.issecret(me) and me == true
+    end
+    if type(partyID) == "number" and not ns.issecret(partyID) then return partyID == 0 end
+    return false
+end
+
+--- Est-ce a moi de distribuer le butin ? (droit « award » ; le maitre du
+-- butin s il y en a un, sinon le chef de raid ; en demo, toujours)
+function A.Distributor()
+    if not ns.Can("award") then return false end
+    if ns.demo then return true end
+    local ml = A.MasterLooter()
+    if ml ~= nil then return ml end
+    local ok, lead = pcall(UnitIsGroupLeader, "player")
+    return ok and not ns.issecret(lead) and lead == true
+end
+
+--- Est-ce a moi de mener la soiree automatique ?
 function A.Leader()
     if A.Delay() <= 0 then return false end
     if ns.DemoLive and ns.DemoLive.running then return false end   -- soiree de demo scriptee
-    if not (ns.Can("session") and ns.Can("award")) then return false end
-    if ns.demo then return true end
-    local ok, lead = pcall(UnitIsGroupLeader, "player")
-    return ok and not ns.issecret(lead) and lead == true
+    if not ns.Can("session") then return false end
+    return A.Distributor()
 end
 
 local function now() return GetTime and GetTime() or 0 end
@@ -87,9 +119,11 @@ end
 
 --- Objets du butin pas encore attribues pendant la soiree : epiques (ou
 -- mieux), ou deja connus de la guilde, ou reserves cette semaine.
-function A.Queue()
+-- any : meme sans soiree ouverte (le butin vaut-il la fenetre ?).
+function A.Queue(any)
     local s = D.LiveSession()
-    if not s then return {} end
+    if not s and not any then return {} end
+    s = s or { id = false, w = ns.Week() }
     local st = ns.State()
     local known = {}
     for _, r in pairs(st.raids) do
@@ -116,11 +150,7 @@ function A.Queue()
     return out
 end
 
-local function showAward()
-    local P = ns.Panel
-    if not (P.frame and P.frame:IsVisible()) and ns.ShowWindow then ns.ShowWindow() end
-    P.Select("award")
-end
+local function showAward() ns.AwardWindow.Show() end
 
 --- Lance l objet suivant du butin (s il y en a un et rien en cours).
 function A.Next()
@@ -139,8 +169,10 @@ function A.Next()
     return true
 end
 
---- Le butin s ouvre.
+--- Le butin s ouvre : chez le distributeur, la fenetre d attribution
+-- (s il y a un objet qui vaut la peine), puis l automatisme.
 function A.OnLoot()
+    if A.Distributor() and #A.Queue(true) > 0 then showAward() end
     if not A.Leader() then return end
     if not D.LiveSession() and not A.EnsureSession() then return end
     A.Next()
@@ -188,6 +220,6 @@ pulse:SetScript("OnUpdate", function(_, e)
     acc = 0
     if D.cur and D.cur.deadline then
         A.Check()
-        if ns.Panel.frame and ns.Panel.frame:IsVisible() and ns.AwardView and ns.AwardView.Tick then ns.AwardView.Tick() end
+        if ns.AwardWindow.IsShown() and ns.AwardView and ns.AwardView.Tick then ns.AwardView.Tick() end
     end
 end)

@@ -25,7 +25,8 @@ Règles tranchées par l'utilisateur le 16/10/2026 (WoW Forever : les raids chan
 - Si personne ne veut l'objet, le distributeur choisit : jet libre, banque de guilde ou désenchantement.
 - Le GM règle les valeurs (points, nombre de SR, double SR, portée de « déjà loot », fourchettes). Il choisit aussi les droits grade par grade.
 - Le GM peut **tout réinitialiser** (Réglages, mot RESET à taper) : points, SR, soirées, historique, objets, réglages et droits repartent de zéro pour toute la guilde. Les membres connectés effacent tout de suite, les absents à leur connexion (0.4.6 ou plus) ; une écriture d’avant la réinitialisation est ensuite refusée partout.
-- **Soirée automatique** chez le chef de raid : elle s'ouvre en entrant dans un raid, une seule par soir même sur plusieurs raids. Les SR se verrouillent au premier objet, l'attribution part à l'ouverture du butin et se valide après le délai.
+- **Fenêtre d'attribution à part** (comme celle du raideur) : elle s'ouvre toute seule chez le **maître du butin** quand il ouvre le butin d'un boss (chez le chef de raid en butin de groupe), même si l'automatisme est coupé. On l'ouvre aussi par l'onglet Attribution, le clic droit sur le bouton de la minicarte ou `/csr attrib`.
+- **Soirée automatique** chez ce même distributeur : elle s'ouvre en entrant dans un raid, une seule par soir même sur plusieurs raids. Les SR se verrouillent au premier objet, l'attribution part à l'ouverture du butin et se valide après le délai. Les objets d'un boss passent l'un après l'autre.
 
 ## Icône
 
@@ -60,7 +61,8 @@ CorpSR/              l'addon (jonction : Interface\AddOns\CorpSR)
   Auto.lua           soirée automatique chez le chef de raid : ouverture, verrou, butin, validation
   DemoLive.lua       démo d'une soirée : groupe simulé, boss, jets simulés, soirée automatique
   UI/CorpUIPage.lua  page CorpSR dans /corp quand CorpUI est installé (API publique de CorpUI)
-  UI/Minimap.lua     bouton de la minicarte (clic gauche : CorpSR, clic droit : Attribution)
+  UI/Minimap.lua     bouton de la minicarte (clic gauche : CorpSR, clic droit : fenêtre d'attribution)
+  UI/AwardWindow.lua fenêtre d'attribution à part (ouverte chez le maître du butin)
   UI/                style, panneau, vues (Mes SR, Points, Session, Attribution, Historique,
                      Réglages, Raids), fenêtre /csr, onglet de la fenêtre Guilde & Communautés,
                      fenêtre côté raideur, bouton d'annonce sécurisé (/rw), boîte de saisie

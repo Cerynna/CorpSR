@@ -36,8 +36,14 @@ Test("accueil -> demo : bandeau, onglets, toutes les vues", function()
         Ok(tab(P, key) and tab(P, key):IsShown(), "onglet " .. key .. " (GM)")
         tab(P, key):Click()
         FS.Layout()
-        Eq(P.current, key, "vue choisie")
-        Ok(P.frames[key]:IsShown(), "vue " .. key .. " affichee")
+        if key == "award" then
+            -- l attribution a sa propre fenetre : l onglet l ouvre
+            Ok(ns.AwardWindow.IsShown(), "fenetre d attribution ouverte")
+            Eq(P.current, "session", "la vue du panneau ne change pas")
+        else
+            Eq(P.current, key, "vue choisie")
+            Ok(P.frames[key]:IsShown(), "vue " .. key .. " affichee")
+        end
     end
     Eq(#FS.errors, 0, "erreurs")
 end)

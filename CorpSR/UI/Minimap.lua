@@ -3,7 +3,7 @@
 
     Ouvrir CorpSR etait laborieux (/csr ou la fenetre de guilde) :
       - clic gauche : ouvre ou ferme la fenetre CorpSR ;
-      - clic droit : ouvre directement l onglet Attribution (Mes SR pour
+      - clic droit : ouvre la fenetre d attribution (Mes SR pour
         qui n a pas le droit d attribuer) ;
       - glisser : deplace le bouton autour de la minicarte.
     /csr minimap le cache ou le remet. Position et visibilite dans
@@ -53,8 +53,13 @@ local function build()
     UI.Paint(hl, "accent", 0.3)
     btn:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
-            ns.ShowWindow()
-            ns.Panel.Select(ns.Can("award") and "award" or "mine")
+            -- la fenetre d attribution (a part), ou « Mes SR » sans le droit
+            if ns.Can("award") then
+                ns.AwardWindow.Toggle()
+            else
+                ns.ShowWindow()
+                ns.Panel.Select("mine")
+            end
         else
             ns.ToggleWindow()
         end

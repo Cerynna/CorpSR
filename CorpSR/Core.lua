@@ -479,6 +479,8 @@ SlashCmdList.CORPSR = function(input)
         if ns.SyncNow then ns.SyncNow() end
     elseif cmd == "minimap" then
         if ns.MinimapButton then ns.MinimapButton.Toggle() end
+    elseif cmd == "attrib" or cmd == "loot" or cmd == "award" then
+        if ns.AwardWindow then ns.AwardWindow.Toggle() end
     elseif cmd == "demo" then
         if ns.demo then ns.StopDemo() else ns.StartDemo(0) end
         if ns.ShowWindow then ns.ShowWindow(true) end

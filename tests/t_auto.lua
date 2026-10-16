@@ -15,7 +15,7 @@ Test("demo : un boss suffit, tout s enchaine (ouverture, verrou, attributions)",
     local s = D.LiveSession()
     Ok(s and s.locked, "soiree ouverte et verrouillee toute seule")
     Ok(D.cur and D.cur.deadline, "attribution lancee avec echeance")
-    Eq(ns.Panel.current, "award", "vue Attribution")
+    Ok(ns.AwardWindow.IsShown(), "fenetre d attribution ouverte")
     local before = #ns.State().awards
     for _ = 1, 12 do
         FS.RunTimers()
@@ -104,10 +104,52 @@ Test("bouton de la minicarte : ouvrir, attribution, cacher", function()
     b:Click("LeftButton")
     Ok(not CorpSRWindow:IsShown(), "clic gauche : ferme")
     b:Click("RightButton")
-    Ok(CorpSRWindow:IsShown(), "clic droit : ouvre")
-    Eq(ns.Panel.current, "award", "sur Attribution")
+    Ok(ns.AwardWindow.IsShown(), "clic droit : la fenetre d attribution")
+    b:Click("RightButton")
+    Ok(not ns.AwardWindow.IsShown(), "clic droit : la referme")
     SlashCmdList.CORPSR("minimap")
     Ok(not b:IsShown() and CorpSRDB.minimap.hide, "cache")
     SlashCmdList.CORPSR("minimap")
     Ok(b:IsShown(), "remis")
 end)
+
+Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du boss", function()
+    -- maitre du butin = moi (raid1), automatisme coupe : la fenetre s ouvre quand meme
+    local FS, ns = realGame(false)
+    _G.Enum.LootMethod = { Masterlooter = 2, Group = 3 }
+    local method, mlRaid = 2, 1
+    _G.C_PartyInfo = { GetLootMethod = function() return method, nil, mlRaid end }
+    _G.UnitIsUnit = function(a, b) return a == "raid1" and b == "player" end
+    ns.Auto.SetDelay(0)
+    Eq(ns.Auto.MasterLooter(), true, "je suis maitre du butin")
+    loot(FS, { 17080 })                       -- objet sans interet (pas epique, inconnu)
+    Ok(not ns.AwardWindow.IsShown(), "pas pour un butin sans interet")
+    loot(FS, { 17076, 17080 })
+    Ok(ns.AwardWindow.IsShown(), "ouverte au butin du boss")
+    Eq(ns.Distrib.cur, nil, "automatisme coupe : rien de lance")
+    ns.AwardWindow.Hide()
+    -- un autre est maitre du butin : rien, meme chef de raid
+    FS.leader, mlRaid = true, 2
+    Eq(ns.Auto.MasterLooter(), false, "un autre est maitre du butin")
+    loot(FS, { 17076 })
+    Ok(not ns.AwardWindow.IsShown(), "pas chez le chef de raid")
+    -- butin de groupe : le chef de raid
+    method = 3
+    Eq(ns.Auto.MasterLooter(), nil, "pas en maitre du butin")
+    loot(FS, { 17076 })
+    Ok(ns.AwardWindow.IsShown(), "butin de groupe : chez le chef de raid")
+    -- automatisme en marche et maitre du butin : l attribution se lance
+    ns.AwardWindow.Hide()
+    method, mlRaid, FS.leader = 2, 1, false
+    ns.Auto.SetDelay(15)
+    loot(FS, { 18814 })
+    Ok(ns.AwardWindow.IsShown(), "ouverte")
+    Ok(ns.Distrib.cur and ns.Distrib.cur.item == 18814, "le maitre du butin mene l attribution")
+    -- /csr attrib : ferme et rouvre
+    SlashCmdList.CORPSR("attrib")
+    Ok(not ns.AwardWindow.IsShown(), "/csr attrib : ferme")
+    SlashCmdList.CORPSR("attrib")
+    Ok(ns.AwardWindow.IsShown(), "/csr attrib : ouvre")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+_G.C_PartyInfo, _G.UnitIsUnit = nil, nil

@@ -41,9 +41,9 @@ Test("demo : boss, attribution en direct, fenetre de raideur, validation", funct
     ns.SessionActions.Open("MC")
     ns.SessionActions.Lock(D.LiveSession(), true)
     ns.DemoLive.Boss()
-    Eq(P.current, "award", "vue Attribution")
+    Ok(ns.AwardWindow.IsShown(), "fenetre d attribution ouverte")
     FS.Layout()
-    local f = P.frames.award
+    local f = ns.AwardWindow.View()
     Ok(f.loot[1]:IsShown() and f.loot[3]:IsShown(), "trois objets du butin")
     f.loot[2]:Click()
     f.start:Click()

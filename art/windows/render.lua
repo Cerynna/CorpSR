@@ -406,13 +406,13 @@ do
     ns.SessionActions.Lock(D.LiveSession(), true)
     ns.DemoLive.Boss()
     FS.Layout()
-    local f = P.frames.award
+    local f = ns.AwardWindow.View()
     f.loot[1]:Click()
     f.start:Click()
     FS.RunTimers()
     FS.RunTimers()
     FS.Layout()
-    add(dump(FS, "Attribution", "Attribution en direct", { CorpSRWindow }))
+    add(dump(FS, "Attribution", "Fenêtre d'attribution (en direct)", { CorpSRAwardWindow }))
     add(dump(FS, "Raideur", "Fenêtre du raideur", { CorpSRRaiderWindow }))
 end
 

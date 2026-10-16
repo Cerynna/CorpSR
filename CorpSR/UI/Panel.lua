@@ -214,6 +214,9 @@ local function visibleViews()
 end
 
 function P.Select(key)
+    for _, v in ipairs(P.views) do
+        if v.key == key and v.launch then return v.launch() end
+    end
     P.current = key
     P.Refresh()
 end
@@ -228,19 +231,29 @@ function P.Refresh(soft)
         P.demoBtn:SetShown(ns.demo == nil)
         if ns.demo then P.role:Update() end
 
+        -- un onglet « launch » ouvre sa propre fenetre (Attribution) : il
+        -- n est jamais la vue choisie
         local list = visibleViews()
         local found = false
         for _, v in ipairs(list) do
-            if v.key == P.current then found = true end
+            if v.key == P.current and not v.launch then found = true end
         end
-        if not found then P.current = list[1] and list[1].key end
+        if not found then
+            P.current = nil
+            for _, v in ipairs(list) do
+                if not v.launch and not P.current then P.current = v.key end
+            end
+        end
 
         for _, t in pairs(P.tabs) do t:Hide() end
         local x = 8
         for _, v in ipairs(list) do
             local t = P.tabs[v.key]
             if not t then
-                t = UI.Tab(f, v.label(), function() P.Select(v.key) end)
+                t = UI.Tab(f, v.label(), function()
+                    if v.launch then v.launch() else P.Select(v.key) end
+                end)
+                t.tip = v.tip
                 P.tabs[v.key] = t
             end
             t:SetLabel(v.label())
@@ -257,7 +270,7 @@ function P.Refresh(soft)
         if key ~= P.current then frame:Hide() end
     end
     for _, v in ipairs(P.views) do
-        if v.key == P.current then
+        if v.key == P.current and not v.launch then
             local frame = P.frames[v.key]
             if not frame then
                 frame = v.build(P.body)
