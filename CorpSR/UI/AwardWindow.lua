@@ -12,6 +12,13 @@
     la poignee du coin bas droit (460 x 330 au plus petit : les rangees se
     resserrent) ; position et taille gardees (CorpSRDB.awardWin). On la
     ferme avec la croix (pas d UISpecialFrames : code securise d Echap).
+    Alt + clic gauche sur un objet des sacs (ceux du jeu ou de CorpUI),
+    quand la fenetre est ouverte ou qu une soiree l est : l objet rejoint
+    le butin de la fenetre et devient l objet choisi ; la fenetre s ouvre
+    si elle etait fermee. Sans crochet : GLOBAL_MOUSE_DOWN, GetMouseFoci,
+    puis le sac et l emplacement du bouton sous la souris (b.bag / b.slot
+    chez CorpUI, GetBagID / GetID chez Blizzard). Le clic normal du sac
+    prend l objet sur le curseur : on le repose aussitot.
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...
@@ -207,3 +214,84 @@ ns.On("data", W.Refresh)
 ns.On("deliver", W.Refresh)
 ns.On("items", W.Refresh)
 ns.On("demo", W.Refresh)
+
+------------------------------------------------------------------------------
+-- Alt + clic gauche dans les sacs
+------------------------------------------------------------------------------
+
+local function num(v) return type(v) == "number" and not ns.issecret(v) and v or nil end
+
+-- sac et emplacement d un bouton d objet (lui ou un de ses parents proches)
+local function bagSlotOf(f)
+    for _ = 1, 3 do
+        if type(f) ~= "table" then return nil end
+        local bag, slot = num(rawget(f, "bag")), num(rawget(f, "slot"))       -- CorpUI
+        if bag and slot then return bag, slot end
+        if type(f.GetBagID) == "function" and type(f.GetID) == "function" then  -- Blizzard
+            local ok, b = pcall(f.GetBagID, f)
+            local ok2, s = pcall(f.GetID, f)
+            if ok and ok2 and num(b) and num(s) then return b, s end
+        end
+        local ok, parent = pcall(f.GetParent, f)
+        f = ok and parent or nil
+    end
+    return nil
+end
+
+-- l objet des sacs sous la souris
+local function bagItemUnderMouse()
+    local foci = {}
+    if type(GetMouseFoci) == "function" then
+        local ok, list = pcall(GetMouseFoci)
+        if ok and type(list) == "table" then foci = list end
+    elseif type(GetMouseFocus) == "function" then
+        local ok, f = pcall(GetMouseFocus)
+        if ok then foci = { f } end
+    end
+    local C = C_Container
+    for _, f in ipairs(foci) do
+        local bag, slot = bagSlotOf(f)
+        if bag and C and C.GetContainerItemID then
+            local id = ns.Api(C.GetContainerItemID, bag, slot)
+            if num(id) then return id end
+        end
+    end
+    return nil
+end
+
+--- Ajoute un objet des sacs a l attribution (fenetre ouverte ou soiree en
+-- cours ; droit « award »). Rend true si c est fait.
+function W.AddFromBag(id)
+    if not (id and ns.Can("award")) then return false end
+    if not (W.IsShown() or ns.Distrib.LiveSession()) then return false end
+    ns.Raid.AddLoot(id)
+    ns.AwardView.Pick(id)
+    W.Show()
+    W.Select("rolls")
+    W.Notice(L.AW_BAG_ADDED:format(ns.ItemText(id)))
+    return true
+end
+
+-- le clic du sac a pris l objet sur le curseur : on le repose
+local putBack
+local function clearCursor()
+    if not putBack or not (CursorHasItem and CursorHasItem()) then return end
+    local ok, kind, id = pcall(GetCursorInfo)
+    if ok and kind == "item" and id == putBack and ClearCursor then ClearCursor() end
+end
+
+ns.Event("GLOBAL_MOUSE_DOWN", function(button)
+    if button ~= "LeftButton" or not (IsAltKeyDown and IsAltKeyDown()) then return end
+    local id = bagItemUnderMouse()
+    if not W.AddFromBag(id) then return end
+    putBack = id
+    -- le sac agit au relachement : on repose apres (filet si le jeu n a pas
+    -- d evenement de relachement)
+    ns.Later("bagPutBack", 0.5, function()
+        clearCursor()
+        putBack = nil
+    end)
+end)
+ns.Event("GLOBAL_MOUSE_UP", function()
+    if putBack then ns.Later("bagPutBackUp", 0.05, clearCursor) end
+end)

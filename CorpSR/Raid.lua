@@ -247,6 +247,25 @@ function G.Loot()
     return G.loot
 end
 
+--- Ajoute un objet au butin du moment (Alt + clic dans les sacs : le
+-- maitre du butin a tout ramasse). Une seule fois par objet.
+function G.AddLoot(id)
+    local list
+    if ns.demo then
+        ns.demo.loot = ns.demo.loot or {}
+        list = ns.demo.loot
+    else
+        G.loot = G.loot or {}
+        list = G.loot
+        G.lootAt = GetTime and GetTime() or 0
+    end
+    for _, x in ipairs(list) do
+        if x == id then return false end
+    end
+    list[#list + 1] = id
+    return true
+end
+
 ------------------------------------------------------------------------------
 -- Jets /roll
 ------------------------------------------------------------------------------

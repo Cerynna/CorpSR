@@ -247,7 +247,7 @@ local function build(parent)
     end
     pick:SetScript("OnReceiveDrag", dropped)
     pick:SetScript("OnClick", dropped)
-    pick.tip = { L.AW_PICK, { L.AW_PICK_TIP } }
+    pick.tip = { L.AW_PICK, { L.AW_PICK_TIP, { L.AW_ALT_TIP, 0.6, 0.6, 0.6 } } }
     f.pick = pick
 
     local idBox = UI.Field(f, 92, {
@@ -493,5 +493,13 @@ ns.On("loot", function()
     redraw()
 end)
 function S.Tick() if S.frame then refreshTimer(S.frame) end end
+
+--- Choisit l objet a attribuer (Alt + clic dans les sacs), si rien n est en cours.
+function S.Pick(id)
+    if D.cur or D.leftover then return false end
+    S.item, S.count = id, 1
+    redraw()
+    return true
+end
 S.build, S.refresh = build, refresh
 ns.AwardView = S

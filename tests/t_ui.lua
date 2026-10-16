@@ -389,3 +389,58 @@ Test("fenetre d attribution redimensionnable : taille gardee, bornes, rangees re
     Eq(CorpSRDB.awardWin.h, 420, "hauteur gardee")
     Eq(#FS.errors, 0, "erreurs")
 end)
+
+Test("Alt + clic gauche dans les sacs : l objet arrive dans l attribution", function()
+    local FS, ns, P = open()
+    P.CloseIntro()
+    ns.StartDemo(0)
+    local W = ns.AwardWindow
+    -- un bouton de sac de CorpUI (b.bag, b.slot) puis un de Blizzard (GetBagID)
+    local corpui = { bag = 0, slot = 3 }
+    local blizz = FS.New("Button", nil, UIParent)
+    blizz.GetBagID = function() return 1 end
+    blizz.GetID = function() return 2 end
+    local under = corpui
+    _G.GetMouseFoci = function() return { under } end
+    _G.C_Container = { GetContainerItemID = function(bag, slot)
+        if bag == 0 and slot == 3 then return 17076 end
+        if bag == 1 and slot == 2 then return 18814 end
+    end }
+    local alt = false
+    _G.IsAltKeyDown = function() return alt end
+    -- ni fenetre ni soiree : rien
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    alt = true
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    Ok(not W.IsShown(), "sans fenetre ni soiree : rien")
+    -- une soiree ouverte : la fenetre s ouvre, l objet est choisi
+    ns.SessionActions.Open()
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    Ok(W.IsShown(), "fenetre ouverte")
+    Eq(ns.AwardView.item, 17076, "objet choisi")
+    local loot = ns.Raid.Loot()
+    Eq(loot[#loot], 17076, "dans le butin de la fenetre")
+    -- le clic du sac a pris l objet : il est repose
+    local cleared = false
+    _G.CursorHasItem = function() return not cleared end
+    _G.GetCursorInfo = function() return "item", 17076 end
+    _G.ClearCursor = function() cleared = true end
+    FS.Fire("GLOBAL_MOUSE_UP", "LeftButton")
+    FS.RunTimers()
+    Ok(cleared, "objet repose dans le sac")
+    -- sac de Blizzard, sans Alt : rien ; avec Alt : choisi
+    under = blizz
+    alt = false
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    Eq(ns.AwardView.item, 17076, "sans Alt : rien")
+    alt = true
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    Eq(ns.AwardView.item, 18814, "sac de Blizzard")
+    -- un novice : rien
+    ns.DemoRole(4)
+    under = corpui
+    FS.Fire("GLOBAL_MOUSE_DOWN", "LeftButton")
+    Eq(ns.AwardView.item, 18814, "novice : rien")
+    _G.GetMouseFoci, _G.IsAltKeyDown = nil, nil
+    Eq(#FS.errors, 0, "erreurs")
+end)
