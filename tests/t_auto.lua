@@ -1,35 +1,25 @@
--- Soiree automatique (chef de raid) et bouton de minicarte.
+-- Plus de mode Auto (retire le 16/10 : il sautait les annonces du chat de
+-- raid) : rien ne part tout seul ; le temps des jets, la fenetre qui s ouvre
+-- chez le maitre du butin, le bouton de minicarte.
 
 local function advance(FS, seconds)
     for _ = 1, seconds * 4 do FS.Tick(0.25) end
     FS.RunTimers()
 end
 
-Test("demo : un boss suffit, tout s enchaine (ouverture, verrou, attributions)", function()
+Test("demo : un boss ouvre la fenetre d attribution, rien ne se lance seul", function()
     local FS, ns = Game()
     ns.Panel.CloseIntro()
     ns.StartDemo(0)
     local D = ns.Distrib
-    Eq(D.LiveSession(), nil, "pas de soiree")
     ns.DemoLive.Boss()
-    local s = D.LiveSession()
-    Ok(s and s.locked, "soiree ouverte et verrouillee toute seule")
-    Ok(D.cur and D.cur.deadline, "attribution lancee avec echeance")
     Ok(ns.AwardWindow.IsShown(), "fenetre d attribution ouverte")
-    local before = #ns.State().awards
-    for _ = 1, 12 do
-        FS.RunTimers()
-        advance(FS, 6)
-        if D.leftover then D.Leftover("bank") end
-    end
-    local st = ns.State()
-    local given = 0
-    for _, a in ipairs(st.awards) do
-        if a.s == s.id then given = given + 1 end
-    end
-    Eq(given, 3, "les trois objets du boss attribues")
-    Eq(#ns.Auto.Queue(), 0, "plus rien a attribuer")
-    Ok(#st.awards > before, "inscrit")
+    Eq(D.LiveSession(), nil, "pas de soiree ouverte toute seule")
+    Eq(D.cur, nil, "pas d attribution lancee")
+    ns.SessionActions.Open()
+    ns.DemoLive.Boss()
+    Eq(D.cur, nil, "soiree ouverte : toujours rien de lance")
+    Ok(not D.LiveSession().locked, "pas de verrou tout seul")
     Eq(#FS.errors, 0, "erreurs")
 end)
 
@@ -53,44 +43,31 @@ local function loot(FS, items)
     FS.Fire("LOOT_OPENED")
 end
 
-Test("chef de raid : soiree a l entree, butin, jet lu, validation", function()
+Test("chef de raid : rien de tout seul (entree dans le raid, butin, fin du temps)", function()
     local FS, ns = realGame(true)
     local D = ns.Distrib
     FS.instance = 409
     FS.Fire("PLAYER_ENTERING_WORLD")
     FS.RunTimers()
-    local s = D.LiveSession()
-    Ok(s, "soiree ouverte en entrant")
-    Ok(FS.printed[#FS.printed]:find("automatiquement", 1, true), "prevenu dans le chat")
-    loot(FS, { 17076 })
-    Ok(D.cur and D.cur.item == 17076, "attribution lancee a l ouverture du butin")
-    s = D.LiveSession()
-    Ok(s.locked, "SR de la semaine verrouilles au premier objet")
-    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 64 (1-100).")
-    advance(FS, 25)
-    local a = ns.State().awards[#ns.State().awards]
-    Ok(a and a.i == 17076 and a.p == "4620-000000AA", "valide pour l officier")
-    Eq(D.cur, nil, "plus rien en cours")
-    Eq(#FS.errors, 0, "erreurs")
-end)
-
-Test("pas chef de raid, ou auto coupe : rien de tout seul", function()
-    local FS, ns = realGame(false)
-    local D = ns.Distrib
-    FS.instance = 409
-    FS.Fire("PLAYER_ENTERING_WORLD")
-    FS.RunTimers()
-    Eq(D.LiveSession(), nil, "pas de soiree ouverte")
+    Eq(D.LiveSession(), nil, "pas de soiree ouverte en entrant")
     ns.SessionActions.Open("MC")
     loot(FS, { 17076 })
-    Eq(D.cur, nil, "pas d attribution lancee")
-    FS.leader = true
-    ns.Auto.SetAuto(false)
-    loot(FS, { 17076 })
-    Eq(D.cur, nil, "auto coupe")
-    ns.Auto.SetAuto(true)
-    loot(FS, { 17076 })
-    Ok(D.cur, "auto remis : lancee")
+    Eq(D.cur, nil, "pas d attribution lancee au butin")
+    Ok(ns.AwardWindow.IsShown(), "mais la fenetre s ouvre")
+    -- lancee a la main : le premier objet verrouille les SR
+    D.Start(17076, 1, false)
+    Ok(D.LiveSession().locked, "SR verrouilles au premier objet")
+    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 64 (1-100).")
+    advance(FS, 25)
+    Ok(D.cur and D.cur.expired, "temps ecoule : rien ne se valide seul")
+    Eq(#ns.State().awards, 0, "rien d inscrit")
+    D.Validate()
+    local a = ns.State().awards[#ns.State().awards]
+    Ok(a and a.i == 17076 and a.p == "4620-000000AA", "valide a la main pour l officier")
+    FS.RunTimers()
+    advance(FS, 5)
+    Eq(D.cur, nil, "pas d objet suivant lance seul")
+    Eq(#FS.errors, 0, "erreurs")
 end)
 
 Test("bouton de la minicarte : ouvrir, attribution, cacher", function()
@@ -114,19 +91,18 @@ Test("bouton de la minicarte : ouvrir, attribution, cacher", function()
 end)
 
 Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du boss", function()
-    -- maitre du butin = moi (raid1), automatisme coupe : la fenetre s ouvre quand meme
+    -- maitre du butin = moi (raid1) : la fenetre s ouvre, rien ne se lance
     local FS, ns = realGame(false)
     _G.Enum.LootMethod = { Masterlooter = 2, Group = 3 }
     local method, mlRaid = 2, 1
     _G.C_PartyInfo = { GetLootMethod = function() return method, nil, mlRaid end }
     _G.UnitIsUnit = function(a, b) return a == "raid1" and b == "player" end
-    ns.Auto.SetAuto(false)
     Eq(ns.Auto.MasterLooter(), true, "je suis maitre du butin")
     loot(FS, { 17080 })                       -- objet sans interet (pas epique, inconnu)
     Ok(not ns.AwardWindow.IsShown(), "pas pour un butin sans interet")
     loot(FS, { 17076, 17080 })
     Ok(ns.AwardWindow.IsShown(), "ouverte au butin du boss")
-    Eq(ns.Distrib.cur, nil, "automatisme coupe : rien de lance")
+    Eq(ns.Distrib.cur, nil, "rien de lance")
     ns.AwardWindow.Hide()
     -- un autre est maitre du butin : rien, meme chef de raid
     FS.leader, mlRaid = true, 2
@@ -138,13 +114,6 @@ Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du 
     Eq(ns.Auto.MasterLooter(), nil, "pas en maitre du butin")
     loot(FS, { 17076 })
     Ok(ns.AwardWindow.IsShown(), "butin de groupe : chez le chef de raid")
-    -- automatisme en marche et maitre du butin : l attribution se lance
-    ns.AwardWindow.Hide()
-    method, mlRaid, FS.leader = 2, 1, false
-    ns.Auto.SetAuto(true)
-    loot(FS, { 18814 })
-    Ok(ns.AwardWindow.IsShown(), "ouverte")
-    Ok(ns.Distrib.cur and ns.Distrib.cur.item == 18814, "le maitre du butin mene l attribution")
     -- /csr attrib : ferme et rouvre
     SlashCmdList.CORPSR("attrib")
     Ok(not ns.AwardWindow.IsShown(), "/csr attrib : ferme")
@@ -154,7 +123,7 @@ Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du 
 end)
 _G.C_PartyInfo, _G.UnitIsUnit = nil, nil
 
-Test("demo : une attribution lancee a la main suit aussi le delai Auto", function()
+Test("demo : chaque objet lance a son temps ; a la fin, on valide a la main", function()
     local FS, ns = Game()
     ns.Panel.CloseIntro()
     ns.StartDemo(0)
@@ -165,28 +134,18 @@ Test("demo : une attribution lancee a la main suit aussi le delai Auto", functio
     local items = ns.Catalog[1].items
     -- « Lancer » a la main : l echeance est posee
     ns.AwardView.Pick(items[2])
-    local f
     ns.AwardWindow.Show()
-    f = ns.AwardWindow.View()
+    local f = ns.AwardWindow.View()
+    Eq(f.autoOn, nil, "plus de case Auto")
     f.start:Click()
-    Ok(D.cur and D.cur.deadline, "echeance posee")
+    Ok(D.cur and D.cur.deadline and D.cur.dur == 15, "echeance posee (15 s)")
     local m = ns.demo.group.list[3]
     D.Manual(m.key, "ms", 61)
-    advance(FS, 22)
-    Ok(not D.cur, "validee toute seule")
-    local last = ns.State().awards[#ns.State().awards]
-    Eq(last.i, items[2], "attribuee")
-    -- Auto decoche : le minuteur tourne quand meme, rien ne se valide seul
-    FS.RunTimers()
-    if D.cur then D.Finish() end
-    A.SetAuto(false)
-    D.Start(items[4], 1, false)
-    Ok(D.cur.deadline and D.cur.dur == 15, "minuteur meme sans Auto")
     advance(FS, 30)
     Ok(D.cur and D.cur.expired, "temps ecoule, rien ne se valide")
-    Ok(FS.Texts(ns.AwardWindow.View()):find("temps écoulé", 1, true), "affiche : temps ecoule")
+    Ok(FS.Texts(f):find("temps écoulé", 1, true), "affiche : temps ecoule")
     -- la duree se regle au champ ; bornes 5 a 120
-    local field = ns.AwardWindow.View().autoTime
+    local field = f.autoTime
     field:SetText("30")
     field:GetScript("OnEnterPressed")(field)
     Eq(A.Delay(), 30, "duree tapee")
@@ -194,20 +153,18 @@ Test("demo : une attribution lancee a la main suit aussi le delai Auto", functio
     field:SetText("2")
     field:GetScript("OnEnterPressed")(field)
     Eq(A.Delay(), 5, "au moins 5 s")
-    -- la case Auto
-    ns.AwardWindow.View().autoOn:Click()
-    Ok(A.On(), "case cochee")
+    f.validate:Click()
+    Eq(ns.State().awards[#ns.State().awards].i, items[2], "valide au clic")
     Eq(#FS.errors, 0, "erreurs")
 end)
 
-Test("ancien reglage « coupe » (0) : Auto decoche, duree par defaut", function()
+Test("ancien reglage « coupe » (0) : duree par defaut", function()
     local FS, ns = Game({ noLogin = true })
-    CorpSRDB = { intro = true, autoDelay = 0 }
+    CorpSRDB = { intro = true, autoDelay = 0, autoOn = true }
     FS.Fire("ADDON_LOADED", "CorpSR")
     FS.Fire("PLAYER_LOGIN")
-    Ok(not ns.Auto.On(), "Auto decoche")
     Eq(ns.Auto.Delay(), 15, "15 s")
     ns.Auto.SetDelay(20)
-    Ok(not ns.Auto.On(), "toujours decoche")
     Eq(CorpSRDB.autoDelay, 20, "duree gardee")
+    Eq(ns.Auto.On, nil, "plus de mode Auto")
 end)

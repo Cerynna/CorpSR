@@ -1,43 +1,30 @@
 --[[--------------------------------------------------------------------------
-    CorpSR - soiree automatique (chez le distributeur)
+    CorpSR - le distributeur et le temps des jets
 
-    Demande du 15/10 : lancer la soiree et attribuer etaient laborieux.
     Le distributeur : en butin « maitre du butin », le maitre du butin ;
-    sinon le chef de raid. Il lui faut le droit « award » (et « session »
-    pour l automatisme). Quand il ouvre le butin d un boss, la fenetre
-    d attribution s ouvre (AwardWindow.lua), meme si l automatisme est
-    coupe (demande du 16/10).
-    Chez UN seul joueur, le distributeur qui a les droits « session » et
-    « award » (pour qu il n y ait jamais deux soirees ou deux attributions
-    en double), et si le reglage « Auto » n est pas coupe :
-      - en entrant dans une instance de raid, en raid : la soiree s ouvre
-        (une seule par soir, meme si l on enchaine plusieurs raids ; celles
-        restees ouvertes d avant se ferment) ;
-      - les SR se verrouillent au premier objet attribue (Distrib.Start) ;
-      - a l ouverture du butin : la fenetre d attribution s ouvre et lance
-        le premier objet du raid (ou epique) pas encore attribue ;
-      - a la fin du temps (15 s par defaut ; plus 2 s de marge pour les
-        jets en retard ; aussi pour une attribution lancee a la main) :
-        validation, ou relance si egalite, puis l objet suivant ; si
-        personne n en veut, on attend le choix du distributeur.
-    L annonce dans le chat reste un clic (bouton securise) : le jeu
-    interdit a un addon d ecrire dans le chat.
-    Le reglage (delai, 0 = coupe) est garde dans CorpSRDB.autoDelay.
-    En mode demo, le grade simule tient lieu de chef de raid.
+    sinon le chef de raid. Il lui faut le droit « award ». Quand il ouvre
+    le butin d un boss, la fenetre d attribution s ouvre (AwardWindow.lua).
+    Chaque objet lance a un temps pour jouer (15 s par defaut, de 5 a 120,
+    CorpSRDB.autoDelay). A la fin, plus 2 s de marge pour les jets en
+    retard, le temps est ecoule : le distributeur valide a la main.
+
+    Plus de mode « Auto » (retire le 16/10) : soiree ouverte en entrant
+    dans le raid, objet lance au butin, validation a la fin du temps. Il
+    passait a cote des annonces du chat de raid, qui ne partent que sur
+    un clic (le jeu interdit a un addon d ecrire seul dans le chat).
+    Tout se fait donc au clic : « Nouvelle session », « Lancer »,
+    « Valider »...
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...
-local L = ns.L
 local D = ns.Distrib
 
 local A = {}
 ns.Auto = A
 A.DEFAULT, A.MIN, A.MAX = 15, 5, 120
 
--- Reglages (demande du 16/10) : chaque attribution a un minuteur, de la
--- duree choisie ; la case « Auto » dit si l on valide tout seul a la fin
--- (et si la soiree et le butin se lancent seuls chez le maitre du butin).
--- Avant : un seul delai, 0 = coupe (CorpSRDB.autoDelay) : repris tel quel.
+-- Reglage (demande du 16/10) : chaque attribution a un minuteur, de la
+-- duree choisie. Avant : 0 = automatisme coupe ; c est la duree par defaut.
 local function clampDelay(d) return math.max(A.MIN, math.min(A.MAX, math.floor(d + 0.5))) end
 
 --- Duree des jets de chaque objet (secondes).
@@ -47,29 +34,13 @@ function A.Delay()
     return clampDelay(d)
 end
 
---- La case « Auto » est-elle cochee ?
-function A.On()
-    local db = ns.db
-    if not db then return true end
-    if type(db.autoOn) == "boolean" then return db.autoOn end
-    return db.autoDelay ~= 0          -- ancien reglage « coupe »
-end
-
 function A.SetDelay(d)
     d = tonumber(d)
     if not d then return end
     d = clampDelay(d)
-    if ns.db then
-        if ns.db.autoDelay == 0 and type(ns.db.autoOn) ~= "boolean" then ns.db.autoOn = false end
-        ns.db.autoDelay = d
-    end
+    if ns.db then ns.db.autoDelay = d end
     -- en cours d attribution : le temps repart de la nouvelle duree
     if D.cur then D.SetTime(d) end
-    ns.Fire("data")
-end
-
-function A.SetAuto(on)
-    if ns.db then ns.db.autoOn = on and true or false end
     ns.Fire("data")
 end
 
@@ -102,47 +73,10 @@ function A.Distributor()
     return ok and not ns.issecret(lead) and lead == true
 end
 
---- Est-ce a moi de mener la soiree automatique ?
-function A.Leader()
-    if not A.On() then return false end
-    if ns.DemoLive and ns.DemoLive.running then return false end   -- soiree de demo scriptee
-    if not ns.Can("session") then return false end
-    return A.Distributor()
-end
-
 local function now() return GetTime and GetTime() or 0 end
 
--- soiree en cours : ouverte cette semaine, il y a moins de 12 h (une soiree
--- peut enchainer plusieurs raids : Onyxia, Hyjal, les Tumulaires...)
-local function liveRecent()
-    local s = D.LiveSession()
-    if s and s.w == ns.Week() and ns.Now() - s.t < 12 * 3600 then return s end
-    return nil
-end
-
---- Soiree ouverte (l ouvre au besoin ; ferme celles restees ouvertes).
-function A.EnsureSession()
-    local s = liveRecent()
-    if s then return s end
-    local st = ns.State()
-    for _, sid in ipairs(st.order) do
-        if not st.sessions[sid].closed then ns.Write("close", { s = sid }) end
-    end
-    if ns.Write("open", {}) then
-        ns.Say(L.AUTO_OPENED_EVENING)
-        return liveRecent()
-    end
-    return nil
-end
-
--- en raid, dans une instance de raid (n importe laquelle)
-local function zoneCheck()
-    if ns.demo or not A.Leader() or not (IsInRaid and IsInRaid()) then return end
-    if ns.Raid.CurrentZone() then A.EnsureSession() end
-end
-
 ------------------------------------------------------------------------------
--- Butin : objets a attribuer, l un apres l autre
+-- Butin : objets qui valent la fenetre d attribution
 ------------------------------------------------------------------------------
 
 --- Objets du butin pas encore attribues pendant la soiree : epiques (ou
@@ -178,59 +112,23 @@ function A.Queue(any)
     return out
 end
 
-local function showAward() ns.AwardWindow.Show() end
-
---- Lance l objet suivant du butin (s il y en a un et rien en cours).
-function A.Next()
-    if not A.Leader() or D.cur or D.leftover then return false end
-    local q = A.Queue()
-    local item = q[1]
-    if not item then return false end
-    local count = 0
-    for _, id in ipairs(q) do
-        if id == item then count = count + 1 end
-    end
-    local cur = D.Start(item, count, false)
-    if not cur then return false end
-    showAward()
-    return true
-end
-
---- Le butin s ouvre : chez le distributeur, la fenetre d attribution
--- (s il y a un objet qui vaut la peine), puis l automatisme.
+--- Le butin s ouvre : chez le distributeur, la fenetre d attribution (s il
+-- y a un objet qui vaut la peine). Rien ne se lance tout seul.
 function A.OnLoot()
-    if A.Distributor() and #A.Queue(true) > 0 then showAward() end
-    if not A.Leader() then return end
-    if not D.LiveSession() and not A.EnsureSession() then return end
-    A.Next()
+    if A.Distributor() and #A.Queue(true) > 0 then ns.AwardWindow.Show() end
 end
 
---- Echeance : « Auto » coche, valider, relancer ou attendre le choix du
--- distributeur ; sinon, le temps est ecoule et le distributeur decide.
+--- Echeance : le temps est ecoule, le distributeur decide (les jets
+-- arrives dans les 2 s de marge comptent encore, Distrib.lua).
 function A.Check()
     local cur = D.cur
-    if not (cur and cur.deadline) or now() < cur.deadline then return end
-    if not A.On() then
-        if not cur.expired then
-            cur.expired = true
-            ns.Fire("distrib", "expired")
-        end
-        return
-    end
-    -- les jets arrives juste apres la fin comptent : on valide apres la marge
-    if now() < cur.deadline + D.GRACE then return end
-    -- le gagnant choisi par le distributeur, sinon le classement
-    local win = D.Winners()
-    if win.tie then
-        D.Reroll()
-    elseif #win.list > 0 then
-        D.Validate()
-    else
-        D.NoTaker()
-    end
+    if not (cur and cur.deadline) or cur.expired then return end
+    if now() < cur.deadline then return end
+    cur.expired = true
+    ns.Fire("distrib", "expired")
 end
 
---- Secondes avant la validation automatique (nil : pas d echeance).
+--- Secondes de jeu restantes (nil : pas d echeance).
 function A.Remaining()
     local cur = D.cur
     if not (cur and cur.deadline) then return nil end
@@ -238,15 +136,6 @@ function A.Remaining()
 end
 
 ns.On("loot", function() A.OnLoot() end)
-ns.On("distrib", function(what)
-    -- apres une validation (ou le choix d un reste) : l objet suivant
-    if what == "validated" and A.Leader() then
-        ns.Later("autoNext", 2, function() A.Next() end)
-    end
-end)
-
-ns.Event("PLAYER_ENTERING_WORLD", function() ns.Later("autoZone", 3, zoneCheck) end)
-ns.Event("ZONE_CHANGED_NEW_AREA", function() ns.Later("autoZone", 3, zoneCheck) end)
 
 -- echeances : quatre fois par seconde, seulement pendant une attribution
 local pulse = CreateFrame("Frame")

@@ -292,7 +292,7 @@ local function build(parent)
     head:SetWidth(182)
     head:SetHeight(16)
     f.head = head
-    -- duree des jets (chaque attribution a un minuteur) et case « Auto »
+    -- duree des jets (chaque attribution a un minuteur)
     local autoTime = UI.Field(f, 40, {
         numeric = true, max = 3, keep = true, placeholder = tostring(ns.Auto.DEFAULT),
         onEnter = function(v) ns.Auto.SetDelay(v) end,
@@ -306,18 +306,8 @@ local function build(parent)
     secs:SetWidth(10)
     secs:SetHeight(16)
     secs:SetText("s")
-    local autoOn = UI.Check(f, function() ns.Auto.SetAuto(not ns.Auto.On()) end)
-    autoOn:SetPoint("LEFT", secs, "RIGHT", 6, 0)
-    autoOn.tip = { L.AUTO_CHECK, { L.AUTO_CHECK_TIP } }
-    f.autoOn = autoOn
-    local autoLabel = UI.Text(f, "GameFontHighlightSmall")
-    autoLabel:SetPoint("LEFT", autoOn, "RIGHT", 4, 0)
-    autoLabel:SetWidth(34)
-    autoLabel:SetHeight(16)
-    autoLabel:SetText(L.AUTO_CHECK)
-    f.autoLabel = autoLabel
     local timer = UI.Text(f, "GameFontNormalSmall")
-    timer:SetPoint("TOPLEFT", autoLabel, "TOPRIGHT", 4, 0)
+    timer:SetPoint("TOPLEFT", secs, "TOPRIGHT", 8, 0)
     timer:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(LOOT_ICONS * 26) - 4, -4)
     timer:SetHeight(16)
     f.timer = timer
@@ -516,7 +506,7 @@ function layout(f, W)
     UI.FitRow(f.left, { 120, 120, 120 }, W - f.annAnchor:GetWidth() - 4)
 end
 
--- compte a rebours de la validation automatique (et pourquoi elle est coupee)
+-- temps de jeu restant, puis « temps ecoule : valide a la main »
 local function refreshTimer(f)
     local cur = D.cur
     local left = ns.Auto.Remaining()
@@ -524,9 +514,7 @@ local function refreshTimer(f)
     if cur and cur.expired then
         f.timer:SetText(UI.Hex("bad") .. L.TIMER_UP .. "|r")
     elseif left then
-        f.timer:SetText(UI.Hex("gold") .. (ns.Auto.On() and L.AUTO_COUNTDOWN or L.ROLLS_LEFT):format(left) .. "|r")
-    elseif ns.Auto.On() and not ns.Auto.Leader() then
-        f.timer:SetText(UI.Hex("dim") .. L.AUTO_NOT_LEADER .. "|r")
+        f.timer:SetText(UI.Hex("gold") .. L.ROLLS_LEFT:format(left) .. "|r")
     else
         f.timer:SetText("")
     end
@@ -536,7 +524,6 @@ local function refresh(f)
     S.frame = f
     layout(f)
     if not f.autoTime:HasFocus() then f.autoTime:SetText(tostring(ns.Auto.Delay())) end
-    f.autoOn:SetValue(ns.Auto.On())
     refreshTimer(f)
     local s = D.LiveSession()
     local cur = D.cur

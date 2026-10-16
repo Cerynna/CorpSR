@@ -361,7 +361,6 @@ Test("distributeur : minuteur sur chaque objet, le joueur qui passe s affiche", 
     local FS, ns = twoPlayers()
     local D, J = ns.Distrib, ns.Journal
     ns.SessionActions.Open()
-    ns.Auto.SetAuto(false)
     ns.Auto.SetDelay(25)
     D.Start(17076, 1, false)
     Eq(D.cur.dur, 25, "duree du reglage")
@@ -400,7 +399,6 @@ local function wait(FS, s) for _ = 1, math.floor(s * 4 + 0.5) do FS.Tick(0.25) e
 Test("fin du temps : un jet jusqu a 2 s apres compte, plus tard refuse ; le temps ne s allonge plus", function()
     local FS, ns = threePlayers()
     local D = ns.Distrib
-    ns.Auto.SetAuto(false)
     ns.Auto.SetDelay(10)
     D.Start(17076, 1, false)
     local deadline = D.cur.deadline
@@ -413,22 +411,15 @@ Test("fin du temps : un jet jusqu a 2 s apres compte, plus tard refuse ; le temp
     local r = D.cur.attr.refused[#D.cur.attr.refused]
     Ok(r and r.why == "late", "jet 3 s apres la fin : trop tard")
     Eq(#D.cur.attr:Result().list, 1, "toujours un seul jet")
-    -- Auto : la validation attend la marge de 2 s
-    D.Finish()
-    ns.Auto.SetAuto(true)
-    D.Start(18814, 1, false)
-    FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 50 (1-100).")
-    wait(FS, 11)
-    Ok(D.cur, "1 s apres la fin : pas encore valide")
-    wait(FS, 2)
-    Ok(not D.cur, "valide apres la marge")
+    -- rien ne se valide seul, meme apres la marge
+    wait(FS, 10)
+    Ok(D.cur and D.cur.expired, "temps ecoule : valide a la main")
     Eq(#FS.errors, 0, "erreurs")
 end)
 
 Test("le distributeur choisit un autre gagnant que le classement", function()
     local FS, ns = threePlayers()
     local D = ns.Distrib
-    ns.Auto.SetAuto(false)
     D.Start(17076, 1, false)
     FS.Fire("CHAT_MSG_SYSTEM", "Garmor Hautcœur obtient un 90 (1-100).")
     FS.Fire("CHAT_MSG_SYSTEM", "Sylva Brumeval obtient un 40 (1-100).")
@@ -459,7 +450,6 @@ end)
 Test("annonces : Lancer annonce le debut, Valider annonce le gagnant (boutons securises)", function()
     local FS, ns = threePlayers()
     local D = ns.Distrib
-    ns.Auto.SetAuto(false)
     ns.AwardWindow.Show()
     ns.AwardView.Pick(17076)
     FS.Layout()

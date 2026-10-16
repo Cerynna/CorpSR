@@ -10,9 +10,10 @@
     Actions (droit « session ») : ouvrir la soiree, verrouiller les SR de
     la semaine (confirmation), fermer ; rouvrir une soiree fermee, la
     renommer, la supprimer (confirmation : ses attributions sont annulees,
-    points rendus ; il faut aussi le droit « undo » s il y en a). Chez le chef de raid, la soiree
-    automatique (Auto.lua) fait tout cela toute seule.
-    En mode demo : « Simuler un boss » (butin) et « Soiree automatique ».
+    points rendus ; il faut aussi le droit « undo » s il y en a). Tout se
+    fait au clic : plus de soiree automatique (retiree le 16/10).
+    En mode demo : « Simuler un boss » (butin) et « Soiree guidee »
+    (DemoLive.Auto : une soiree jouee pas a pas, avec ses explications).
 ----------------------------------------------------------------------------]]
 
 local _, ns = ...

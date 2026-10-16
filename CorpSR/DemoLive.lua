@@ -9,7 +9,7 @@
         quelques secondes : SR sur 110 s ils ont un SR, sinon parfois +1,
         +2 ou mog, parfois un jet refuse (110 sans SR, pickup) ; le joueur
         a sa fenetre de raideur et son jet est simule ;
-      - « Soiree automatique » : ouverture, verrouillage, retardataire,
+      - « Soiree guidee » : ouverture, verrouillage, retardataire,
         boss, trois attributions (SR, +1, personne : desenchante), une
         correction et une annulation, fermeture ; chaque etape expliquee
         en bas du panneau.
@@ -188,7 +188,7 @@ function DL.MyRoll(max)
 end
 
 ------------------------------------------------------------------------------
--- Soiree automatique
+-- Soiree guidee (une demo pas a pas, ce n est pas un mode de jeu)
 ------------------------------------------------------------------------------
 
 -- objets de MC : le plus reserve par le groupe, et deux sans SR

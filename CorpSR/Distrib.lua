@@ -115,7 +115,7 @@ function D.Start(item, count, free, drop)
             return inf
         end,
     })
-    -- chaque attribution a un minuteur ; « Auto » dit si l on valide seul
+    -- chaque attribution a un minuteur ; a la fin, on valide a la main
     cur.dur = duration()
     cur.deadline = now() + cur.dur
     cur.passed = {}
