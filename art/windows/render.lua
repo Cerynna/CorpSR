@@ -388,6 +388,20 @@ do
     add(dump(FS, "MesSR", "Mes SR", { CorpSRWindow }))
 end
 
+-- Mes SR avec 6 SR par semaine (reglage du GM) : deux rangees de cases
+do
+    local FS, ns, P = demo(0, "mine")
+    ns.Write("cfg", { c = { nsr = 6 } })
+    P.Refresh()
+    FS.Layout()
+    local f = P.frames.mine
+    f.list.rows[2]:Click("LeftButton")
+    FS.Layout()
+    f.list.rows[3]:Click("LeftButton")
+    FS.Layout()
+    add(dump(FS, "MesSR6", "Mes SR (6 SR par semaine)", { CorpSRWindow }))
+end
+
 -- les autres onglets du GM
 for _, v in ipairs({
     { "points", "Points", "Points" }, { "session", "Session", "Session" },

@@ -79,6 +79,41 @@ Test("Mes SR : poser, double SR, plein, retirer, case vide", function()
     Eq(#FS.errors, 0, "erreurs")
 end)
 
+Test("Mes SR : une case par SR permis (6, 10), dans la largeur, l etat sur sa ligne", function()
+    local FS, ns, P = open()
+    P.CloseIntro()
+    ns.StartDemo(0)
+    tab(P, "mine"):Click()
+    local f = P.frames.mine
+    f:SetWidth(624)
+    local function check(n)
+        ns.Write("cfg", { c = { nsr = n } })
+        Eq(ns.State().cfg.nsr, n, "reglage " .. n)
+        P.Refresh()
+        local shown, bottom = 0, 0
+        for s, b in ipairs(f.slots) do
+            if b:IsShown() then
+                shown = shown + 1
+                local _, x, y = b:GetPoint(1)
+                Ok(x + b:GetWidth() <= 624, n .. " SR : case " .. s .. " dans la largeur")
+                Ok(b:GetWidth() >= 110, n .. " SR : case " .. s .. " assez large (" .. b:GetWidth() .. ")")
+                bottom = math.min(bottom, y - 26)
+            end
+        end
+        Eq(shown, n, n .. " cases")
+        Ok(FS.Texts(f):find("SR " .. n .. " : libre", 1, true), "derniere case libre")
+        local _, _, sy = f.state:GetPoint(1)
+        Ok(sy <= bottom, n .. " SR : l etat sous les cases (" .. sy .. " / " .. bottom .. ")")
+        local _, _, ly = f.list:GetPoint(1)
+        Ok(ly <= sy - 16, n .. " SR : la liste sous l etat")
+        Ok(f.state:GetText():find("0/" .. n, 1, true), "etat : 0/" .. n)
+    end
+    check(6)
+    check(10)
+    check(2)
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
 Test("grades simules : un novice ne voit ni Session ni Attribution", function()
     local FS, ns, P = open()
     P.CloseIntro()

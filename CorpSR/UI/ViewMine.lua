@@ -19,7 +19,7 @@ local J = ns.Journal
 
 ns.ui = ns.ui or {}
 local V = { group = "*", query = "" }
-local MAX_SLOTS = 3
+local MAX_SLOTS = 10   -- une case par SR permis (reglage : 1 a 10)
 
 -- groupes d objets (un par raid) encore suivis
 local function groups()
@@ -147,6 +147,8 @@ local function idBox(parent, width, onEnter)
     return UI.Field(parent, width, { placeholder = L.RAIDS_ID, numeric = true, max = 8, onEnter = onEnter })
 end
 
+local layoutSlots
+
 local function build(parent)
     local f = CreateFrame("Frame", nil, parent)
     V.frame = f
@@ -211,17 +213,46 @@ local function build(parent)
         f.slots[s] = b
     end
 
-    local state = UI.Text(f, "GameFontNormalSmall", "RIGHT")
-    state:SetPoint("TOPLEFT", 382, -34)
-    state:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -34)
+    -- etat de la semaine : sa ligne, sous les cases
+    local state = UI.Text(f, "GameFontNormalSmall")
     state:SetHeight(16)
     f.state = state
 
     local list = UI.List(f, 22, buildRow, updateRow)
-    list:SetPoint("TOPLEFT", 0, -62)
-    list:SetPoint("BOTTOMRIGHT", 0, 0)
     f.list = list
+    f:SetScript("OnSizeChanged", function(self)
+        if self.nSlots then layoutSlots(self, self.nSlots) end
+    end)
     return f
+end
+
+-- Une case par SR permis, dans la largeur qui reste : au moins 120 px par
+-- case, sinon une rangee de plus (rangees equilibrees) ; la ligne d etat et
+-- la liste descendent d autant.
+function layoutSlots(f, n)
+    f.nSlots = n
+    local W = f:GetWidth() or 0
+    if W <= 0 then W = 624 end
+    local key = n .. ":" .. math.floor(W)
+    if f.slotsLaid == key then return end
+    f.slotsLaid = key
+    local fit = math.max(1, math.floor((W - 72 + 4) / 124))
+    local rows = math.max(1, math.ceil(n / fit))
+    local perRow = math.max(1, math.ceil(n / rows))
+    local w = math.floor(math.min(150, (W - 72 - 4 * (perRow - 1)) / perRow))
+    for s, b in ipairs(f.slots) do
+        local row, col = math.floor((s - 1) / perRow), (s - 1) % perRow
+        b:SetWidth(w)
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", 72 + col * (w + 4), -28 - row * 30)
+    end
+    local y = -28 - rows * 30 - 1
+    f.state:ClearAllPoints()
+    f.state:SetPoint("TOPLEFT", 72, y)
+    f.state:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, y)
+    f.list:ClearAllPoints()
+    f.list:SetPoint("TOPLEFT", 0, y - 18)
+    f.list:SetPoint("BOTTOMRIGHT", 0, 0)
 end
 
 local function refresh(f)
@@ -238,6 +269,7 @@ local function refresh(f)
         f.state:SetText(L.MINE_STATE_OPEN:format(ns.WeekDate(w), #my, nsr))
     end
     for _, b in ipairs(f.slots) do b:Hide() end
+    layoutSlots(f, math.min(nsr, MAX_SLOTS))
     for s = 1, math.min(nsr, MAX_SLOTS) do
         local b = f.slots[s]
         local item = my[s]
