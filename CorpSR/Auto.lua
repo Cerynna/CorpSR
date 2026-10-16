@@ -16,7 +16,8 @@
       - les SR se verrouillent au premier objet attribue (Distrib.Start) ;
       - a l ouverture du butin : la fenetre d attribution s ouvre et lance
         le premier objet du raid (ou epique) pas encore attribue ;
-      - apres le delai (15 s par defaut, repousse quand un jet arrive) :
+      - apres le delai (15 s par defaut, repousse quand un jet arrive ; aussi
+        pour une attribution lancee ou relancee a la main) :
         validation, ou relance si egalite, puis l objet suivant ; si
         personne n en veut, on attend le choix du distributeur.
     L annonce dans le chat reste un clic (bouton securise) : le jeu
@@ -42,6 +43,15 @@ end
 
 function A.SetDelay(d)
     if ns.db then ns.db.autoDelay = d end
+    -- en cours d attribution : le nouveau reglage s applique tout de suite
+    local cur = D.cur
+    if cur then
+        if d <= 0 then
+            cur.deadline = nil
+        elseif A.Leader() then
+            cur.deadline = (GetTime and GetTime() or 0) + d
+        end
+    end
     ns.Fire("data")
 end
 
@@ -202,6 +212,11 @@ end
 
 ns.On("loot", function() A.OnLoot() end)
 ns.On("distrib", function(what)
+    -- toute attribution du distributeur suit le delai, meme lancee (ou
+    -- relancee entre ex aequo) a la main
+    if (what == "start" or what == "reroll") and D.cur and A.Leader() then
+        D.cur.deadline = now() + A.Delay()
+    end
     -- apres une validation (ou le choix d un reste) : l objet suivant
     if what == "validated" and A.Leader() then
         ns.Later("autoNext", 2, function() A.Next() end)

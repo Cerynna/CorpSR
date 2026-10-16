@@ -153,3 +153,38 @@ Test("maitre du butin : la fenetre d attribution s ouvre en ouvrant le butin du 
     Eq(#FS.errors, 0, "erreurs")
 end)
 _G.C_PartyInfo, _G.UnitIsUnit = nil, nil
+
+Test("demo : une attribution lancee a la main suit aussi le delai Auto", function()
+    local FS, ns = Game()
+    ns.Panel.CloseIntro()
+    ns.StartDemo(0)
+    ns.DemoLive.quiet = true
+    local D, A = ns.Distrib, ns.Auto
+    ns.SessionActions.Open()
+    ns.SessionActions.Lock(D.LiveSession(), true)
+    local items = ns.Catalog[1].items
+    -- « Lancer » a la main : l echeance est posee
+    ns.AwardView.Pick(items[2])
+    local f
+    ns.AwardWindow.Show()
+    f = ns.AwardWindow.View()
+    f.start:Click()
+    Ok(D.cur and D.cur.deadline, "echeance posee")
+    local m = ns.demo.group.list[3]
+    D.Manual(m.key, "ms", 61)
+    advance(FS, 22)
+    Ok(not D.cur, "validee toute seule")
+    local last = ns.State().awards[#ns.State().awards]
+    Eq(last.i, items[2], "attribuee")
+    -- Coupe en cours de route : plus d echeance ; remis : elle revient
+    FS.RunTimers()
+    if D.cur then D.Finish() end
+    D.Start(items[4], 1, false)
+    A.SetDelay(0)
+    Eq(D.cur.deadline, nil, "coupe : pas d echeance")
+    advance(FS, 30)
+    Ok(D.cur, "coupe : rien ne se valide")
+    A.SetDelay(15)
+    Ok(D.cur.deadline, "remis : echeance")
+    Eq(#FS.errors, 0, "erreurs")
+end)
