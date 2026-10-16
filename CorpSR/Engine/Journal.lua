@@ -19,8 +19,11 @@
         raid   r, nm, inst, add, del, drop
                                       groupe d objets r (un raid, appris en tombant) :
                                       ajouter est ouvert a tous, retirer demande le droit
-        sr     i                      SR de l AUTEUR pour la semaine w (i = itemIDs,
-                                      n importe lesquels, n importe quel raid)
+        sr     i, (p)                 SR de l AUTEUR pour la semaine w (i = itemIDs,
+                                      n importe lesquels, n importe quel raid) ;
+                                      p : SR d un autre joueur (sans CorpSR, par
+                                      « !SR » en MP), inscrit par un membre qui a
+                                      le droit « session »
         open   (r)                    ouvre une soiree (plusieurs raids possibles) ;
                                       son id = celui de l ecriture
         lock   s, pr                  verrouille les SR de la semaine
@@ -115,7 +118,7 @@ local FORM = {
             and (e.del == nil or isList(e.del, 300, isItem))
             and (e.drop == nil or type(e.drop) == "boolean")
     end,
-    sr = function(e) return (e.r == nil or isStr(e.r, 32)) and isList(e.i, 10, isItem) end,
+    sr = function(e) return (e.r == nil or isStr(e.r, 32)) and (e.p == nil or isKey(e.p)) and isList(e.i, 10, isItem) end,
     open = function(e) return e.r == nil or isStr(e.r, 32) end,
     lock = function(e) return isKey(e.s) and isList(e.pr, 80, isKey) end,
     pres = function(e) return isKey(e.s) and isKey(e.p) and type(e.on) == "boolean" end,
@@ -359,7 +362,7 @@ function APPLY.sr(st, e, cfg)
         t = {}
         st.sr[e.w] = t
     end
-    t[e.a] = (#e.i > 0) and copy(e.i) or nil
+    t[e.p or e.a] = (#e.i > 0) and copy(e.i) or nil
     return true
 end
 
@@ -469,6 +472,8 @@ end
 -- droit demande par une ecriture : ajouter des objets est ouvert a tous
 local function rightOf(e)
     if e.k == "raid" and not e.del and not e.drop then return nil end
+    -- ses propres SR : aucun droit ; ceux d un autre : le droit « session »
+    if e.k == "sr" then return (e.p and e.p ~= e.a) and "session" or nil end
     return RIGHT[e.k]
 end
 
@@ -496,7 +501,7 @@ function J.Replay(list)
             else
                 why[i] = "right"
             end
-        elseif e.k == "sr" or not right or R.Can(cfg, e.rk, right) then
+        elseif not right or R.Can(cfg, e.rk, right) then
             valid[i] = true
         else
             why[i] = "right"

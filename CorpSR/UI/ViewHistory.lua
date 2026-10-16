@@ -37,11 +37,15 @@ function ns.Describe(rec, st)
     local e = rec.e
     local k = e.k
     if k == "sr" then
-        -- les SR des autres restent caches jusqu au verrouillage
-        if e.a ~= ns.Me() and #e.i > 0 and not J.Locked(st, e.w) then
+        -- les SR des autres restent caches jusqu au verrouillage (ceux posés
+        -- par MP pour un joueur : visibles de lui et de celui qui les a inscrits)
+        local mine = e.a == ns.Me() or e.p == ns.Me()
+        if not mine and #e.i > 0 and not J.Locked(st, e.w) then
             return L.D_SR_HIDDEN:format(ns.WeekLabel(e.w))
         end
-        return L.D_SR:format(ns.WeekLabel(e.w), (#e.i > 0) and itemList(e.i) or L.D_SR_NONE)
+        local text = L.D_SR:format(ns.WeekLabel(e.w), (#e.i > 0) and itemList(e.i) or L.D_SR_NONE)
+        if e.p and e.p ~= e.a then text = L.D_SR_FOR:format(ns.ColorName(e.p)) .. " · " .. text end
+        return text
     elseif k == "open" then
         return e.r and L.D_OPEN:format(ns.RaidName(e.r)) or L.D_OPEN_EVENING
     elseif k == "lock" then
