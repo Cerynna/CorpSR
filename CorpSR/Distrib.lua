@@ -5,8 +5,11 @@
     liste du raid), lance l attribution, suit les /roll lus dans le chat
     (ou saisis a la main), relance les ex aequo, puis valide : une ecriture
     « award » par gagnant, avec le classement complet. Si personne ne veut
-    l objet (ou s il reste des exemplaires), il choisit : jet libre, banque
-    de guilde, desenchantement.
+    l objet (ou s il reste des exemplaires), il choisit : banque de guilde
+    ou desenchantement (plus de jet libre depuis le 17/10).
+    Les pickups (hors guilde) jouent avec les memes regles que la guilde
+    (17/10) : SR par MP (WhisperSR.lua), jets, points. Leur nom part dans
+    l ecriture (nms) pour que toute la guilde l affiche.
     L attribution en cours n est pas au journal : seul le resultat l est.
     Les raideurs qui ont CorpSR sont prevenus par un message d addon sur
     GUILD (A : debut, T : relance, Z : fin) et voient leur petite fenetre
@@ -73,7 +76,7 @@ end
 --- Lance une attribution. Rend l attribution, ou nil et la raison.
 -- drop : { dr, cr } d un drop deja commence (jet libre d un reste), pour
 -- qu il ne credite pas deux fois.
-function D.Start(item, count, free, drop)
+function D.Start(item, count)
     if not ns.Can("award") then return nil, "right" end
     local s = D.LiveSession()
     if not s then return nil, "session" end
@@ -87,28 +90,23 @@ function D.Start(item, count, free, drop)
     if D.cur then D.Finish() end
     D.leftover = nil
     local roster = ns.Roster()
-    local cur = { id = newId(), sid = s.id, item = item, count = count or 1, free = free and true or false,
+    local cur = { id = newId(), sid = s.id, item = item, count = count or 1,
         group = ns.Raid.Members(), names = {} }
-    -- le drop : les membres de la guilde presents qui l ont SR cette semaine
-    -- et ne l auront pas eu gagnent leurs points apres le jet (regle du
-    -- 16/10), une seule fois par drop ; le jet se fait avec les points d avant
-    cur.dr = drop and drop.dr or cur.id
-    if drop and drop.cr then
-        cur.cr = drop.cr
-    else
-        cur.cr = {}
-        local st = ns.State()
-        for _, m in ipairs(cur.group.list) do
-            if m.guild and J.SRCount(st, s.w, m.key, item) > 0 then cur.cr[#cur.cr + 1] = m.key end
-        end
-        table.sort(cur.cr)
+    -- le drop : les joueurs du raid (guilde ou pickups) qui l ont SR cette
+    -- semaine et ne l auront pas eu gagnent leurs points apres le jet (regles
+    -- du 16 et du 17/10), une seule fois ; le jet se fait avec les points d avant
+    cur.dr = cur.id
+    cur.cr = {}
+    local st = ns.State()
+    for _, m in ipairs(cur.group.list) do
+        if not roster.byKey[m.key] then cur.names[m.key] = m.name end
+        if J.SRCount(st, s.w, m.key, item) > 0 then cur.cr[#cur.cr + 1] = m.key end
     end
+    table.sort(cur.cr)
     cur.attr = R.NewAttribution({
-        item = item, count = cur.count, settings = ns.State().cfg, free = cur.free,
+        item = item, count = cur.count, settings = ns.State().cfg,
         info = function(p)
-            local st = ns.State()
-            local inf = J.Info(st, s.id, p, item)
-            inf.guild = roster.byKey[p] ~= nil
+            local inf = J.Info(ns.State(), s.id, p, item)
             inf.present = cur.group.byKey[p] ~= nil
             return inf
         end,
@@ -118,7 +116,7 @@ function D.Start(item, count, free, drop)
     cur.deadline = now() + cur.dur
     cur.passed = {}
     D.cur = cur
-    send("A", { id = cur.id, i = item, n = cur.count, f = cur.free or nil, s = s.id, d = cur.dur })
+    send("A", { id = cur.id, i = item, n = cur.count, s = s.id, d = cur.dur })
     ns.Fire("distrib", "start")
     return cur
 end
@@ -274,12 +272,22 @@ function D.Validate()
     for _, c in ipairs(res.list) do
         if #q < 80 then q[#q + 1] = { c.p, c.cat, c.roll } end
     end
+    -- noms des pickups du classement, pour toute la guilde
+    local roster, nms, n = ns.Roster(), {}, 0
+    for _, x in ipairs(q) do
+        local k = x[1]
+        if not roster.byKey[k] and cur.names[k] and not nms[k] and n < 40 then
+            nms[k], n = cur.names[k]:sub(1, 48), n + 1
+        end
+    end
+    if n == 0 then nms = nil end
     for _, c in ipairs(win.list) do
-        if ns.db and not ns.Roster().byKey[c.p] and cur.names[c.p] then ns.db.names[c.p] = cur.names[c.p] end
+        if ns.db and not roster.byKey[c.p] and cur.names[c.p] then ns.db.names[c.p] = cur.names[c.p] end
         -- m : choisi par le distributeur (a la place du classement)
         local ok, why = ns.Write("award", {
             s = cur.sid, i = cur.item, p = c.p, c = c.cat, r = c.roll,
             pt = (c.cat == "sr") and c.pts or nil, q = q, dr = cur.dr, cr = creditors(cur), m = win.forced or nil,
+            nms = nms,
         })
         if not ok then return nil, why end
     end
@@ -315,21 +323,23 @@ function D.NoTaker()
     ns.Fire("distrib", "leftover")
 end
 
---- Choix pour les exemplaires restants : "free" (jet libre), "bank", "de".
+--- Choix pour les exemplaires restants : "bank" (banque de guilde) ou "de"
+-- (desenchantement). Plus de jet libre (17/10).
 function D.Leftover(choice)
     local l = D.leftover
     if not l then return nil end
-    if choice == "free" then
-        D.leftover = nil
-        return D.Start(l.item, l.count, true, { dr = l.dr, cr = l.cr })
-    end
+    if choice ~= "bank" and choice ~= "de" then return nil, "choice" end
     -- desenchantement : a la personne choisie pour la soiree (remise comme
     -- une attribution : echange tente, MP pret)
     local de = choice == "de" and ns.Deliver and ns.Deliver.DE()
     if choice == "de" and not de then return nil, "nodeuser" end
-    if de and ns.db and not ns.Roster().byKey[de.key] then ns.db.names[de.key] = de.name end
+    local nms
+    if de and not ns.Roster().byKey[de.key] then
+        if ns.db then ns.db.names[de.key] = de.name end
+        nms = { [de.key] = tostring(de.name):sub(1, 48) }
+    end
     for _ = 1, l.count do
-        local ok, why = ns.Write("award", { s = l.sid, i = l.item, c = choice, p = de and de.key or nil, dr = l.dr, cr = l.cr })
+        local ok, why = ns.Write("award", { s = l.sid, i = l.item, c = choice, p = de and de.key or nil, dr = l.dr, cr = l.cr, nms = nms })
         if not ok then return nil, why end
     end
     D.leftover = nil

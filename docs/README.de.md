@@ -34,10 +34,10 @@ Keine Website, kein Export, keine Tabelle. Die Daten laufen nur über den Addon-
 - **Punkte**: Du verlierst einen reservierten Gegenstand → +10 Punkte darauf. Dein SR-Wurf = Wurf + Punkte.
 - **Klare Priorität**: SR > +1 > +1 hat Beute > +2 > Transmog, abgelesen am Würfelbereich.
 - **Schlachtzügler-Fenster**: der Gegenstand, deine Punkte, ein Knopf pro Wurfart, ein Zeitbalken, „Passen“.
-- **Vergabe-Fenster** für den Plündermeister: Würfe live, Gleichstände, Gewinner nach Wahl, Reste (freier Wurf, Gildenbank, Entzaubern).
+- **Vergabe-Fenster** für den Plündermeister: Würfe live, Gleichstände, Gewinner nach Wahl, Reste (Gildenbank, Entzaubern).
 - **Ansagen im Schlachtzug** zu Beginn und am Ende jedes Gegenstands.
 - **Übergabe**: Handelsversuch, vorbereitetes Flüstern, Liste offener Übergaben, ein Entzauberer für die Sitzung.
-- **`!SR` per Flüstern** für Mitglieder ohne das Addon.
+- **`!SR` per Flüstern** für Randoms (Spieler außerhalb der Gilde) und alle ohne das Addon: Installieren ist nicht nötig.
 - **Vollständiger Verlauf**: Alles wird festgehalten; Korrekturen und Stornos mit Begründung, rückgängig zu machen.
 - **Einstellungen des GM**: Werte und Rechte Rang für Rang, vollständiges Zurücksetzen.
 - **Demomodus**, um alles auszuprobieren, ohne etwas an die Gilde zu senden.
@@ -57,8 +57,9 @@ Keine Website, kein Export, keine Tabelle. Die Daten laufen nur über den Addon-
 - **Punkte**: Du würfelst mit den Punkten, die du schon hast (beim ersten Mal 0). Sobald um den Gegenstand gewürfelt wurde, erhalten alle, die ihn reserviert haben, im Schlachtzug waren und ihn nicht bekommen haben, **+10 pro SR** darauf (+20 bei doppeltem SR). Der Gewinner erhält nichts und fällt, wenn er per SR gewonnen hat, auf 0 für diesen Gegenstand zurück. Wer „Passen“ klickt, erhält auch nichts.
 - **Punkte bleiben erhalten**, wenn du den Gegenstand wechselst: Sie warten in Reserve, bis du ihn wieder reservierst.
 - **Ein gewonnener Gegenstand verbraucht deinen SR** für die Woche: Wenn mehrere Bosse ihn fallen lassen können, würfelst du bis zur nächsten Woche nicht mehr per SR darum.
-- **+1 hat Beute**: ab deinem ersten +1-Gewinn der Woche (oder der Sitzung, Einstellung des GM). Gewinne per SR, +2, Transmog oder freiem Wurf zählen nicht.
+- **+1 hat Beute**: ab deinem ersten +1-Gewinn der Woche (oder der Sitzung, Einstellung des GM). Gewinne per SR, +2 oder Transmog zählen nicht.
 - **Nur dein erster gültiger Wurf zählt.** Fallen N Exemplare, gewinnen die N Besten.
+- **Randoms** (Spieler außerhalb der Gilde) haben genau dieselben Regeln wie die Gilde: SR (per `!SR`-Flüstern), Punkte, alle Wurfarten.
 - Alle Werte (Punkte, Anzahl SR, doppelter SR, Würfelbereiche) sind Einstellungen des GM.
 
 ## Eine Schlachtzugssitzung
@@ -70,7 +71,7 @@ Keine Website, kein Export, keine Tabelle. Die Daten laufen nur über den Addon-
 3. Wähle den Gegenstand, dann **Starten**: Dein Klick sagt den Gegenstand im Schlachtzugschat an, mit Würfelbereichen und Zeit.
 4. Die Würfe kommen live an. Wenn die Zeit um ist, **Bestätigen** (oder **Gleichstand neu**): Dein Klick sagt den Gewinner an.
 5. CorpSR versucht, einen Handel mit dem Gewinner zu öffnen, und legt den Gegenstand hinein. Sonst liegt ein Flüstern auf einem Knopf bereit. Der Reiter **Zu übergeben** merkt sich, wer noch was bekommt.
-6. Niemand will ihn? Freier Wurf, Gildenbank oder Entzaubern.
+6. Niemand will ihn? Gildenbank oder Entzaubern.
 
 ![Vergabe-Fenster](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/en/Attribution.png)
 
@@ -84,7 +85,7 @@ Keine Website, kein Export, keine Tabelle. Die Daten laufen nur über den Addon-
 </p>
 
 - Reiter **Punkte**: die Punkte aller, Gegenstand für Gegenstand. Reiter **Verlauf**: alles, was passiert ist, von wem und wann.
-- Kein Addon? Flüstere einem Offizier `!SR [Gegenstand] [Gegenstand]` (Gegenstandslinks, zusammen oder getrennt, oder Gegenstandsnummern). `!SR` allein nennt dir deine SR der Woche.
+- Random oder kein Addon? Flüstere einem Offizier `!SR [Gegenstand] [Gegenstand]` (Gegenstandslinks, zusammen oder getrennt, oder Gegenstandsnummern). `!SR` allein nennt dir deine SR der Woche.
 
 ## Rechte nach Rang
 
@@ -92,7 +93,7 @@ Der GM legt Rang für Rang fest, wer was darf (Reiter Optionen). Eigene SR setze
 
 | Recht | Erlaubt |
 |---|---|
-| **Sitzung** | eine Sitzung öffnen, sperren, schließen, wieder öffnen, umbenennen oder löschen; die SR eines Mitglieds eintragen, das `!SR` flüstert |
+| **Sitzung** | eine Sitzung öffnen, sperren, schließen, wieder öffnen, umbenennen oder löschen; die SR eines Spielers (Random oder Mitglied) eintragen, der `!SR` flüstert |
 | **Vergabe** | einen Gegenstand starten, die Würfe lesen, den Gewinner bestätigen, ihn zur Gildenbank oder zum Entzaubern schicken |
 | **Korrigieren** | die Punkte eines Spielers auf einen Gegenstand korrigieren, mit Pflichtbegründung |
 | **Stornieren** | einen Eintrag im Verlauf stornieren, mit Pflichtbegründung |

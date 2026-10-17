@@ -34,10 +34,10 @@ There is no website, no export, no spreadsheet. The data travels only through th
 - **Points**: you lose an item you reserved → +10 points on it. Your SR roll = roll + points.
 - **Clear priority**: SR > +1 > +1 looted > +2 > Transmog, read from the roll range.
 - **Raider window**: the item, your points, one button per roll type, a timer bar, “Pass”.
-- **Loot window** for the master looter: live rolls, ties, a winner of your choice, leftovers (free roll, guild bank, disenchant).
+- **Loot window** for the master looter: live rolls, ties, a winner of your choice, leftovers (guild bank, disenchant).
 - **Raid announcements** for the start and the end of each item.
 - **Handing over**: trade attempt, ready whisper, list of what is still owed, a disenchanter for the session.
-- **`!SR` by whisper** for members who don't have the addon.
+- **`!SR` by whisper** for pickups (PUGs) and anyone without the addon: no need to install it.
 - **Full history**: every change is written down; corrections and cancellations need a reason and can be undone.
 - **GM settings**: values and rights rank by rank, full reset.
 - **Demo mode** to try everything without sending anything to the guild.
@@ -57,8 +57,9 @@ There is no website, no export, no spreadsheet. The data travels only through th
 - **Points**: you roll with the points you already have (0 the first time). Once the item has been rolled, everyone who reserved it, was in the raid and didn't get it earns **+10 per SR** on it (+20 with a double SR). The winner earns nothing and, if they won with an SR, goes back to 0 on that item. Players who click “Pass” earn nothing either.
 - **Points are kept** when you change items: they wait in reserve until you reserve that item again.
 - **An item won uses up your SR** for the week: if several bosses can drop it, you can't SR it again until next week.
-- **+1 looted**: from your first +1 win of the week (or of the session, GM setting). SR, +2, transmog and free-roll wins don't count.
+- **+1 looted**: from your first +1 win of the week (or of the session, GM setting). SR, +2 and transmog wins don't count.
 - **Only your first valid roll counts.** If N copies drop, the N best win.
+- **Pickups** (players outside the guild) follow exactly the same rules as guild members: SRs (by whispering `!SR`), points, every roll type.
 - All values (points, number of SRs, double SR, roll ranges) are GM settings.
 
 ## A raid session
@@ -70,7 +71,7 @@ There is no website, no export, no spreadsheet. The data travels only through th
 3. Pick the item, then **Start**: your click announces the item in raid chat, with the ranges and the time.
 4. Rolls come in live. When time is up, **Validate** (or **Reroll ties**): your click announces the winner.
 5. CorpSR tries to open a trade with the winner and puts the item in it. Otherwise a whisper is ready on a button. The **To hand over** tab remembers who is still owed what.
-6. Nobody wants it? Free roll, guild bank or disenchant.
+6. Nobody wants it? Guild bank or disenchant.
 
 ![Loot window](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/en/Attribution.png)
 
@@ -84,7 +85,7 @@ There is no website, no export, no spreadsheet. The data travels only through th
 </p>
 
 - **Points** tab: everyone's points, item by item. **History** tab: everything that happened, by whom and when.
-- No addon? Whisper an officer `!SR [item] [item]` (item links, glued or not, or item numbers). `!SR` alone gives you back your SRs of the week.
+- Pickup, or no addon? Whisper an officer `!SR [item] [item]` (item links, glued or not, or item numbers). `!SR` alone gives you back your SRs of the week.
 
 ## Rights by rank
 
@@ -92,7 +93,7 @@ The GM chooses, rank by rank, who can do what (Settings tab). Reserving your own
 
 | Right | Allows |
 |---|---|
-| **Session** | open, lock, close, reopen, rename or delete a session; record the SRs of a member who whispers `!SR` |
+| **Session** | open, lock, close, reopen, rename or delete a session; record the SRs of a player (pickup or member) who whispers `!SR` |
 | **Loot** | start an item, read the rolls, validate the winner, send it to the bank or to disenchant |
 | **Fix points** | correct a player's points on an item, with a required reason |
 | **Cancel** | cancel an entry of the history, with a required reason |

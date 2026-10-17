@@ -165,7 +165,11 @@ function ns.IsGM() return ns.MyRank() == 0 end
 function ns.Name(k)
     local m = ns.Roster().byKey[k]
     if m then return m.name end
-    return (ns.db and ns.db.names[k]) or k or "?"
+    -- pickup : le nom inscrit dans le journal (SR par MP, attribution), sinon
+    -- celui vu localement
+    local st = ns.Store() and ns.State()
+    local n = st and st.names and st.names[k]
+    return n or (ns.db and ns.db.names[k]) or k or "?"
 end
 
 function ns.ClassOf(k)

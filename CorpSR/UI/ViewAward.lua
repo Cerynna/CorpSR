@@ -5,16 +5,17 @@
     chef de raid en butin de groupe) ouvre le butin d un boss. L onglet
     « Attribution » du panneau ne fait plus que l ouvrir.
 
-    Pendant une soiree ouverte :
+    Pendant une session ouverte :
       1. choisir l objet : une icone du dernier butin, un objet glisse sur
          la case, ou son numero ; nombre d exemplaires (clic gauche +1,
-         droit -1) ; « Lancer » (ou « Jet libre » directement) ;
+         droit -1) ; « Lancer » ;
       2. les /roll arrivent en direct (lus dans le chat), classes par
-         categorie puis total ; jets refuses affiches avec leur raison ;
+         categorie puis total, guilde et pickups avec les memes regles
+         (17/10) ; jets refuses affiches avec leur raison ;
          saisie a la main possible (joueur, categorie, jet) ;
       3. « Relancer les ex aequo » si besoin, puis « Valider » ; si
-         personne ne veut l objet : jet libre, banque de guilde ou
-         desenchantement.
+         personne ne veut l objet : banque de guilde ou desenchantement
+         (plus de jet libre depuis le 17/10).
     « Annoncer » envoie le texte du moment dans le chat de raid (bouton
     securise, Announce.lua). Hors attribution, la vue montre les objets
     deja attribues pendant la soiree, avec le classement en infobulle.
@@ -40,10 +41,9 @@ end
 
 -- texte a annoncer selon le moment
 -- textes d annonce : debut d un objet, gagnants, egalite, reste
-local function startText(item, count, free)
+local function startText(item, count)
     local r = ns.State().cfg.rolls
     local secs = " (" .. ns.Auto.Delay() .. " s)"
-    if free then return L.ANN_FREE:format(link(item), r.free) .. secs end
     return L.ANN_START:format(link(item), count or 1, r.sr, r.ms, r.os, r.mog) .. secs
 end
 
@@ -79,7 +79,7 @@ local function announceText()
             for p in pairs(cur.attr.pool) do list[#list + 1] = p end
             return tieText(cur.item, list)
         end
-        return startText(cur.item, cur.count, cur.free)
+        return startText(cur.item, cur.count)
     end
     local last = D.last
     if last then
@@ -233,7 +233,7 @@ end
 
 
 -- actions de la vue (boutons normaux, et boutons securises par-dessus)
-function S.DoStart(free) notice(D.Start(S.item, S.count, free)) end
+function S.DoStart() notice(D.Start(S.item, S.count)) end
 function S.DoReroll() D.Reroll() end
 function S.DoValidate()
     local n, why = D.Validate()
@@ -271,14 +271,13 @@ function S.HideSecure() for _, o in pairs(SEC) do o.Hide() end end
 local function updateSecure(f)
     local cur = D.cur
     local win = cur and D.Winners()
-    secure("start", f.start, S.item and startText(S.item, S.count, false), function() S.DoStart(false) end)
-    secure("free", f.free, S.item and startText(S.item, S.count, true), function() S.DoStart(true) end)
+    secure("start", f.start, S.item and startText(S.item, S.count), function() S.DoStart() end)
     secure("validate", f.validate, win and not win.tie and #win.list > 0 and winText(cur.item, win.list, cur.names) or nil,
         function() S.DoValidate() end)
     secure("reroll", f.reroll, win and win.tie and tieText(cur.item, win.tie.list) or nil, function() S.DoReroll() end)
     local l = D.leftover
-    for i, choice in ipairs({ "free", "bank", "de" }) do
-        local text = l and ((choice == "free") and startText(l.item, l.count, true) or leftText(l.item, choice)) or nil
+    for i, choice in ipairs({ "bank", "de" }) do
+        local text = l and leftText(l.item, choice) or nil
         secure("left" .. i, f.left[i], text, function() S.DoLeftover(choice) end)
     end
 end
@@ -379,17 +378,14 @@ local function build(parent)
     count.box:SetScript("OnLeave", UI.HideTip)
     f.count = count
 
-    local start = UI.Button(f, L.AW_START, 80, function() S.DoStart(false) end)
+    local start = UI.Button(f, L.AW_START, 80, function() S.DoStart() end)
     start:SetPoint("LEFT", count, "RIGHT", 4, 0)
     f.start = start
-    local free = UI.Button(f, ns.CatLabel("free"), 90, function() S.DoStart(true) end)
-    free:SetPoint("LEFT", start, "RIGHT", 4, 0)
-    f.free = free
     local addList = UI.Button(f, L.AW_ADD_LIST, 80, function()
         local s = D.LiveSession()
         if s and S.item then ns.Write("raid", { r = s.r, add = { S.item } }) end
     end)
-    addList:SetPoint("LEFT", free, "RIGHT", 4, 0)
+    addList:SetPoint("LEFT", start, "RIGHT", 4, 0)
     addList.tip = { L.AW_ADD_LIST, { L.AW_ADD_LIST_TIP } }
     f.addList = addList
 
@@ -418,7 +414,6 @@ local function build(parent)
     who.tip = { L.AW_MANUAL_WHO, { L.CYCLE_TIP } }
     f.who = who
     local cat = UI.Cycle(f, 90, function()
-        if D.cur and D.cur.free then return { { "free", ns.CatLabel("free") } } end
         local out = {}
         for _, k in ipairs(R.CATS) do out[#out + 1] = { k, ns.CatLabel(k) } end
         return out
@@ -428,7 +423,7 @@ local function build(parent)
     local function manual(text)
         local v = tonumber(text)
         if not (S.manualKey and v) then return end
-        local c, why = D.Manual(S.manualKey, (D.cur and D.cur.free) and "free" or S.manualCat, v)
+        local c, why = D.Manual(S.manualKey, S.manualCat, v)
         if not c then ns.AwardWindow.Notice(L["AWHY_" .. tostring(why)] or tostring(why), true) end
     end
     local rollBox = UI.Field(f, 64, { placeholder = L.ROLL_HINT, numeric = true, max = 6, onEnter = manual })
@@ -470,7 +465,7 @@ local function build(parent)
     f.cancel = cancel
     -- reste (personne ne veut l objet)
     f.left = {}
-    for i, choice in ipairs({ "free", "bank", "de" }) do
+    for i, choice in ipairs({ "bank", "de" }) do
         local b = UI.Button(f, ns.CatLabel(choice), 120, function() S.DoLeftover(choice) end)
         b:SetPoint("LEFT", (i == 1) and annAnchor or f.left[i - 1], "RIGHT", 4, 0)
         f.left[i] = b
@@ -495,7 +490,7 @@ function layout(f, W)
     f.pick:SetWidth(math.max(100, W - (92 + 66 + 80 + 90 + 16)))
     UI.FitRow({ f.who, f.cat, f.rollBox, f.enter }, { 170, 90, 64, 80 }, W)
     UI.FitRow({ f.annAnchor, f.reroll, f.validate, f.nobody, f.cancel }, { 100, 120, 90, 100, 80 }, W)
-    UI.FitRow(f.left, { 120, 120, 120 }, W - f.annAnchor:GetWidth() - 4)
+    UI.FitRow(f.left, { 140, 140 }, W - f.annAnchor:GetWidth() - 4)
 end
 
 -- temps de jeu restant, puis « temps ecoule : valide a la main »
@@ -549,7 +544,6 @@ local function refresh(f)
     f.count:SetLocked(cur ~= nil)
     local idle = not cur and not D.leftover
     f.start:SetActive(idle and s ~= nil and S.item ~= nil)
-    f.free:SetActive(idle and s ~= nil and S.item ~= nil)
     local raid = s and ns.State().raids[s.r]
     f.addList:SetShown(idle and S.item ~= nil and raid ~= nil and not raid.items[S.item] and ns.Can("raids"))
 

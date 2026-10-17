@@ -34,10 +34,10 @@ Pas de site, pas d'export, pas de tableur. Les données passent uniquement par l
 - **Points** : tu perds un objet que tu avais réservé → +10 points dessus. Ton jet SR = jet + points.
 - **Priorité claire** : SR > +1 > +1 DL > +2 > Transmo, lue dans la fourchette du jet.
 - **Fenêtre du raideur** : l'objet, tes points, un bouton par type de jet, une barre de temps, « Passer ».
-- **Fenêtre d'attribution** pour le maître du butin : jets en direct, égalités, gagnant au choix, restes (jet libre, banque de guilde, désenchantement).
+- **Fenêtre d'attribution** pour le maître du butin : jets en direct, égalités, gagnant au choix, restes (banque de guilde, désenchantement).
 - **Annonces en raid** au début et à la fin de chaque objet.
 - **Remise des objets** : échange tenté, MP prêt, liste de ce qui reste à donner, un désenchanteur pour la session.
-- **`!SR` en MP** pour les membres qui n'ont pas l'addon.
+- **`!SR` en MP** pour les PU (pickups) et tous ceux qui n'ont pas l'addon : pas besoin de l'installer.
 - **Historique complet** : tout est inscrit ; corrections et annulations avec une raison, rattrapables.
 - **Réglages du GM** : valeurs et droits grade par grade, réinitialisation complète.
 - **Mode démo** pour tout essayer sans rien envoyer à la guilde.
@@ -57,8 +57,9 @@ Pas de site, pas d'export, pas de tableur. Les données passent uniquement par l
 - **Points** : tu joues avec les points que tu as déjà (0 la première fois). Une fois l'objet joué, tous ceux qui l'ont réservé, étaient dans le raid et ne l'ont pas eu gagnent **+10 par SR** dessus (+20 en double SR). Le gagnant n'en gagne pas et, s'il l'a eu en SR, repasse à 0 sur l'objet. Ceux qui cliquent « Passer » n'en gagnent pas non plus.
 - **Les points restent** quand tu changes d'objet : ils attendent en réserve que tu le réserves de nouveau.
 - **Un objet gagné consomme ton SR** pour la semaine : si plusieurs boss peuvent le faire tomber, tu ne le rejoues plus en SR avant la semaine suivante.
-- **+1 DL** : dès ton premier gain en +1 de la semaine (ou de la session, réglage du GM). Les gains en SR, +2, transmo ou jet libre ne comptent pas.
+- **+1 DL** : dès ton premier gain en +1 de la semaine (ou de la session, réglage du GM). Les gains en SR, +2 ou transmo ne comptent pas.
 - **Seul ton premier jet valable compte.** S'il tombe N exemplaires, les N meilleurs gagnent.
+- **Les PU** (joueurs hors guilde) suivent exactement les mêmes règles que la guilde : SR (en chuchotant `!SR`), points, tous les types de jet.
 - Toutes les valeurs (points, nombre de SR, double SR, fourchettes) sont des réglages du GM.
 
 ## Une session de raid
@@ -70,7 +71,7 @@ Pas de site, pas d'export, pas de tableur. Les données passent uniquement par l
 3. Choisis l'objet, puis **Lancer** : ton clic annonce l'objet dans le chat de raid, avec les fourchettes et le temps.
 4. Les jets arrivent en direct. À la fin du temps, **Valider** (ou **Relancer ex æquo**) : ton clic annonce le gagnant.
 5. CorpSR tente d'ouvrir un échange avec le gagnant et y pose l'objet. Sinon, un MP est prêt sur un bouton. L'onglet **À remettre** retient qui attend encore quoi.
-6. Personne n'en veut ? Jet libre, banque de guilde ou désenchantement.
+6. Personne n'en veut ? Banque de guilde ou désenchantement.
 
 ![Fenêtre d'attribution](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/fr/Attribution.png)
 
@@ -84,7 +85,7 @@ Pas de site, pas d'export, pas de tableur. Les données passent uniquement par l
 </p>
 
 - Onglet **Points** : les points de tout le monde, objet par objet. Onglet **Historique** : tout ce qui s'est passé, par qui et quand.
-- Pas l'addon ? Chuchote à un officier `!SR [objet] [objet]` (liens d'objets, collés ou non, ou numéros d'objets). `!SR` seul te redonne tes SR de la semaine.
+- PU, ou pas l'addon ? Chuchote à un officier `!SR [objet] [objet]` (liens d'objets, collés ou non, ou numéros d'objets). `!SR` seul te redonne tes SR de la semaine.
 
 ## Droits par grade
 
@@ -92,7 +93,7 @@ Le GM choisit, grade par grade, qui peut faire quoi (onglet Réglages). Poser se
 
 | Droit | Permet de |
 |---|---|
-| **Session** | ouvrir, verrouiller, fermer, rouvrir, renommer ou supprimer une session ; inscrire les SR d'un membre qui chuchote `!SR` |
+| **Session** | ouvrir, verrouiller, fermer, rouvrir, renommer ou supprimer une session ; inscrire les SR d'un joueur (PU ou membre) qui chuchote `!SR` |
 | **Attribuer** | lancer un objet, lire les jets, valider le gagnant, l'envoyer en banque ou au désenchantement |
 | **Corriger** | corriger les points d'un joueur sur un objet, avec une raison obligatoire |
 | **Annuler** | annuler une ligne de l'historique, avec une raison obligatoire |

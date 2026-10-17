@@ -1,11 +1,12 @@
 -- Attribution : fourchettes de jet, priorites, egalites, exemplaires,
--- premier jet, saisie a la main, jet libre, reglages.
+-- premier jet, saisie a la main, pickups (memes regles), reglages.
 
 local ns = Engine()
 local R = ns.Rules
 local S = R.Settings(nil)
 
--- joueurs : guild, present, sr (SR sur l objet), pts, looted
+-- joueurs : guild (indicatif : pickups et guilde ont les memes regles), present,
+-- sr (SR sur l objet), pts, looted
 local PEOPLE = {
     A = { guild = true, present = true, sr = 2, pts = 60 },
     B = { guild = true, present = true, sr = 1, pts = 50 },
@@ -15,11 +16,12 @@ local PEOPLE = {
     F = { guild = true, present = true },
     G = { guild = true, present = true },
     Pug = { guild = false, present = true },
+    PugSR = { guild = false, present = true, sr = 1, pts = 30 },
     Away = { guild = true, present = false, sr = 1, pts = 90 },
 }
 local function info(p) return PEOPLE[p] end
-local function new(count, free)
-    return R.NewAttribution({ item = 1, count = count or 1, settings = S, info = info, free = free })
+local function new(count)
+    return R.NewAttribution({ item = 1, count = count or 1, settings = S, info = info })
 end
 
 Test("fourchettes : 110 SR, 100 +1, 100 deja loot = +1 DL, 50 +2, 20 mog", function()
@@ -33,7 +35,7 @@ Test("fourchettes : 110 SR, 100 +1, 100 deja loot = +1 DL, 50 +2, 20 mog", funct
     Eq(why, "nosr", "raison")
     Eq(select(2, R.Category(S, 1, 99, PEOPLE.D)), "range", "fourchette inconnue")
     Eq(select(2, R.Category(S, 2, 100, PEOPLE.D)), "range", "minimum different de 1")
-    Eq(select(2, R.Category(S, 1, 100, PEOPLE.Pug)), "guild", "hors guilde")
+    Eq(R.Category(S, 1, 100, PEOPLE.Pug), "ms", "pickup : +1 comme la guilde")
     Eq(select(2, R.Category(S, 1, 110, PEOPLE.Away)), "absent", "absent du raid")
 end)
 
@@ -140,9 +142,10 @@ Test("seul le premier jet valable compte ; jets refuses", function()
     Eq(select(2, a:Roll("D", 100, 1, 110)), "nosr", "110 sans SR")
     Ok(a:Roll("D", 20, 1, 100), "puis un vrai +1")
     Eq(select(2, a:Roll("D", 99, 1, 100)), "again", "deuxieme jet")
-    Eq(select(2, a:Roll("Pug", 100, 1, 100)), "guild", "joueur hors guilde")
+    Eq(select(2, a:Roll("Pug", 100, 1, 110)), "nosr", "pickup sans SR : 110 refuse comme pour la guilde")
     Eq(select(2, a:Roll("F", 101, 1, 100)), "value", "jet hors de sa fourchette")
-    Eq(#a.refused, 4, "refus gardes pour l affichage")
+    Eq(select(2, a:Roll("Away", 50, 1, 50)), "absent", "absent du raid")
+    Eq(#a.refused, 5, "refus gardes pour l affichage")
     Eq(a:Result().winners[1].roll, 20, "jet retenu")
 end)
 
@@ -152,7 +155,7 @@ Test("saisie a la main du distributeur", function()
     Ok(a:Manual("F", "os", 44), "jet saisi")
     Ok(a:Manual("D", "ms", 95), "jet corrige")
     Eq(a:Manual("G", "ms", 150), nil, "hors fourchette")
-    Eq(a:Manual("G", "free", 50), nil, "jet libre hors du mode libre")
+    Eq(a:Manual("G", "free", 50), nil, "plus de jet libre")
     local res = a:Result()
     Eq(res.winners[1].p, "D", "gagnant")
     Eq(res.winners[1].roll, 95, "jet corrige")
@@ -162,14 +165,17 @@ Test("saisie a la main du distributeur", function()
     Eq(#a:Result().list, 1, "un seul jet")
 end)
 
-Test("objet dont personne ne veut : jet libre ouvert a tout le raid", function()
-    local a = new(1, true)
-    Ok(a:Roll("Pug", 64, 1, 100), "hors guilde accepte")
-    Ok(a:Roll("D", 12, 1, 100), "membre")
-    Eq(select(2, a:Roll("G", 5, 1, 110)), "range", "110 refuse")
+Test("pickups (PU) : memes regles que la guilde, SR et points compris", function()
+    local a = new(1)
+    local c = a:Roll("PugSR", 80, 1, 110)
+    Eq(c and c.cat, "sr", "PU avec un SR : jet SR")
+    Eq(c.total, 110, "jet + ses points (80 + 30)")
+    Ok(a:Roll("A", 40, 1, 110), "membre en SR")
+    Ok(a:Roll("Pug", 99, 1, 100), "PU sans SR : +1")
     local res = a:Result()
-    Eq(res.winners[1].p, "Pug", "gagnant")
-    Eq(res.winners[1].cat, "free", "categorie")
+    Eq(res.winners[1].p, "PugSR", "le PU gagne au total (110 contre 100)")
+    -- le jet libre n existe plus : une fourchette 100 est un +1
+    Eq(res.list[3].cat, "ms", "100 = +1, pas de jet libre")
 end)
 
 Test("aucun jet : aucun gagnant", function()

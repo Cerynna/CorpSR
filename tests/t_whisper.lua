@@ -1,6 +1,7 @@
--- « !SR » en MP (16/10) : un joueur sans CorpSR chuchote ses SR a un
--- officier ; liens colles ou separes, numeros ; regles de la semaine ;
--- reponse preparee sur un bouton securise ; droits.
+-- « !SR » en MP (16/10, precise le 17/10 : surtout pour les pickups) : un
+-- joueur sans CorpSR, de la guilde ou PU, chuchote ses SR a un officier ;
+-- liens colles ou separes, numeros ; memes regles pour tous ; reponse
+-- preparee sur un bouton securise ; droits.
 
 local SYLVA = "4620-000000BB"
 
@@ -63,9 +64,15 @@ Test("un officier recoit !SR : SR inscrits pour le joueur, reponse prete", funct
     whisper(FS, "!SR")
     Ok(CorpSRReplyButton:GetAttribute("macrotext"):find("Tes SR", 1, true), "rappel de ses SR")
     ns.WhisperSR.Next()
-    -- un joueur hors guilde
+    -- un pickup (PU) : memes regles, son nom inscrit pour toute la guilde
     whisper(FS, "!SR 16800", "Pickup-Royaume", "Player-1-ABC")
-    Ok(CorpSRReplyButton:GetAttribute("macrotext"):find("guilde", 1, true), "hors guilde : refuse")
+    Ok(CorpSRReplyButton:GetAttribute("macrotext"):find("SR enregistrés", 1, true), "PU : SR enregistres")
+    Ok(CorpSRReplyButton:GetAttribute("macrotext"):find("^/w Pickup%-Royaume "), "reponse au PU")
+    Eq(J.SR(ns.State(), ns.Week(), "1-ABC")[1], 16800, "SR du PU")
+    Eq(ns.Name("1-ABC"), "Pickup Royaume", "nom du PU")
+    ns.WhisperSR.Next()
+    whisper(FS, "!SR 16800 16805 17076", "Pickup-Royaume", "Player-1-ABC")
+    Ok(CorpSRReplyButton:GetAttribute("macrotext"):find("refusés", 1, true), "PU : trois SR refuses aussi")
     ns.WhisperSR.Next()
     -- semaine verrouillee
     ns.SessionActions.Open()
@@ -84,5 +91,31 @@ Test("un membre sans le droit Session : rien ; le journal refuse un SR pour autr
     -- meme ecrit a la main, un SR pour autrui sans le droit est refuse au rejeu
     local e = ns.Write("sr", { i = { 16800 }, p = SYLVA })
     Eq(ns.State().byId[ns.Journal.Id(e)].why, "right", "refuse : droit")
+    Eq(#FS.errors, 0, "erreurs")
+end)
+
+Test("un PU pose son SR par MP, joue SR en raid et gagne des points comme la guilde", function()
+    local FS, ns = officer(0)
+    local J, D = ns.Journal, ns.Distrib
+    local PU = "1-0000PU01"
+    FS.raid = { { "Ilona Ställer", "Player-4620-00D54EFC" }, { "Sylva Brumeval", "Player-4620-000000BB" },
+        { "Brann Pugvif", "Player-" .. PU } }
+    ns.Write("raid", { r = "MC", nm = "MC", inst = 409, add = { 16800 } })
+    whisper(FS, "!SR 16800", "Brann-Pugvif", "Player-" .. PU)
+    Eq(J.SR(ns.State(), ns.Week(), PU)[1], 16800, "SR du PU inscrit")
+    Eq(ns.Name(PU), "Brann Pugvif", "nom pris dans le groupe")
+    ns.WhisperSR.Next()
+    ns.Write("sr", { i = { 16800 }, p = SYLVA })
+    ns.SessionActions.Open("MC")
+    D.Start(16800, 1)
+    Ok(table.concat(D.cur.cr, ","):find(PU, 1, true), "le PU compte pour les points du drop")
+    FS.Fire("CHAT_MSG_SYSTEM", "Brann Pugvif obtient un 30 (1-110).")
+    FS.Fire("CHAT_MSG_SYSTEM", "Sylva Brumeval obtient un 90 (1-110).")
+    local c = D.cur.attr.seen[PU]
+    Eq(c and c.cat, "sr", "jet SR du PU accepte")
+    D.Validate()
+    local st = ns.State()
+    Eq(st.awards[#st.awards].p, SYLVA, "Sylva gagne")
+    Eq(J.Points(st, PU, 16800), 10, "le PU n a pas eu l objet : +10, comme la guilde")
     Eq(#FS.errors, 0, "erreurs")
 end)

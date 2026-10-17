@@ -116,6 +116,17 @@ local function isList(v, max, check)
 end
 local function isItem(v) return isInt(v, 1, 10000000) end
 local function isKey(v) return isStr(v, 48) end
+-- noms des pickups (hors guilde) : { [cle] = nom }, pour que toute la guilde
+-- les affiche (17/10)
+local function isNames(v)
+    if type(v) ~= "table" then return false end
+    local n = 0
+    for k, x in pairs(v) do
+        n = n + 1
+        if n > 40 or not (isKey(k) and isStr(x, 48)) then return false end
+    end
+    return true
+end
 
 local FORM = {
     cfg = function(e) return type(e.c) == "table" end,
@@ -126,7 +137,10 @@ local FORM = {
             and (e.del == nil or isList(e.del, 300, isItem))
             and (e.drop == nil or type(e.drop) == "boolean")
     end,
-    sr = function(e) return (e.r == nil or isStr(e.r, 32)) and (e.p == nil or isKey(e.p)) and isList(e.i, 10, isItem) end,
+    sr = function(e)
+        return (e.r == nil or isStr(e.r, 32)) and (e.p == nil or isKey(e.p)) and isList(e.i, 10, isItem)
+            and (e.pn == nil or isStr(e.pn, 48))
+    end,
     open = function(e) return e.r == nil or isStr(e.r, 32) end,
     lock = function(e) return isKey(e.s) and isList(e.pr, 80, isKey) end,
     pres = function(e) return isKey(e.s) and isKey(e.p) and type(e.on) == "boolean" end,
@@ -144,6 +158,7 @@ local FORM = {
         if e.dr ~= nil and not isStr(e.dr, 80) then return false end
         if e.cr ~= nil and not isList(e.cr, 40, isKey) then return false end
         if e.m ~= nil and e.m ~= true then return false end
+        if e.nms ~= nil and not isNames(e.nms) then return false end
         return e.q == nil or isList(e.q, 80, function(x)
             return type(x) == "table" and isKey(x[1]) and type(x[2]) == "string" and isInt(x[3], 0, 100000)
         end)
@@ -388,6 +403,7 @@ function APPLY.sr(st, e, cfg)
         st.sr[e.w] = t
     end
     t[e.p or e.a] = (#e.i > 0) and copy(e.i) or nil
+    if e.p and e.pn then st.names[e.p] = e.pn end
     return true
 end
 
@@ -459,6 +475,7 @@ function APPLY.award(st, e, cfg, rec, id)
     local s, why = liveSession(st, e.s)
     if not s then return false, why end
     rec.fx = {}
+    for k, n in pairs(e.nms or {}) do st.names[k] = n end
     local drop = e.dr or id
     local d = st.drops[drop]
     if not d then
@@ -539,6 +556,7 @@ local function newState()
         pts = {},       -- [joueur][itemID] = points (en cours et en reserve)
         looted = {},    -- [joueur] = { s = { [session] = true }, w = { [semaine] = true } }
         won = {},       -- [semaine][joueur][itemID] = true : objet gagne (SR consommes)
+        names = {},     -- [cle] = nom des pickups (champs pn et nms des ecritures)
         awards = {},
         log = {},       -- une ligne par ecriture, dans l ordre : { id, e, st, why, by, fx }
         byId = {},

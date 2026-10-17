@@ -105,7 +105,7 @@ Test("egalite : refus de valider, relance entre ex aequo, puis gagnant", functio
     ns.DemoLive.quiet = false
 end)
 
-Test("personne : banque ; reste d exemplaires ; jet libre ouvert aux pickups", function()
+Test("personne : banque ou desenchantement ; reste d exemplaires ; plus de jet libre", function()
     local FS, ns, P, D = demoGame(0)
     ns.SessionActions.Open("MC")
     ns.DemoLive.quiet = true
@@ -121,20 +121,16 @@ Test("personne : banque ; reste d exemplaires ; jet libre ouvert aux pickups", f
     local n, left = D.Validate()
     Eq(n, 1, "un gagnant")
     Eq(left, 1, "un exemplaire reste")
-    -- jet libre : le pickup peut jouer
-    D.Leftover("free")
-    Ok(D.cur and D.cur.free, "jet libre lance")
-    D.OnRoll("Lyra Ventvif", 93, 1, 100)
-    D.OnRoll(g[3].name, 12, 1, 100)
-    D.Validate()
-    local last = ns.State().awards[#ns.State().awards]
-    Eq(last.c, "free", "jet libre")
-    Eq(last.p, "PUG-0002", "le pickup gagne")
-    Eq(ns.Name("PUG-0002"), "Lyra Ventvif", "nom garde pour l historique")
+    -- plus de jet libre : seulement la banque ou le desenchantement
+    Eq(select(2, D.Leftover("free")), "choice", "jet libre refuse")
+    Ok(D.leftover, "le reste attend toujours")
+    Eq(D.cur, nil, "rien de lance")
+    Ok(D.Leftover("bank"), "banque")
+    Eq(ns.State().awards[#ns.State().awards].c, "bank", "inscrit banque")
     ns.DemoLive.quiet = false
 end)
 
-Test("vraie guilde : jets lus dans le chat, pickup refuse, messages A et Z", function()
+Test("vraie guilde : jets lus dans le chat, le pickup joue comme la guilde, messages A et Z", function()
     local FS, ns = Game({ roster = {
         { "Ilona Ställer", "Maître de guilde", 0, "PRIEST", "Player-4620-00D54EFC" },
         { "Garmor Hautcœur", "Officier", 1, "WARRIOR", "Player-4620-000000AA" },
@@ -156,10 +152,22 @@ Test("vraie guilde : jets lus dans le chat, pickup refuse, messages A et Z", fun
     FS.Fire("CHAT_MSG_SYSTEM", "Lyra Ventvif obtient un 99 (1-100).")
     FS.Fire("CHAT_MSG_SYSTEM", "Quelqu'un d'autre obtient un 5 (1-100).")
     local attr = D.cur.attr
-    Eq(#attr.rolls, 1, "un jet retenu")
-    Eq(attr.rolls[1].p, "4620-000000AA", "l officier")
-    Eq(attr.refused[1].why, "guild", "pickup refuse")
+    Eq(#attr.rolls, 2, "deux jets retenus : l officier et le pickup")
+    Eq(attr.rolls[2].p, "4620-0000CCCC", "le pickup")
+    Eq(attr.rolls[2].cat, "ms", "en +1, comme la guilde")
     D.Validate()
+    local last = ns.State().awards[#ns.State().awards]
+    Eq(last.p, "4620-0000CCCC", "le pickup gagne (99 contre 88)")
+    local rec
+    for _, r in ipairs(ns.State().log) do
+        if r.e.k == "award" then rec = r end
+    end
+    Eq(rec.e.nms and rec.e.nms["4620-0000CCCC"], "Lyra Ventvif", "son nom part avec l attribution")
+    Eq(ns.Name("4620-0000CCCC"), "Lyra Ventvif", "nom affiche")
+    -- un autre membre, qui rejoue le journal sans avoir vu le raid, a son nom
+    local list = {}
+    for _, r in ipairs(ns.State().log) do list[#list + 1] = r.e end
+    Eq(ns.Journal.Replay(list).names["4620-0000CCCC"], "Lyra Ventvif", "nom connu de toute la guilde")
     for _ = 1, 10 do FS.Tick(0.5) end
     local kinds = {}
     for _, m in ipairs(FS.sent) do kinds[m.text:sub(1, 1)] = true end

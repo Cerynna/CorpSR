@@ -10,13 +10,15 @@
       ms  : +1, spe principale     /roll 100   total = jet
       dl  : +1 DL, principale      /roll 100   le joueur a deja gagne un objet en +1
                                                (l addon le sait ; regle du 16/10 : les gains
-                                               en SR, +2, Mog et jet libre ne comptent pas)
+                                               en SR, +2 et Mog ne comptent pas)
       os  : +2, seconde spe        /roll 50
       mog : transmogrification     /roll 20
     La priorite est stricte : le total ne departage qu a l interieur d une
-    meme categorie. Un objet dont personne ne veut : le distributeur choisit
-    un jet libre (free, /roll 100, ouvert a tout le raid), la banque de
-    guilde (bank) ou le desenchantement (de).
+    meme categorie. Les pickups (hors guilde) jouent avec les memes regles
+    que la guilde (17/10) : seuls comptent les joueurs du raid. Un objet
+    dont personne ne veut : le distributeur choisit la banque de guilde
+    (bank) ou le desenchantement (de). Plus de jet libre (retire le 17/10) :
+    « free » ne reste que pour relire les anciennes attributions.
 
     Une attribution se joue par manches : la premiere est ouverte a tous ;
     en cas d egalite a la limite des gagnants, une nouvelle manche n est
@@ -32,8 +34,8 @@ local R = {}
 ns.Rules = R
 
 R.CATS = { "sr", "ms", "dl", "os", "mog" }
-R.PRIO = { sr = 1, ms = 2, dl = 3, os = 4, mog = 5, free = 6 }
--- objet dont personne ne veut : choix du distributeur
+R.PRIO = { sr = 1, ms = 2, dl = 3, os = 4, mog = 5, free = 6 }   -- free : anciennes ecritures
+-- objet dont personne ne veut : choix du distributeur (free : anciennes ecritures)
 R.LEFTOVER = { free = true, bank = true, de = true }
 -- gains qui font passer un joueur en « deja loot » (+1 DL), des le premier :
 -- seulement en +1 (ou +1 DL) ; un gain en SR ne compte pas (16/10/2026)
@@ -107,17 +109,13 @@ function R.Can(s, rank, right)
 end
 
 --- Categorie d un jet d apres sa fourchette.
--- info : { guild, present, sr (SR encore valables sur l objet), srwon (objet
--- deja gagne cette semaine : SR consommes), pts, looted }
+-- info : { present, sr (SR encore valables sur l objet), srwon (objet deja
+-- gagne cette semaine : SR consommes), pts, looted } ; guilde ou pickup,
+-- memes regles (17/10).
 -- Rend la categorie, ou nil et la raison du refus.
-function R.Category(s, min, max, info, free)
+function R.Category(s, min, max, info)
     if min ~= 1 then return nil, "range" end
-    if free then
-        if max == s.rolls.free then return "free" end
-        return nil, "range"
-    end
-    if not (info and info.guild) then return nil, "guild" end
-    if not info.present then return nil, "absent" end
+    if not (info and info.present) then return nil, "absent" end
     if max == s.rolls.sr then
         if (info.sr or 0) > 0 then return "sr" end
         return nil, info.srwon and "srwon" or "nosr"
@@ -184,8 +182,8 @@ end
 local A = {}
 A.__index = A
 
---- opts : { item, count, settings, info = function(p) -> table, free }
--- info(p) decrit le joueur pour CET objet : { guild, present, sr, pts, looted }.
+--- opts : { item, count, settings, info = function(p) -> table }
+-- info(p) decrit le joueur pour CET objet : { present, sr, pts, looted }.
 function R.NewAttribution(opts)
     local count = isInt(opts.count, 1, 40) and opts.count or 1
     return setmetatable({
@@ -193,7 +191,6 @@ function R.NewAttribution(opts)
         count = count,
         s = opts.settings or R.Settings(nil),
         info = opts.info,
-        free = opts.free and true or false,
         round = 1,
         slots = count,
         pool = nil,      -- manche d egalite : [joueur] = categorie
@@ -218,7 +215,7 @@ function A:Roll(p, roll, min, max)
         return self:refuse(p, roll, max, "value")
     end
     local info = self.info and self.info(p) or nil
-    local cat, why = R.Category(self.s, min, max, info, self.free)
+    local cat, why = R.Category(self.s, min, max, info)
     if not cat then return self:refuse(p, roll, max, why) end
     -- manche d egalite : on relance dans sa categorie
     if self.pool and self.pool[p] ~= cat then return self:refuse(p, roll, max, "range") end
@@ -247,7 +244,7 @@ end
 --- Saisie a la main par le distributeur (lecture du chat en echec, oubli...).
 function A:Manual(p, cat, roll)
     if self.pool and not self.pool[p] then return nil, "notie" end
-    if not R.PRIO[cat] or (cat == "free") ~= self.free then return nil, "range" end
+    if not R.PRIO[cat] or cat == "free" then return nil, "range" end
     local max = R.RangeOf(self.s, cat)
     if not (isInt(roll, 1, max)) then return nil, "value" end
     if self.pool and self.pool[p] ~= cat then return nil, "range" end

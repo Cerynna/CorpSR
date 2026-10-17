@@ -34,10 +34,10 @@ Niente sito, niente esportazioni, niente fogli di calcolo. I dati passano solo d
 - **Punti**: perdi un oggetto che avevi prenotato → +10 punti su di esso. Il tuo tiro SR = tiro + punti.
 - **Priorità chiara**: SR > +1 > +1 già bottino > +2 > Trasmog, letta dall'intervallo del tiro.
 - **Finestra dell'incursore**: l'oggetto, i tuoi punti, un pulsante per tipo di tiro, una barra del tempo, «Passa».
-- **Finestra di assegnazione** per il maestro del bottino: tiri in diretta, parità, vincitore a scelta, avanzi (tiro libero, banca di gilda, disincanto).
+- **Finestra di assegnazione** per il maestro del bottino: tiri in diretta, parità, vincitore a scelta, avanzi (banca di gilda, disincanto).
 - **Annunci in incursione** all'inizio e alla fine di ogni oggetto.
 - **Consegna**: tentativo di scambio, sussurro pronto, elenco di ciò che resta da consegnare, un disincantatore per la sessione.
-- **`!SR` via sussurro** per i membri senza l'addon.
+- **`!SR` via sussurro** per i PUG (giocatori fuori dalla gilda) e chiunque non abbia l'addon: non serve installarlo.
 - **Cronologia completa**: tutto viene registrato; correzioni e annullamenti con motivo, reversibili.
 - **Impostazioni del GM**: valori e diritti grado per grado, azzeramento completo.
 - **Modalità demo** per provare tutto senza inviare nulla alla gilda.
@@ -57,8 +57,9 @@ Niente sito, niente esportazioni, niente fogli di calcolo. I dati passano solo d
 - **Punti**: tiri con i punti che hai già (0 la prima volta). Una volta tirato l'oggetto, tutti quelli che lo avevano prenotato, erano nell'incursione e non l'hanno avuto guadagnano **+10 per SR** su di esso (+20 con doppio SR). Il vincitore non guadagna nulla e, se l'ha vinto con un SR, torna a 0 su quell'oggetto. Chi clicca «Passa» non guadagna nulla.
 - **I punti restano** quando cambi oggetto: aspettano in riserva finché non lo prenoti di nuovo.
 - **Un oggetto vinto consuma il tuo SR** della settimana: se più boss possono farlo cadere, non lo ritiri in SR fino alla settimana dopo.
-- **+1 già bottino**: dalla tua prima vittoria in +1 della settimana (o della sessione, impostazione del GM). Le vittorie in SR, +2, trasmog o tiro libero non contano.
+- **+1 già bottino**: dalla tua prima vittoria in +1 della settimana (o della sessione, impostazione del GM). Le vittorie in SR, +2 o trasmog non contano.
 - **Conta solo il tuo primo tiro valido.** Se cadono N copie, vincono i N migliori.
+- **I PUG** (giocatori fuori dalla gilda) seguono esattamente le stesse regole della gilda: SR (sussurrando `!SR`), punti e tutti i tipi di tiro.
 - Tutti i valori (punti, numero di SR, doppio SR, intervalli di tiro) sono impostazioni del GM.
 
 ## Una sessione di incursione
@@ -70,7 +71,7 @@ Niente sito, niente esportazioni, niente fogli di calcolo. I dati passano solo d
 3. Scegli l'oggetto, poi **Avvia**: il tuo clic annuncia l'oggetto nella chat d'incursione, con gli intervalli e il tempo.
 4. I tiri arrivano in diretta. Allo scadere del tempo, **Conferma** (o **Ritira parità**): il tuo clic annuncia il vincitore.
 5. CorpSR prova ad aprire uno scambio con il vincitore e ci mette l'oggetto. Altrimenti un sussurro è pronto su un pulsante. La scheda **Da consegnare** ricorda chi aspetta ancora cosa.
-6. Nessuno lo vuole? Tiro libero, banca di gilda o disincanto.
+6. Nessuno lo vuole? Banca di gilda o disincanto.
 
 ![Finestra di assegnazione](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/en/Attribution.png)
 
@@ -84,7 +85,7 @@ Niente sito, niente esportazioni, niente fogli di calcolo. I dati passano solo d
 </p>
 
 - Scheda **Punti**: i punti di tutti, oggetto per oggetto. Scheda **Cronologia**: tutto quello che è successo, chi e quando.
-- Niente addon? Sussurra a un ufficiale `!SR [oggetto] [oggetto]` (link di oggetti, attaccati o separati, o numeri di oggetto). `!SR` da solo ti ridà i tuoi SR della settimana.
+- PUG o niente addon? Sussurra a un ufficiale `!SR [oggetto] [oggetto]` (link di oggetti, attaccati o separati, o numeri di oggetto). `!SR` da solo ti ridà i tuoi SR della settimana.
 
 ## Diritti per grado
 
@@ -92,7 +93,7 @@ Il GM sceglie, grado per grado, chi può fare cosa (scheda Opzioni). Mettere i p
 
 | Diritto | Permette di |
 |---|---|
-| **Sessione** | aprire, bloccare, chiudere, riaprire, rinominare o eliminare una sessione; registrare gli SR di un membro che sussurra `!SR` |
+| **Sessione** | aprire, bloccare, chiudere, riaprire, rinominare o eliminare una sessione; registrare gli SR di un giocatore (PUG o membro) che sussurra `!SR` |
 | **Assegnare** | avviare un oggetto, leggere i tiri, confermare il vincitore, mandarlo in banca o al disincanto |
 | **Correggere** | correggere i punti di un giocatore su un oggetto, con motivo obbligatorio |
 | **Annullare** | annullare una riga della cronologia, con motivo obbligatorio |

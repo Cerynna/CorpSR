@@ -7,8 +7,9 @@
       - « Simuler un boss » : un butin de 3 objets du raid de la soiree ;
       - pendant une attribution, les membres simules font leurs /roll en
         quelques secondes : SR sur 110 s ils ont un SR, sinon parfois +1,
-        +2 ou mog, parfois un jet refuse (110 sans SR, pickup) ; le joueur
-        a sa fenetre de raideur et son jet est simule ;
+        +2 ou mog, parfois un jet refuse (110 sans SR) ; le joueur
+        a sa fenetre de raideur et son jet est simule ; les pickups jouent
+        avec les memes regles que la guilde (17/10) ;
       - « Soiree guidee » : ouverture, verrouillage, retardataire,
         boss, trois attributions (SR, +1, personne : desenchante), une
         correction et une annulation, fermeture ; chaque etape expliquee
@@ -120,11 +121,9 @@ local function scheduleRolls(cur)
     for _, m in ipairs(ns.demo.group.list) do
         if m.key ~= ns.me then
             local delay = 0.6 + rng(40) / 10
-            if cur.free then
-                if rng(2) == 1 then fakeRoll(cur, m, delay, r.free) end
-            elseif not m.guild then
-                if rng(4) == 1 then fakeRoll(cur, m, delay, r.ms) end       -- refuse : hors guilde
-            else
+            -- guilde et pickups : memes regles (17/10) ; un pickup n a pas
+            -- l addon, il ne « passe » pas : il ne joue pas, c est tout
+            do
                 local info = J.Info(st, cur.sid, m.key, cur.item)
                 local x = rng(100)
                 if info.sr > 0 then
@@ -137,7 +136,7 @@ local function scheduleRolls(cur)
                     fakeRoll(cur, m, delay, r.mog)
                 elseif x <= 51 then
                     fakeRoll(cur, m, delay, r.sr)                           -- refuse : pas de SR
-                elseif x <= 70 then
+                elseif x <= 70 and m.guild then
                     after(delay, function()                                 -- « Passer »
                         if D.cur == cur then D.Pass(m.key, m.name) end
                     end)
@@ -164,7 +163,7 @@ ns.On("distrib", function(what)
     if what == "start" and cur then
         scheduleRolls(cur)
         if ns.demo.group.byKey[ns.me] then
-            ns.Raider.Open({ id = cur.id, sid = cur.sid, item = cur.item, count = cur.count, free = cur.free })
+            ns.Raider.Open({ id = cur.id, sid = cur.sid, item = cur.item, count = cur.count })
         end
     elseif what == "reroll" and cur then
         rerollTied(cur)

@@ -34,10 +34,10 @@ Sin web, sin exportar, sin hojas de cálculo. Los datos solo viajan por el canal
 - **Puntos**: pierdes un objeto que habías reservado → +10 puntos en él. Tu tirada SR = tirada + puntos.
 - **Prioridad clara**: SR > +1 > +1 ya botín > +2 > Transfiguración, según el rango de la tirada.
 - **Ventana del jugador**: el objeto, tus puntos, un botón por tipo de tirada, una barra de tiempo, «Pasar».
-- **Ventana de reparto** para el maestro despojador: tiradas en directo, empates, ganador a elección, restos (tirada libre, banco de hermandad, desencantar).
+- **Ventana de reparto** para el maestro despojador: tiradas en directo, empates, ganador a elección, restos (banco de hermandad, desencantar).
 - **Anuncios en banda** al empezar y al terminar cada objeto.
 - **Entrega**: intento de comercio, susurro preparado, lista de lo que falta entregar, un desencantador para la sesión.
-- **`!SR` por susurro** para los miembros sin el addon.
+- **`!SR` por susurro** para los PUG (jugadores de fuera de la hermandad) y cualquiera sin el addon: no hace falta instalarlo.
 - **Historial completo**: todo queda escrito; correcciones y anulaciones con motivo, reversibles.
 - **Ajustes del GM**: valores y permisos rango por rango, reinicio completo.
 - **Modo demo** para probarlo todo sin enviar nada a la hermandad.
@@ -57,8 +57,9 @@ Sin web, sin exportar, sin hojas de cálculo. Los datos solo viajan por el canal
 - **Puntos**: tiras con los puntos que ya tienes (0 la primera vez). Una vez tirado el objeto, todos los que lo reservaron, estaban en la banda y no se lo llevaron ganan **+10 por SR** en él (+20 con doble SR). El ganador no gana nada y, si lo ganó con SR, vuelve a 0 en ese objeto. Quien pulsa «Pasar» tampoco gana nada.
 - **Los puntos se guardan** cuando cambias de objeto: esperan en reserva hasta que lo vuelvas a reservar.
 - **Un objeto ganado gasta tu SR** de la semana: si varios jefes pueden soltarlo, no vuelves a tirar SR por él hasta la semana siguiente.
-- **+1 ya botín**: desde tu primera victoria en +1 de la semana (o de la sesión, ajuste del GM). Las victorias en SR, +2, transfiguración o tirada libre no cuentan.
+- **+1 ya botín**: desde tu primera victoria en +1 de la semana (o de la sesión, ajuste del GM). Las victorias en SR, +2 o transfiguración no cuentan.
 - **Solo cuenta tu primera tirada válida.** Si caen N copias, ganan los N mejores.
+- **Los PUG** (jugadores de fuera de la hermandad) siguen exactamente las mismas reglas que la hermandad: SR (susurrando `!SR`), puntos y todos los tipos de tirada.
 - Todos los valores (puntos, número de SR, doble SR, rangos de tirada) son ajustes del GM.
 
 ## Una sesión de banda
@@ -70,7 +71,7 @@ Sin web, sin exportar, sin hojas de cálculo. Los datos solo viajan por el canal
 3. Elige el objeto y luego **Lanzar**: tu clic anuncia el objeto en el chat de banda, con los rangos y el tiempo.
 4. Las tiradas llegan en directo. Cuando se acaba el tiempo, **Validar** (o **Repetir empate**): tu clic anuncia al ganador.
 5. CorpSR intenta abrir un comercio con el ganador y pone el objeto en él. Si no, un susurro queda listo en un botón. La pestaña **Por entregar** recuerda a quién se le debe qué.
-6. ¿Nadie lo quiere? Tirada libre, banco de hermandad o desencantar.
+6. ¿Nadie lo quiere? Banco de hermandad o desencantar.
 
 ![Ventana de reparto](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/en/Attribution.png)
 
@@ -84,7 +85,7 @@ Sin web, sin exportar, sin hojas de cálculo. Los datos solo viajan por el canal
 </p>
 
 - Pestaña **Puntos**: los puntos de todos, objeto por objeto. Pestaña **Historial**: todo lo que pasó, quién y cuándo.
-- ¿Sin addon? Susurra a un oficial `!SR [objeto] [objeto]` (enlaces de objetos, juntos o separados, o números de objeto). `!SR` solo te devuelve tus SR de la semana.
+- ¿PUG o sin addon? Susurra a un oficial `!SR [objeto] [objeto]` (enlaces de objetos, juntos o separados, o números de objeto). `!SR` solo te devuelve tus SR de la semana.
 
 ## Permisos por rango
 
@@ -92,7 +93,7 @@ El GM elige, rango por rango, quién puede hacer qué (pestaña Ajustes). Poner 
 
 | Permiso | Permite |
 |---|---|
-| **Sesión** | abrir, bloquear, cerrar, reabrir, renombrar o eliminar una sesión; inscribir los SR de un miembro que susurra `!SR` |
+| **Sesión** | abrir, bloquear, cerrar, reabrir, renombrar o eliminar una sesión; inscribir los SR de un jugador (PUG o miembro) que susurra `!SR` |
 | **Reparto** | lanzar un objeto, leer las tiradas, validar al ganador, enviarlo al banco o a desencantar |
 | **Corregir** | corregir los puntos de un jugador en un objeto, con motivo obligatorio |
 | **Anular** | anular una línea del historial, con motivo obligatorio |

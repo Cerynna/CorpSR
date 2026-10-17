@@ -124,15 +124,11 @@ local function choices(c)
     local st = ns.State()
     local r = st.cfg.rolls
     local out = {}
-    if c.free then
-        out[1] = { "free", r.free }
-    else
-        local info = J.Info(st, c.sid, ns.Me(), c.item)
-        if info.sr > 0 then out[#out + 1] = { "sr", r.sr } end
-        out[#out + 1] = { info.looted and "dl" or "ms", r.ms }
-        out[#out + 1] = { "os", r.os }
-        out[#out + 1] = { "mog", r.mog }
-    end
+    local info = J.Info(st, c.sid, ns.Me(), c.item)
+    if info.sr > 0 then out[#out + 1] = { "sr", r.sr } end
+    out[#out + 1] = { info.looted and "dl" or "ms", r.ms }
+    out[#out + 1] = { "os", r.os }
+    out[#out + 1] = { "mog", r.mog }
     -- relance : seulement sa categorie
     if c.tieCat then
         local keep = {}
@@ -169,7 +165,7 @@ function render()
     W.Tick()
 end
 
---- Montre la fenetre pour une attribution { id, sid, item, count, free }.
+--- Montre la fenetre pour une attribution { id, sid, item, count }.
 function W.Open(c)
     if not win then build() end
     cur = c
@@ -257,14 +253,14 @@ function W.OnMessage(kind, payload, channel, sender)
     if kind == "A" then
         if not R.IsInt(d.i, 1, 10000000) or type(d.s) ~= "string" then return end
         local dur = secs(d.d)
-        W.Open({ id = d.id, sid = d.s, item = d.i, count = R.IsInt(d.n, 1, 40) and d.n or 1, free = d.f == true,
+        W.Open({ id = d.id, sid = d.s, item = d.i, count = R.IsInt(d.n, 1, 40) and d.n or 1,
             from = sender, dur = dur, ends = dur and now() + dur or nil })
     elseif kind == "T" then
         if not cur or cur.id ~= d.id or type(d.p) ~= "table" then return end
         for _, k in ipairs(d.p) do
             if k == ns.Me() then
                 -- on relance dans la categorie de son premier jet
-                cur.tieCat = cur.myCat or choices({ sid = cur.sid, item = cur.item, free = cur.free })[1][1]
+                cur.tieCat = cur.myCat or choices({ sid = cur.sid, item = cur.item })[1][1]
                 cur.done = false
                 local dur = secs(d.d)
                 if dur then cur.dur, cur.ends = dur, now() + dur end

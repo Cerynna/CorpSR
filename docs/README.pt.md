@@ -34,10 +34,10 @@ Sem site, sem exportação, sem planilha. Os dados passam só pelo canal de addo
 - **Pontos**: você perde um item que reservou → +10 pontos nele. Sua rolagem SR = rolagem + pontos.
 - **Prioridade clara**: SR > +1 > +1 já saqueou > +2 > Transmog, lida na faixa da rolagem.
 - **Janela do raider**: o item, seus pontos, um botão por tipo de rolagem, uma barra de tempo, «Passar».
-- **Janela de distribuição** para o mestre saqueador: rolagens ao vivo, empates, vencedor à escolha, sobras (rolagem livre, banco da guilda, desencantar).
+- **Janela de distribuição** para o mestre saqueador: rolagens ao vivo, empates, vencedor à escolha, sobras (banco da guilda, desencantar).
 - **Anúncios na raide** no início e no fim de cada item.
 - **Entrega**: tentativa de troca, sussurro pronto, lista do que falta entregar, um desencantador para a sessão.
-- **`!SR` por sussurro** para membros sem o addon.
+- **`!SR` por sussurro** para PUGs (jogadores de fora da guilda) e qualquer um sem o addon: não precisa instalá-lo.
 - **Histórico completo**: tudo fica registrado; correções e anulações com motivo, reversíveis.
 - **Ajustes do GM**: valores e direitos patente por patente, reinício completo.
 - **Modo demo** para testar tudo sem enviar nada à guilda.
@@ -57,8 +57,9 @@ Sem site, sem exportação, sem planilha. Os dados passam só pelo canal de addo
 - **Pontos**: você rola com os pontos que já tem (0 na primeira vez). Depois que o item é rolado, todos que o reservaram, estavam na raide e não o levaram ganham **+10 por SR** nele (+20 com SR duplo). O vencedor não ganha nada e, se venceu com SR, volta a 0 nesse item. Quem clica em «Passar» também não ganha nada.
 - **Os pontos ficam guardados** quando você troca de item: eles esperam na reserva até você reservá-lo de novo.
 - **Um item ganho gasta seu SR** da semana: se vários chefes podem derrubá-lo, você não rola SR por ele de novo até a semana seguinte.
-- **+1 já saqueou**: a partir da sua primeira vitória em +1 da semana (ou da sessão, ajuste do GM). Vitórias em SR, +2, transmog ou rolagem livre não contam.
+- **+1 já saqueou**: a partir da sua primeira vitória em +1 da semana (ou da sessão, ajuste do GM). Vitórias em SR, +2 ou transmog não contam.
 - **Só a sua primeira rolagem válida conta.** Se caírem N cópias, os N melhores vencem.
+- **Os PUGs** (jogadores de fora da guilda) seguem exatamente as mesmas regras da guilda: SR (sussurrando `!SR`), pontos e todos os tipos de rolagem.
 - Todos os valores (pontos, número de SR, SR duplo, faixas de rolagem) são ajustes do GM.
 
 ## Uma sessão de raide
@@ -70,7 +71,7 @@ Sem site, sem exportação, sem planilha. Os dados passam só pelo canal de addo
 3. Escolha o item e depois **Iniciar**: seu clique anuncia o item no chat da raide, com as faixas e o tempo.
 4. As rolagens chegam ao vivo. Quando o tempo acaba, **Validar** (ou **Rolar empate**): seu clique anuncia o vencedor.
 5. O CorpSR tenta abrir uma troca com o vencedor e coloca o item nela. Se não der, um sussurro fica pronto em um botão. A aba **A entregar** lembra quem ainda espera o quê.
-6. Ninguém quer? Rolagem livre, banco da guilda ou desencantar.
+6. Ninguém quer? Banco da guilda ou desencantar.
 
 ![Janela de distribuição](https://raw.githubusercontent.com/Cerynna/CorpSR/main/docs/images/en/Attribution.png)
 
@@ -84,7 +85,7 @@ Sem site, sem exportação, sem planilha. Os dados passam só pelo canal de addo
 </p>
 
 - Aba **Pontos**: os pontos de todos, item por item. Aba **Histórico**: tudo o que aconteceu, por quem e quando.
-- Sem o addon? Sussurre a um oficial `!SR [item] [item]` (links de itens, juntos ou separados, ou números de itens). `!SR` sozinho devolve seus SR da semana.
+- PUG ou sem o addon? Sussurre a um oficial `!SR [item] [item]` (links de itens, juntos ou separados, ou números de itens). `!SR` sozinho devolve seus SR da semana.
 
 ## Direitos por patente
 
@@ -92,7 +93,7 @@ O GM escolhe, patente por patente, quem pode fazer o quê (aba Ajustes). Pôr os
 
 | Direito | Permite |
 |---|---|
-| **Sessão** | abrir, travar, fechar, reabrir, renomear ou excluir uma sessão; registrar os SR de um membro que sussurra `!SR` |
+| **Sessão** | abrir, travar, fechar, reabrir, renomear ou excluir uma sessão; registrar os SR de um jogador (PUG ou membro) que sussurra `!SR` |
 | **Distribuir** | iniciar um item, ler as rolagens, validar o vencedor, mandar para o banco ou para desencantar |
 | **Corrigir** | corrigir os pontos de um jogador em um item, com motivo obrigatório |
 | **Anular** | anular uma linha do histórico, com motivo obrigatório |

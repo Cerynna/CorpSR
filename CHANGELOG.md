@@ -4,6 +4,22 @@ Each version has its notes in English, then in French. The release action publis
 
 Chaque version a ses notes en anglais, puis en français. L'action de publication reprend la section de la version du tag sur GitHub et sur Wago.
 
+## 0.4.30
+
+**English**
+
+- Pickups (players outside the guild) now follow exactly the same rules as guild members: SRs, points, every roll type. Their rolls are no longer refused.
+- `!SR [item] [item]` by whisper is made for pickups: they reserve without installing the addon. Their name is saved with their SRs and wins, so the whole guild sees it.
+- Pickups who reserved an item earn points when they don't get it, like guild members.
+- The free roll is gone: when nobody wants an item, the loot master chooses guild bank or disenchant. Old free-roll attributions stay readable in the history.
+
+**Français**
+
+- Les PU (joueurs hors guilde) suivent maintenant exactement les mêmes règles que la guilde : SR, points, tous les types de jet. Leurs jets ne sont plus refusés.
+- `!SR [objet] [objet]` en MP est fait pour les PU : ils réservent sans installer l'addon. Leur nom est gardé avec leurs SR et leurs gains, pour que toute la guilde le voie.
+- Les PU qui ont réservé un objet gagnent des points quand ils ne l'ont pas, comme la guilde.
+- Le jet libre disparaît : quand personne ne veut un objet, le maître du butin choisit banque de guilde ou désenchantement. Les anciennes attributions en jet libre restent lisibles dans l'historique.
+
 ## 0.4.29
 
 **English** — first public release.

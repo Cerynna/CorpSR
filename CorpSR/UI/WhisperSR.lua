@@ -1,13 +1,17 @@
 --[[--------------------------------------------------------------------------
     CorpSR - « !SR » en MP : un joueur sans CorpSR pose ses SR
 
-    Demande du 16/10 : un membre de la guilde venu en raid sans l addon
+    Demande du 16/10, precisee le 17/10 : c est surtout pour les pickups
+    (PU, hors guilde), pour ne pas les obliger a installer l addon ; un
+    membre de la guilde sans l addon peut aussi s en servir. Le joueur
     chuchote a un officier (un membre qui a le droit « session ») :
         !SR [objet1] [objet2]
     avec des liens d objets, colles ou separes, ou leurs numeros. Le CorpSR
     de l officier inscrit ces SR pour lui (ecriture « sr » avec p = le
-    joueur), avec les regles de la semaine : 2 SR au plus, double SR,
-    verrouillage. « !SR » seul : la reponse redonne ses SR de la semaine.
+    joueur, cle tiree de son GUID ; pn = son nom s il est hors guilde, pour
+    que toute la guilde l affiche), avec les regles de la semaine : 2 SR au
+    plus, double SR, verrouillage. Les PU suivent exactement les memes
+    regles que la guilde. « !SR » seul : la reponse redonne ses SR.
     Le jeu interdit a un addon d envoyer un MP : une petite fenetre montre
     le resultat et un bouton securise « Repondre » prepare la reponse
     (le clic de l officier l envoie). Le texte d un MP peut etre secret en
@@ -136,18 +140,22 @@ function X.OnWhisper(msg, sender, guid)
     local roster = ns.GuildRoster()
     local key = ns.KeyOf(guid)
     local m = (key and roster.byKey[key]) or roster.byName[sender] or roster.byName[(sender:gsub("%-.*$", ""))]
-    local name = m and m.name or sender
+    -- pickup (PU) : sa cle vient de son GUID, son nom du groupe (sinon du MP)
+    local pug = not m
+    if pug then
+        if not key then return nil end
+        local g = ns.Raid.Members().byKey[key]
+        m = { key = key, name = (g and g.name) or (sender:gsub("%-", " ", 1)) }
+    end
+    local name = m.name
     local text, line
     local week = ns.WeekDate(ns.Week())
-    if not m then
-        text = L.WSR_NO:format(L.WSR_GUILD)
-        line = L.WSR_LINE_NO:format(name, L.WSR_GUILD)
-    elseif #items == 0 then
+    if #items == 0 then
         local cur = J.SR(ns.State(), ns.Week(), m.key)
         text = L.WSR_INFO:format(week, itemList(cur))
         line = L.WSR_LINE_INFO:format(name, itemList(cur))
     else
-        local e = ns.Write("sr", { i = items, p = m.key })
+        local e = ns.Write("sr", { i = items, p = m.key, pn = pug and tostring(name):sub(1, 48) or nil })
         local rec = e and ns.State().byId[J.Id(e)]
         if rec and rec.st == "ok" then
             -- les objets inconnus rejoignent les objets connus
