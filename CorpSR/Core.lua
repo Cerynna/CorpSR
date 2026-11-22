@@ -372,6 +372,123 @@ end
 -- Demarrage
 ------------------------------------------------------------------------------
 
+-- Royaume. Depuis le 21/11/2026, le client Forever rend un royaume vide
+-- (GetGuildInfo, GetNormalizedRealmName) : la cle « Corp@<royaume> » est
+-- devenue « Corp@ », un second journal et une seconde liste « A remettre »
+-- a cote des vrais. On garde donc le dernier royaume connu (CorpSRDB.realm).
+
+-- forme normalisee (ni espaces ni tirets : « CAMWOWEU4Realm7PvE »), nil si vide
+local function realmOf(v)
+    if type(v) ~= "string" or issecret(v) then return nil end
+    v = v:gsub("[%s%-]", "")
+    if v ~= "" then return v end
+end
+
+--- Royaume du joueur : celui du jeu (garde dans CorpSRDB.realm), sinon le
+-- dernier connu, sinon "".
+function ns.RealmName()
+    local r = realmOf(api(GetNormalizedRealmName)) or realmOf(api(GetRealmName))
+    local db = ns.db
+    if r then
+        if db then db.realm = r end
+        return r
+    end
+    return db and realmOf(db.realm) or ""
+end
+
+-- le seul royaume des cles de la sauvegarde, nil s il y en a zero ou plusieurs
+local function realmOfKeys(guilds)
+    local found
+    for k in pairs(guilds) do
+        local r = type(k) == "string" and k:match("@(.+)$")
+        if r then
+            if found and found ~= r then return nil end
+            found = r
+        end
+    end
+    return found
+end
+
+-- journal : les ecritures de b qui manquent a a (meme id = meme ecriture ;
+-- l ordre ne compte pas, le rejeu trie)
+local function mergeJournal(a, b)
+    local seen = {}
+    for _, e in ipairs(a) do
+        if J.Check(e) then seen[J.Id(e)] = true end
+    end
+    for _, e in ipairs(b) do
+        if J.Check(e) and not seen[J.Id(e)] then
+            seen[J.Id(e)] = true
+            a[#a + 1] = e
+        end
+    end
+end
+
+-- « A remettre » (Deliver.lua) : { list = { { id, i, p, n, c, t, st, at } }, de }
+-- les objets des deux listes (une seule fois chacun), les plus anciens
+-- d abord ; le desenchanteur de a, sinon celui de b
+local function mergeDeliver(a, b)
+    if type(a.list) ~= "table" then a.list = {} end
+    local seen, all = {}, {}
+    local function take(list)
+        if type(list) ~= "table" then return end
+        for _, e in ipairs(list) do
+            local id = type(e) == "table" and tostring(e.id) .. "|" .. tostring(e.i) .. "|" .. tostring(e.p)
+            if id and not seen[id] then
+                seen[id] = true
+                all[#all + 1] = e
+            end
+        end
+    end
+    take(a.list)
+    take(b.list)
+    local pos = {}
+    for i, e in ipairs(all) do pos[e] = i end
+    table.sort(all, function(x, y)
+        local tx, ty = tonumber(x.t) or 0, tonumber(y.t) or 0
+        if tx ~= ty then return tx < ty end
+        return pos[x] < pos[y]
+    end)
+    a.list = all
+    if a.de == nil then a.de = b.de end
+end
+
+-- la guilde b versee dans a (journal, « A remettre », le reste : a complete par b)
+local function mergeGuild(a, b)
+    if type(a) ~= "table" then return b end
+    if type(b) ~= "table" then return a end
+    if type(a.journal) == "table" and type(b.journal) == "table" then mergeJournal(a.journal, b.journal) end
+    if type(a.deliver) == "table" and type(b.deliver) == "table" then mergeDeliver(a.deliver, b.deliver) end
+    for k, v in pairs(b) do
+        if a[k] == nil then a[k] = v end
+    end
+    return a
+end
+
+-- Une seule fois (CorpSRDB.realmFix) : chaque « Guilde@ » ecrite depuis le
+-- 21/11 est refondue dans « Guilde@<royaume retenu> ». Royaume retenu : le
+-- dernier connu, sinon le seul des cles de la sauvegarde. Aucun : on
+-- reessaiera au prochain chargement.
+local function fixRealm(db)
+    local realm = ns.RealmName()
+    if realm == "" then
+        realm = realmOfKeys(db.guilds)
+        if not realm then return end
+        db.realm = realm
+    end
+    local olds = {}
+    for k in pairs(db.guilds) do
+        if type(k) == "string" and k:match("^.+@$") then olds[#olds + 1] = k end
+    end
+    for _, old in ipairs(olds) do
+        local new = old .. realm
+        db.guilds[new] = mergeGuild(db.guilds[new], db.guilds[old])
+        db.guilds[old] = nil
+        if db.migrated == old then db.migrated = new end
+    end
+    db.realmFix = true
+end
+
 -- La sauvegarde est commune a tout le compte : le journal est range par
 -- guilde (CorpSRDB.guilds[cle]), pour qu un perso d une autre guilde ne
 -- melange jamais ses donnees. Tant que la guilde n est pas connue (ou hors
@@ -382,10 +499,9 @@ local function guildKey()
     if not (IsInGuild and IsInGuild()) or type(GetGuildInfo) ~= "function" then return nil end
     local ok, name, _, _, realm = pcall(GetGuildInfo, "player")
     if not ok or type(name) ~= "string" or issecret(name) or name == "" then return nil end
-    if type(realm) ~= "string" or issecret(realm) or realm == "" then
-        realm = GetNormalizedRealmName and api(GetNormalizedRealmName) or ""
-    end
-    return name .. "@" .. tostring(realm or "")
+    -- royaume de la guilde (rendu s il n est pas le notre), sinon le notre
+    local mine = ns.RealmName()
+    return name .. "@" .. (realmOf(realm) or mine)
 end
 
 --- Choisit le journal de la guilde du perso (au login, puis a chaque
@@ -393,6 +509,7 @@ end
 function ns.SelectGuild()
     local db = ns.db
     if not db then return end
+    if not db.realmFix then fixRealm(db) end
     local key = guildKey()
     if key == ns.guildKey and ns.store then return end
     ns.guildKey = key
