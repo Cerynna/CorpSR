@@ -4,6 +4,16 @@ Each version has its notes in English, then in French. The release action publis
 
 Chaque version a ses notes en anglais, puis en français. L'action de publication reprend la section de la version du tag sur GitHub et sur Wago.
 
+## 0.4.31
+
+**English**
+
+- Fixed: since the 21/11 client update, the game gives an empty realm name, which split the guild data in two (a second, empty journal and items-to-deliver list). CorpSR now keeps the last known realm and merges the split data once, without losing anything.
+
+**Français**
+
+- Corrigé : depuis la mise à jour du client du 21/11, le jeu rend un nom de royaume vide, ce qui coupait les données de la guilde en deux (un second journal et une seconde liste « À remettre », vides). CorpSR garde maintenant le dernier royaume connu et réunit une fois les données coupées, sans rien perdre.
+
 ## 0.4.30
 
 **English**
